@@ -1,0 +1,99 @@
+/* mobile.css — adattamenti per telefono e tablet stretto */
+
+@media (max-width:640px){
+  /* le pastiglie che non stanno sulla riga scendono a sinistra, allineate al testo */
+  .pt li > .acts{flex-basis:100%;justify-content:flex-start;padding-left:32px;margin:5px 0 0;}
+  .pt .alert li{flex-wrap:wrap;}
+  .pt .alert .acts{flex-basis:100%;justify-content:flex-start;padding-left:32px;margin-top:4px;}
+  /* bersagli più generosi per il dito */
+  .pt button.tiny{min-height:34px;padding:7px 12px;}
+  .pt .slot{min-height:30px;padding:5px 10px;}
+  .pt .del{width:34px;min-height:34px;}
+  .pt .box{width:24px;height:24px;}
+  .pt .toolsedit{width:36px;height:36px;}
+  .pt .star{width:26px;height:26px;}
+  .pt .filtroattivo{flex:none;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;
+    font-weight:600;color:var(--pen);background:hsl(202 55% 95%);border:1px solid hsl(202 40% 74%);
+    border-radius:20px;padding:3px 5px 3px 10px;margin-left:2px;white-space:nowrap;}
+.pt .filtroattivo b{font-weight:700;}
+.pt .filtroattivo button{border:none;background:none;cursor:pointer;color:inherit;font-size:14px;
+    line-height:1;padding:0 4px;opacity:.7;}
+.pt .filtroattivo button:hover{opacity:1;}
+.pt[data-theme="scuro"] .filtroattivo{background:hsl(202 30% 20%);border-color:hsl(202 25% 38%);
+    color:hsl(202 55% 74%);}
+@media (prefers-color-scheme:dark){
+  .pt[data-theme="auto"] .filtroattivo{background:hsl(202 30% 20%);border-color:hsl(202 25% 38%);
+      color:hsl(202 55% 74%);}
+}
+  /* i comandi principali occupano la riga: si centrano col pollice */
+  .pt .edit .row > button.add,.pt .nuovo .row > button.add{flex:1 1 auto;}
+  /* i menù del modulo si dispongono a due per riga invece di stringersi */
+  .pt .card > .row > select{flex:1 1 44%;min-width:0;}
+  .pt input[type=text]{min-width:0;}
+  /* l'elenco dei collegamenti si impila: nome sopra, comandi sotto */
+  .pt ul.linklist li{flex-wrap:wrap;}
+  .pt ul.linklist .acts{flex-basis:100%;justify-content:flex-end;margin-top:6px;}
+  /* sul telefono la griglia a ore lascia il posto all'elenco cronologico */
+  .pt .soloampio{display:none;}
+  .pt .solostretto{display:block;}
+  /* la settimana resta leggibile scorrendo, invece di comprimersi a strisce */
+  .pt .wkscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .pt .wkgrid{min-width:560px;}
+  /* la striscia in fondo non finisce sotto il pulsante rotondo */
+  .pt .notes{margin-right:66px;}
+  .pt .wrap[data-notes="1"] .fab{bottom:14px;}
+  .pt .barrabasso{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:9;
+    background:var(--surface);border-top:1px solid var(--line2);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));
+    box-shadow:0 -2px 12px -6px rgba(0,0,0,.35);}
+  .pt .barrabasso button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    border:none;background:none;cursor:pointer;padding:6px 2px;border-radius:10px;
+    font-family:var(--sans);font-size:10.5px;color:var(--muted);min-height:48px;}
+  .pt .barrabasso button::before{content:"";width:21px;height:21px;background-color:var(--muted);
+    -webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat;}
+  .pt .barrabasso button[data-on="1"],.pt .barrabasso button:hover{color:var(--pen);}
+  .pt .barrabasso button[data-on="1"]::before,.pt .barrabasso button:hover::before{
+    background-color:var(--pen);}
+  /* Su telefono la barra in basso contiene già «Nuovo» e «Riepilogo»:
+     il pulsante rotondo e l'icona del riepilogo nella barra alta erano
+     doppioni della stessa azione. */
+  .pt .fab{display:none;}
+  /* NAV-001: le stesse sezioni, in basso dove il pollice arriva */
+  .pt .navprim.alto{display:none;}
+  .pt .navprim.basso{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;
+    background:var(--surface);border-top:1px solid var(--line);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));
+    justify-content:space-around;gap:0;}
+  .pt .navprim.basso button{flex:1;flex-direction:column;gap:3px;font-size:11px;
+    padding:5px 2px;min-height:52px;justify-content:center;}
+  .pt .navprim.basso button::before{width:21px;height:21px;}
+  .pt .toolsedit[data-act="digest"]{display:none;}
+  .pt .fabmenu{bottom:calc(74px + env(safe-area-inset-bottom,0px));}
+  /* spazio perché l'ultima scheda non finisca sotto la barra */
+  .pt .wrap{padding-bottom:78px;}
+  .pt .notes{bottom:calc(74px + env(safe-area-inset-bottom,0px));}
+
+  /* schermate a tutta pagina: niente riquadro, occupano lo schermo */
+  .pt .schermata{padding:0 0 24px;}
+  .pt .schcorpo{border:none;border-radius:0;padding:18px 2px;box-shadow:none;background:none;}
+  .pt .schcorpo h1{font-size:21px;}
+  .pt .schazioni button.add{flex:1 1 100%;}
+}
+@media (max-width:430px){
+  .pt h1{font-size:27px;}
+  .pt .card{--cardpad:14px;padding:15px var(--cardpad);}
+    .pt .tool{padding:2px 10px;}
+  .pt li{gap:8px;}
+  .pt .notes{bottom:8px;}
+  .pt .note{padding:11px 12px;gap:10px;}
+  .pt .hero{gap:12px;}
+  .pt .ring{width:62px;height:62px;}
+  /* etichette e valore su righe separate: nessun campo strizzato */
+  .pt .ctrl{flex-basis:100%;}
+  .pt .fields{grid-template-columns:1fr 1fr;}
+  .pt .fab{right:14px;bottom:14px;width:50px;height:50px;font-size:25px;}
+}
+
+/* ---------- home mobile: barra fissa in basso ---------- */
+.pt .barrabasso{display:none;}
+

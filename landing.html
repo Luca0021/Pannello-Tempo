@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pannello Tempo — la giornata finisce, le cose importanti sono ancora lì</title>
+<meta name="description" content="Scegli tre cose al giorno e vedi dove vanno davvero le tue ore, fra lavoro e vita. Funziona offline, i dati restano tuoi, nessuna registrazione.">
+<meta name="theme-color" content="#E9EDEF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D141A" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%230F1B24' stroke-width='1.6'/%3E%3Cline x1='12' y1='3' x2='12' y2='6' stroke='%23BE8C36' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#E9EDEF; --surface:#FCFDFD; --ink:#0F1B24; --ink2:#33454F; --muted:#78888F;
+  --line:#E0E6E9; --line2:#C9D3D7; --pen:#1F5673; --sage:#4C7C6C; --brass:#BE8C36;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0D141A;--surface:#141D25;--ink:#E8EFF2;--ink2:#9FB2BA;--muted:#7A8C95;
+        --line:#22303A;--line2:#33454F;--pen:#5C9EC4;--sage:#7FB09C;}
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:820px;margin:0 auto;padding:0 22px;}
+a{color:var(--pen);}
+h1,h2,h3{font-family:var(--serif);font-weight:400;letter-spacing:-.015em;line-height:1.15;}
+h1{font-size:clamp(30px,6.4vw,46px);margin:0 0 16px;}
+h2{font-size:clamp(23px,4vw,30px);margin:0 0 14px;}
+h3{font-size:19px;margin:0 0 6px;}
+p{margin:0 0 14px;color:var(--ink2);}
+.eyebrow{font-family:var(--sans);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  font-weight:700;color:var(--muted);margin:0 0 12px;}
+section{padding:56px 0;border-bottom:1px solid var(--line);}
+section:last-of-type{border-bottom:none;}
+header{padding:14px 0;border-bottom:1px solid var(--line);}
+.marchio{display:flex;align-items:center;gap:9px;font-size:12px;letter-spacing:.16em;
+  text-transform:uppercase;font-weight:600;color:var(--muted);}
+.marchio svg{width:19px;height:19px;}
+.hero{padding:64px 0 56px;}
+.sotto{font-size:clamp(17px,2.6vw,20px);color:var(--ink2);max-width:620px;margin:0 0 26px;}
+.azioni{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:18px;}
+.cta{display:inline-block;background:var(--ink);color:var(--bg);text-decoration:none;
+  padding:14px 26px;border-radius:9px;font-weight:600;font-size:15.5px;}
+.cta:hover{background:var(--pen);color:#fff;}
+.cta.secondaria{background:none;color:var(--ink);border:1px solid var(--line2);}
+.fatti{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--muted);margin:0;
+  padding:0;list-style:none;}
+.fatti li{display:flex;align-items:center;gap:7px;}
+.fatti li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--sage);}
+.griglia{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+.scheda{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;}
+.scheda p{margin:0;font-size:14.5px;}
+.tre{background:var(--surface);border:1px solid var(--line2);border-radius:14px;padding:22px;
+  max-width:420px;box-shadow:0 2px 5px rgba(0,0,0,.05),0 22px 44px -28px rgba(0,0,0,.5);}
+.tre .titolo{font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+  color:var(--brass);margin:0 0 14px;}
+.tre ul{margin:0;padding:0;list-style:none;}
+.tre li{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);
+  font-size:17px;}
+.tre li:last-child{border-bottom:none;}
+.quadro{width:21px;height:21px;border-radius:6px;border:1.8px solid var(--line2);flex:none;}
+.quadro.lavoro{border-color:var(--pen);}
+.quadro.vita{border-color:var(--sage);}
+.barra{height:13px;border-radius:20px;overflow:hidden;background:var(--sage);display:flex;
+  margin:18px 0 10px;max-width:460px;}
+.barra i{display:block;height:100%;background:var(--pen);}
+.legenda{display:flex;gap:20px;flex-wrap:wrap;font-size:13.5px;color:var(--ink2);margin:0;
+  padding:0;list-style:none;}
+.legenda li{display:flex;align-items:center;gap:7px;}
+.pallino{width:10px;height:10px;border-radius:50%;flex:none;}
+.pallino.lavoro{background:var(--pen);} .pallino.vita{background:var(--sage);}
+.prezzi{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));}
+.piano{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;
+  display:flex;flex-direction:column;}
+.piano.rilievo{border-color:var(--brass);}
+.cifra{font-family:var(--mono);font-size:29px;margin:4px 0 2px;}
+.periodo{font-size:12.5px;color:var(--muted);margin:0 0 14px;}
+.piano ul{margin:0 0 16px;padding:0;list-style:none;font-size:14px;color:var(--ink2);flex:1;}
+.piano li{padding:5px 0;display:flex;gap:9px;}
+.piano li::before{content:"—";color:var(--line2);flex:none;}
+details{border-bottom:1px solid var(--line);padding:14px 0;}
+summary{cursor:pointer;font-weight:600;font-size:16px;color:var(--ink);}
+summary::marker{color:var(--muted);}
+details p{margin:10px 0 0;font-size:14.5px;}
+footer{padding:34px 0 48px;font-size:13px;color:var(--muted);}
+.nota{font-size:13px;color:var(--muted);border-left:2px solid var(--line2);padding-left:14px;
+  margin:18px 0 0;}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <div class="marchio">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10"
+      stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="3" x2="12" y2="6"
+      stroke="#BE8C36" stroke-width="2.4" stroke-linecap="round"/></svg>
+    Pannello Tempo
+  </div>
+</div></header>
+
+<div class="wrap">
+
+<section class="hero">
+  <h1>La giornata finisce. Le cose importanti sono ancora lì.</h1>
+  <p class="sotto">Pannello Tempo aiuta a scegliere ciò che conta, organizzare una giornata
+    sostenibile e mantenere in equilibrio lavoro e vita.</p>
+  <div class="azioni">
+    <a class="cta" href="index.html">Provalo gratis</a>
+    <a class="cta secondaria" href="#come">Come funziona</a>
+  </div>
+  <ul class="fatti">
+    <li>Nessuna registrazione</li>
+    <li>Funziona senza rete</li>
+    <li>I dati restano sul tuo dispositivo</li>
+    <li>Installabile come app</li>
+  </ul>
+</section>
+
+<section>
+  <p class="eyebrow">Il problema</p>
+  <h2>Non è che dimentichi le cose. È che la sera non sai dove sono andate le ore.</h2>
+  <p>Le liste di cose da fare risolvono la memoria, non le priorità. A fine giornata hai
+    spuntato quindici voci e le tre che contavano sono ancora lì. E nessuno ti dice che è la
+    terza settimana di fila che il lavoro si prende tutto.</p>
+</section>
+
+<section id="come">
+  <p class="eyebrow">La soluzione</p>
+  <h2>Tre cose. Non trenta.</h2>
+  <p>È la regola su cui è costruito tutto il resto. Una priorità alta la metti a dieci
+    attività; tre posti no: ti costringono a scegliere.</p>
+  <div class="tre" role="img" aria-label="Esempio: tre cose di oggi, due di lavoro e una di vita">
+    <p class="titolo">Priorità di oggi</p>
+    <ul>
+      <li><span class="quadro lavoro"></span>Chiudere il preventivo per Rossi</li>
+      <li><span class="quadro lavoro"></span>Rivedere i numeri del trimestre</li>
+      <li><span class="quadro vita"></span>Cena con Anna, senza telefono</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Equilibrio</p>
+  <h2>Ogni cosa appartiene al lavoro o alla vita</h2>
+  <p>Serve a una domanda sola: <strong>stai dando troppo a una e niente all'altra?</strong>
+    Il pannello calcola sulle ore che hai davvero registrato e ti dice quanto pesa ciascuna.</p>
+  <div class="barra" role="img" aria-label="Esempio: lavoro 78 per cento, vita 22 per cento">
+    <i style="width:78%"></i>
+  </div>
+  <ul class="legenda">
+    <li><span class="pallino lavoro"></span>Lavoro 78% · 21h 40</li>
+    <li><span class="pallino vita"></span>Vita 22% · 6h 05</li>
+  </ul>
+  <p class="nota">La soglia di attenzione la scegli tu. Senza soglia impostata, il pannello
+    mostra i numeri e non esprime giudizi. E se una settimana non ha abbastanza giorni
+    registrati, lo dice invece di riempire i buchi con stime.</p>
+</section>
+
+<section>
+  <p class="eyebrow">Oggi</p>
+  <h2>Agenda a blocchi, non un elenco infinito</h2>
+  <div class="griglia">
+    <div class="scheda"><h3>Blocchi orari</h3>
+      <p>Trascini le attività dove stanno davvero. Il pannello ti dice se la giornata è
+        leggera, normale o sovraccarica prima che tu la viva.</p></div>
+    <div class="scheda"><h3>Trova un posto</h3>
+      <p>Hai una cosa da fare e non sai dove metterla: il pannello cerca la prima fascia
+        libera che la contiene.</p></div>
+    <div class="scheda"><h3>Da riprogrammare</h3>
+      <p>Quello che è rimasto indietro non sparisce e non ti insegue: compare in cima, con
+        le azioni per sistemarlo in un tocco.</p></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Il rituale</p>
+  <h2>Trenta secondi la sera</h2>
+  <p>La chiusura di giornata ti mostra com'è andata, ti fa decidere cosa fare di quello che
+    è rimasto aperto e ti fa scegliere le tre cose di domani. È il momento che trasforma
+    uno strumento in un'abitudine.</p>
+  <p>Il pannello conta i <strong>giorni chiusi di fila</strong>. Misura il rituale della
+    revisione, non quanto hai prodotto: nessuna medaglia, nessun coriandolo.</p>
+</section>
+
+<section>
+  <p class="eyebrow">La settimana</p>
+  <h2>La domenica, il quadro d'insieme</h2>
+  <p>Ore di lavoro e di vita, giorni chiusi, priorità completate, routine saltate, attività
+    che continui a rimandare. E i suggerimenti che nascono dai tuoi dati: se salti la
+    palestra ogni sabato e domenica, il pannello ti propone di renderla infrasettimanale.</p>
+</section>
+
+<section>
+  <p class="eyebrow">Privacy</p>
+  <h2>I dati sono tuoi, letteralmente</h2>
+  <div class="griglia">
+    <div class="scheda"><h3>Nessun server</h3>
+      <p>Il pannello vive nel browser. Non esiste un nostro server che riceva i tuoi dati,
+        perché non esiste un nostro server.</p></div>
+    <div class="scheda"><h3>Sincronizzazione tua</h3>
+      <p>Se la vuoi, va dal tuo browser al <em>tuo</em> GitHub Gist o al <em>tuo</em>
+        progetto Firebase. Le credenziali restano sul dispositivo.</p></div>
+    <div class="scheda"><h3>Esportabili sempre</h3>
+      <p>Un file JSON con tutto dentro, quando vuoi. Nessun formato chiuso, nessun
+        riscatto sui tuoi dati.</p></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Prezzi</p>
+  <h2>Quanto costa</h2>
+  <div class="prezzi">
+    <div class="piano">
+      <h3>Gratuito</h3>
+      <p class="cifra">0 €</p>
+      <p class="periodo">per sempre</p>
+      <ul>
+        <li>Priorità di oggi</li><li>Attività e agenda a blocchi</li>
+        <li>Routine</li><li>Posta in arrivo</li><li>Riepilogo giornata</li>
+        <li>Backup manuale</li><li>Dati su un dispositivo</li>
+      </ul>
+      <a class="cta secondaria" href="index.html">Comincia</a>
+    </div>
+    <div class="piano rilievo">
+      <h3>Premium</h3>
+      <p class="cifra">4 €</p>
+      <p class="periodo">al mese, oppure 36 € all'anno</p>
+      <ul>
+        <li>Tutto il gratuito</li><li>Sincronizzazione fra dispositivi</li>
+        <li>Chiusura di giornata</li><li>Revisione settimanale</li>
+        <li>Statistiche lavoro e vita</li><li>Etichette e strumenti avanzati</li>
+        <li>Importi e previsione mensile</li><li>Promemoria nel calendario</li>
+      </ul>
+      <a class="cta secondaria" href="#faq">Non ancora attivabile</a>
+    </div>
+    <div class="piano">
+      <h3>A vita</h3>
+      <p class="cifra">79 €</p>
+      <p class="periodo">una volta sola</p>
+      <ul>
+        <li>Tutto il Premium, per sempre</li>
+        <li>Accesso anticipato alle novità</li>
+        <li>Nessun rinnovo, nessun abbonamento</li>
+      </ul>
+      <a class="cta secondaria" href="#faq">Non ancora attivabile</a>
+    </div>
+  </div>
+  <p class="nota">Onestà prima di tutto: <strong>i pagamenti non sono ancora collegati</strong>.
+    Non c'è un modo di acquistare, e nell'applicazione nessuna funzione è bloccata — un muro
+    senza porta non serve a nessuno. Questi prezzi dicono come sarà organizzato, non come è
+    oggi.</p>
+</section>
+
+<section id="faq">
+  <p class="eyebrow">Domande</p>
+  <h2>Le cose che chiederesti</h2>
+
+  <details><summary>Devo registrarmi?</summary>
+    <p>No. Apri il pannello e comincia. La registrazione non esiste proprio: non c'è un
+      account da creare perché non c'è un server dove crearlo.</p></details>
+
+  <details><summary>Dove finiscono i miei dati?</summary>
+    <p>Nella memoria del browser, sul tuo dispositivo. Se attivi la sincronizzazione, vanno
+      dove decidi tu: il tuo Gist su GitHub o il tuo progetto Firebase. Le credenziali non
+      lasciano mai il dispositivo e non finiscono nei backup che esporti.</p></details>
+
+  <details><summary>Funziona senza rete?</summary>
+    <p>Sì. Installandolo come app resta disponibile offline e i dati continuano a salvarsi
+      normalmente.</p></details>
+
+  <details><summary>C'è un'app per Android o iPhone?</summary>
+    <p>Non nei negozi. Si installa direttamente dal browser: su Android e desktop compare
+      l'invito automatico, su iPhone si usa Condividi e poi «Aggiungi a Home». Il
+      comportamento è quello di un'app: icona, schermo intero, funziona offline.</p></details>
+
+  <details><summary>Ricevo notifiche?</summary>
+    <p>Non a pannello chiuso: servirebbe un server che invii le notifiche push, e non c'è.
+      Il pannello esporta i tuoi blocchi orari verso il calendario del dispositivo, che i
+      promemoria li sa dare. Preferiamo dirlo che prometterlo.</p></details>
+
+  <details><summary>Posso condividerlo con il mio compagno o la mia compagna?</summary>
+    <p>Non ancora. La struttura c'è ed è già pensata perché le voci di lavoro e le
+      statistiche personali non escano mai senza una scelta esplicita, ma serve un servizio
+      che gestisca gli account e non esiste.</p></details>
+
+  <details><summary>Posso importare il mio calendario?</summary>
+    <p>Sì, da file: esporti un <code>.ics</code> dal tuo calendario, il pannello ti mostra
+      gli eventi e scegli quali importare, evitando i doppioni. Il collegamento diretto con
+      Google o Microsoft richiede una registrazione applicativa che non c'è.</p></details>
+
+  <details><summary>Perché tre cose e non cinque?</summary>
+    <p>Perché con cinque torneresti a fare una lista. Il vincolo è la funzione: se tutto è
+      prioritario, niente lo è.</p></details>
+</section>
+
+<section>
+  <h2>Comincia dalla sera di oggi</h2>
+  <p>Scrivi tre cose. Domani sera guarda com'è andata. Se dopo una settimana non ti serve,
+    esporti i dati e chiudi la scheda: non hai lasciato niente da nessuna parte.</p>
+  <div class="azioni"><a class="cta" href="index.html">Apri il pannello</a></div>
+</section>
+
+</div>
+
+<footer><div class="wrap">
+  Pannello Tempo — nessun tracciamento, nessuna pubblicità, nessun account.
+</div></footer>
+
+</body>
+</html>

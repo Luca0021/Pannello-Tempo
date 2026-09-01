@@ -1,0 +1,67 @@
+/* base.css — reset, tipografia, intestazione, anello, metriche */
+.pt *{box-sizing:border-box;}
+.pt .wrap{max-width:680px;margin:0 auto;}
+
+
+.pt .noteact .tiny{font-family:var(--sans);font-size:12px;letter-spacing:.06em;}
+.pt .filtroattivo{flex:none;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;
+    font-weight:600;color:var(--pen);background:hsl(202 55% 95%);border:1px solid hsl(202 40% 74%);
+    border-radius:20px;padding:3px 5px 3px 10px;margin-left:2px;white-space:nowrap;}
+.pt .filtroattivo b{font-weight:700;}
+.pt .filtroattivo button{border:none;background:none;cursor:pointer;color:inherit;font-size:14px;
+    line-height:1;padding:0 4px;opacity:.7;}
+.pt .filtroattivo button:hover{opacity:1;}
+.pt[data-theme="scuro"] .filtroattivo{background:hsl(202 30% 20%);border-color:hsl(202 25% 38%);
+    color:hsl(202 55% 74%);}
+@media (prefers-color-scheme:dark){
+  .pt[data-theme="auto"] .filtroattivo{background:hsl(202 30% 20%);border-color:hsl(202 25% 38%);
+      color:hsl(202 55% 74%);}
+}
+.pt [data-ico="imbuto"]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3.5%205h17l-6.5%207.6V20l-4-2.2v-5.2Z%22%2F%3E%3C%2Fsvg%3E");}
+.pt [data-ico="matita"]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2020.5h4L20%208.5a2.6%202.6%200%200%200-3.7-3.7L4.3%2016.8Z%22%2F%3E%3Cpath%20d%3D%22M15%206.5%2018.5%2010%22%2F%3E%3C%2Fsvg%3E");}
+/* la sfumatura segnala che la barra scorre, ma deve cadere su spazio vuoto:
+   senza questo margine l'ultima voce risulta sempre tagliata */
+/* L'icona vive in un pseudo-elemento: se la maschera fosse sul pulsante,
+   sfondo e bordo verrebbero ritagliati con lei e resterebbero invisibili. */
+.pt .toolsedit{flex:none;width:31px;height:31px;padding:0;border:1px solid transparent;
+    border-radius:8px;background:none;cursor:pointer;display:inline-flex;
+    align-items:center;justify-content:center;
+    transition:background .15s,border-color .15s;}
+.pt .toolsedit::before{content:"";display:block;width:18px;height:18px;
+    background-color:var(--ink2);
+    -webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat;
+    transition:background-color .15s;}
+.pt .toolsedit:hover{background:var(--track);border-color:var(--line2);}
+.pt .toolsedit:hover::before{background-color:var(--ink);}
+.pt .toolsedit[data-on="1"]{background:hsl(202 55% 95%);border-color:hsl(202 40% 74%);}
+.pt .toolsedit[data-on="1"]::before{background-color:var(--pen);}
+.pt[data-theme="scuro"] .toolsedit[data-on="1"]{background:hsl(202 30% 20%);border-color:hsl(202 25% 40%);}
+@media (prefers-color-scheme:dark){
+  .pt[data-theme="auto"] .toolsedit[data-on="1"]{background:hsl(202 30% 20%);border-color:hsl(202 25% 40%);}
+}
+/* separatore reale fra collegamenti e comandi */
+.pt .toolsep{flex:none;width:1px;align-self:stretch;margin:2px 5px 2px 3px;background:var(--line);}
+.pt .tools{padding-right:26px;
+    -webkit-mask:linear-gradient(90deg,#000 calc(100% - 20px),transparent);
+    mask:linear-gradient(90deg,#000 calc(100% - 20px),transparent);}
+
+/* ---------- FASE 2: sbordamento orizzontale ----------
+   Un figlio flessibile ha `min-width:auto`: non si restringe sotto la larghezza
+   del proprio contenuto. Con un titolo lungo su schermo stretto la riga sborda
+   e trascina in orizzontale l'intera pagina — il difetto che rende un pannello
+   inutilizzabile sul telefono.
+
+   Qui i contenitori di testo vengono resi restringibili e le parole lunghe
+   possono spezzarsi. Non è una scelta estetica: è la differenza fra un testo
+   che va a capo e uno che esce dallo schermo. */
+.pt li > .txt,
+.pt .ftxt,
+.pt .ptxt,
+.pt .cnome,
+.pt .accnome,
+.pt .agtesto,
+.pt .prossimo,
+.pt .mconta{min-width:0;overflow-wrap:anywhere;}
+
+/* Le celle della griglia non devono essere più larghe della colonna. */
+.pt .wrap > *{min-width:0;}

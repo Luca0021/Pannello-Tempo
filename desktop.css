@@ -1,0 +1,48 @@
+/* desktop.css — schermi larghi.
+   Le due colonne sono tornate, con la regola che mancava la prima volta:
+   OGNI figlio diretto occupa la larghezza piena per impostazione predefinita, e
+   solo le schede indicate esplicitamente finiscono in colonna. Senza questa
+   riga la griglia collocava da sola anche i frammenti che non sono schede —
+   testi sciolti, righe di pulsanti, il piè di pagina — e li faceva fluttuare. */
+
+@media (min-width:900px){
+  .pt .wrap{max-width:760px;}
+  .pt .card{margin-bottom:14px;}
+  .pt .setcard{margin-top:26px;}
+}
+
+@media (min-width:1100px){
+  .pt .wrap{max-width:1040px;margin:0 auto;display:grid;
+    grid-template-columns:minmax(360px,1.05fr) minmax(320px,1fr);
+    gap:12px 20px;align-items:start;}
+
+  /* la regola che mancava: tutto a larghezza piena, salvo eccezione esplicita */
+  .pt .wrap > *{grid-column:1 / -1;}
+
+  /* colonna sinistra: ciò che guardi e ciò su cui lavori */
+  .pt .wrap > [data-sez="accumulo"],
+  .pt .wrap > [data-sez="attivazione"],
+  .pt .wrap > [data-sez="focus"],
+  .pt .wrap > [data-sez="agenda"]{grid-column:1;}
+
+  /* colonna destra: ciò che ti aspetta e ciò che gestisci */
+  .pt .wrap > [data-sez="recupera"],
+  .pt .wrap > [data-sez="rituale"],
+  .pt .wrap > [data-sez="today"],
+  .pt .wrap > [data-sez="once"],
+  .pt .wrap > [data-sez="waiting"],
+  .pt .wrap > [data-sez="routine"],
+  .pt .wrap > [data-sez="ripensare"],
+  .pt .wrap > [data-sez="note"]{grid-column:2;}
+
+  /* i contenuti a tutta larghezza non si stirano: un campo lungo un metro
+     non si legge e non si compila */
+  .pt .wrap > .card > .row,
+  .pt .wrap > .card > .riassunto,
+  .pt .wrap > .card > .ctrls{max-width:660px;}
+  .pt .schcorpo{max-width:640px;margin:0 auto;}
+}
+
+@media (min-width:1500px){
+  .pt .wrap{max-width:1120px;}
+}

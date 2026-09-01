@@ -1,0 +1,32 @@
+{
+  "name": "Pannello Tempo",
+  "short_name": "Pannello",
+  "description": "Scegli tre cose al giorno e vedi dove vanno le tue ore, fra lavoro e vita.",
+  "lang": "it",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "orientation": "any",
+  "theme_color": "#E9EDEF",
+  "background_color": "#E9EDEF",
+  "categories": ["productivity", "lifestyle"],
+  "icons": [
+    { "src": "icons/icona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icona-mask-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icona-mask-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Oggi", "short_name": "Oggi", "url": "./index.html#oggi",
+      "description": "Le tre cose e le attività di oggi",
+      "icons": [{ "src": "icons/icona-192.png", "sizes": "192x192" }] },
+    { "name": "Aggiungi", "short_name": "Aggiungi", "url": "./index.html#nuovo",
+      "description": "Crea un task, una nota o una routine",
+      "icons": [{ "src": "icons/icona-192.png", "sizes": "192x192" }] },
+    { "name": "Agenda", "short_name": "Agenda", "url": "./index.html#agenda",
+      "description": "La giornata a blocchi orari",
+      "icons": [{ "src": "icons/icona-192.png", "sizes": "192x192" }] }
+  ]
+}

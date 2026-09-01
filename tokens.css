@@ -1,0 +1,95 @@
+/* tokens.css — variabili: colori, caratteri, ombre, temi chiaro e scuro */
+.pt{
+  --bg1:#E9EDEF;--bg2:#DAE1E4;--grid:rgba(15,27,36,.032);
+  --surface:#FCFDFD;--field:#FFFFFF;--agbg:#F1F4F5;--selbg:hsl(202 55% 96%); --track:rgba(15,27,36,.07);
+  --editbg:linear-gradient(#FFFFFF,#F8FAFB);
+  --ink:#0F1B24;--ink2:#33454F;--muted:#78888F;
+  --line:#E0E6E9;--line2:#C9D3D7;
+  --pen:#1F5673;--sage:#4C7C6C;--brass:#BE8C36;--rust:#9C4438;
+  /* HOM-002 — tre livelli, non un solo rosso per tutto:
+       informativo  neutro, non chiede nulla
+       attenzione   qualcosa richiede una decisione, ma niente è rotto
+       errore       qualcosa è fallito o è bloccante
+     Il rosso appartiene solo al terzo. «Da riprogrammare» è attenzione:
+     avere cose da rimettere in calendario è normale, non è un guasto. */
+  --info-bordo:#7C8D96; --info-fondo:#F4F7F8; --info-testo:#33454F;
+  --att-bordo:#A67C1F;  --att-fondo:#FBF4E4;  --att-testo:#6B4E14;
+  --err-bordo:#A24A3D;  --err-fondo:#FBEEEC;  --err-testo:#7A2F26;
+  --btnbg:#0F1B24;--btnfg:#FCFDFD;--btnbg2:#1E3140;
+  --ringbg:rgba(31,86,115,.14);
+  --focusbg:linear-gradient(158deg,#1D4150,#123039);--focusbd:#0C242C;
+  --invitobg:linear-gradient(#FFFDF8,#FBFCFC);--invitotx:#5C4415;
+  --focusfg:#F1F5F7;--focusdim:rgba(240,246,248,.34);--focusmut:rgba(240,246,248,.42);
+  --focusline:rgba(240,246,248,.09);--focusfield:rgba(240,246,248,.22);
+
+    --amber:var(--brass);
+    --sh:0 1px 2px rgba(0,0,0,.05),0 12px 32px -20px rgba(0,0,0,.5);
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    /* UI-002 — lo sfondo si sceglie. La griglia era sempre presente su tutta
+       la pagina: piacevole a colpo d'occhio, ma è rumore costante dietro il
+       testo, e chi legge a lungo lo paga. Il valore predefinito resta la
+       griglia, ma attenuata; «tinta unita» la toglie del tutto. */
+    background:
+      linear-gradient(var(--grid) 1px,transparent 1px) 0 0/23px 23px,
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/23px 23px,
+      linear-gradient(168deg,var(--bg1),var(--bg2));
+    color:var(--ink);padding:22px 14px 44px;min-height:100%;
+    font-family:var(--sans);
+    font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+.pt[data-theme="scuro"]{--selbg:hsl(202 30% 19%);
+  --bg1:#151D23;--bg2:#0D141A;--grid:rgba(216,232,240,.035);
+  --surface:#1B252C;--field:#141D24;--agbg:#151E25;--selbg:hsl(202 55% 96%); --track:rgba(216,232,240,.09);
+  --editbg:linear-gradient(#202B33,#1A242B);
+  --ink:#E7EEF1;--ink2:#B6C4CB;--muted:#8395A0;
+  --line:#28343C;--line2:#3A4A54;
+  --pen:#4A9BC9;--sage:#5FB395;--brass:#D0A050;--rust:#C0604F;
+  --info-bordo:#33454F; --info-fondo:#1B2A34; --info-testo:#C6D4DA;
+  --att-bordo:#8A6C2A;  --att-fondo:#2A2417;  --att-testo:#E8CF95;
+  --err-bordo:#8A3F35;  --err-fondo:#2B1917;  --err-testo:#F0C3BC;
+  --btnbg:#E7EEF1;--btnfg:#101A21;--btnbg2:#CFDBE0;
+  --ringbg:rgba(231,238,241,.13);
+  --focusbg:linear-gradient(158deg,#1B2A34,#16222B);--focusbd:#BE8C36;
+  --invitobg:linear-gradient(#1F2A22,#161E25);--invitotx:#D9BE7E;
+  --focusfg:#101C24;--focusdim:rgba(16,28,36,.38);--focusmut:rgba(16,28,36,.5);
+  --focusline:rgba(16,28,36,.11);--focusfield:rgba(16,28,36,.22);
+}
+@media (prefers-color-scheme:dark){.pt[data-theme="auto"]{
+  --bg1:#151D23;--bg2:#0D141A;--grid:rgba(216,232,240,.035);
+  --surface:#1B252C;--field:#141D24;--agbg:#151E25;--selbg:hsl(202 55% 96%); --track:rgba(216,232,240,.09);
+  --editbg:linear-gradient(#202B33,#1A242B);
+  --ink:#E7EEF1;--ink2:#B6C4CB;--muted:#8395A0;
+  --line:#28343C;--line2:#3A4A54;
+  --pen:#4A9BC9;--sage:#5FB395;--brass:#D0A050;--rust:#C05A38;
+  --info-bordo:#33454F; --info-fondo:#1B2A34; --info-testo:#C6D4DA;
+  --att-bordo:#8A6C2A;  --att-fondo:#2A2417;  --att-testo:#E8CF95;
+  --err-bordo:#8A3F35;  --err-fondo:#2B1917;  --err-testo:#F0C3BC;
+  --btnbg:#E7EEF1;--btnfg:#101A21;--btnbg2:#CFDBE0;
+  --ringbg:rgba(231,238,241,.13);
+  --focusbg:linear-gradient(158deg,#1B2A34,#16222B);--focusbd:#BE8C36;
+  --invitobg:linear-gradient(#1F2A22,#161E25);--invitotx:#D9BE7E;
+  --focusfg:#101C24;--focusdim:rgba(16,28,36,.38);--focusmut:rgba(16,28,36,.5);
+  --focusline:rgba(16,28,36,.11);--focusfield:rgba(16,28,36,.22);
+}}
+
+
+/* ---------- UI-002: quanto rumore nello sfondo ---------- */
+/* «tinta unita»: nessuna trama dietro il testo. */
+.pt[data-sfondo="unito"]{
+  background:linear-gradient(168deg,var(--bg1),var(--bg2));
+}
+/* «carta»: solo la sfumatura, senza reticolo, con un velo appena percettibile. */
+.pt[data-sfondo="carta"]{
+  background:
+    radial-gradient(ellipse at 20% 0%,rgba(190,140,54,.045),transparent 60%),
+    linear-gradient(168deg,var(--bg1),var(--bg2));
+}
+/* Quando il sistema chiede meno effetti, la trama sparisce comunque:
+   la preferenza dell'utente vale più del valore predefinito dell'app. */
+@media (prefers-reduced-transparency:reduce){
+  .pt{background:linear-gradient(168deg,var(--bg1),var(--bg2));}
+}
+@media (forced-colors:active){
+  .pt{background:Canvas;}
+  .pt .card{border:1px solid CanvasText;}
+}
