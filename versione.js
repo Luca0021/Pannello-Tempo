@@ -3,9 +3,9 @@
    «Informazioni» del pannello. */
 var BUILD = {
   "app": "1.0.0",
-  "sorgenti": "0f066be8fbd5",
+  "sorgenti": "29868d4bf9df",
   "commit": "",
   "schema": 5,
-  "cache": "pt-0f066be8",
-  "costruito": "2026-09-01T07:43:55Z"
+  "cache": "pt-29868d4b",
+  "costruito": "2026-09-01T09:31:56Z"
 };

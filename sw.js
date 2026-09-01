@@ -2,7 +2,7 @@
    Strategie distinte: lo scheletro dell'app va dalla cache (è statico e
    versionato), le chiamate ai servizi esterni vanno sempre in rete e non
    vengono mai messe in cache, perché conterrebbero dati personali. */
-var VERSIONE = 'pt-0f066be8';
+var VERSIONE = 'pt-29868d4b';
 var SCHELETRO = [
   './', './index.html', './offline.html', './landing.html',
   './manifest.webmanifest', './build.json',
@@ -117,7 +117,34 @@ self.addEventListener('fetch', function(e){
     return;
   }
 
-  /* risorse statiche: cache per prima, con aggiornamento silenzioso in sottofondo */
+  /* DIFETTO CORRETTO — schermo bianco dopo un aggiornamento.
+
+     Prima: la navigazione andava alla rete (quindi index.html era quello nuovo)
+     mentre le risorse statiche venivano servite dalla cache. Risultato: HTML
+     della build nuova insieme ai moduli della build vecchia. Una funzione che
+     la nuova pagina chiama e il vecchio modulo non definisce produce un
+     ReferenceError, e la pagina resta bianca.
+
+     Ora codice e stile seguono la stessa regola della pagina che li chiede:
+     prima la rete, la cache solo se la rete non c'è. Offline continua a
+     funzionare, e non si mescolano più due build. Immagini e icone restano
+     cache-first: non cambiano fra una build e l'altra e non possono
+     disallinearsi con il resto. */
+  var codice = /\.(js|css)$/.test(url.pathname) || /build\.json$/.test(url.pathname);
+
+  if (codice) {
+    e.respondWith(
+      fetch(req).then(function(r){
+        if (r && r.status === 200) {
+          var copia = r.clone();
+          caches.open(VERSIONE).then(function(c){ c.put(req, copia); });
+        }
+        return r;
+      }).catch(function(){ return caches.match(req); })
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(req).then(function(colpo){
       var rete = fetch(req).then(function(r){
