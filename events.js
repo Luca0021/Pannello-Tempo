@@ -16,10 +16,14 @@ function shift(n, unit){
 
 /* Azioni dopo le quali la pagina cambia del tutto: ancorare sarebbe sbagliato. */
 var ANCORA_MAI = ["digest","search","vaioggi","vaiagenda","vairitardi","gotoday",
-  "onb-avanti","onb-indietro","onb-salta","onb-fine","onb-demo","onb-apri",
+  "onb-avanti","onb-indietro","onb-salta","onb-fine","onb-demo","onb-apri","onb-fascia-salta",
   "ch-apri","ch-avanti","ch-indietro","ch-salva","ch-annulla",
   "rv-apri","rv-chiudi","rv-salva","rv-rinvia","menunuovo",
-  "nuovotask","nuovanota","nuovaroutine","profilo"];
+  "nuovotask","nuovanota","nuovaroutine","profilo",
+  "aggiorna-ora","aggiorna-dopo",
+  /* dopo un ripristino i dati sono altri: ancorare a un elemento che non
+     esiste più farebbe saltare la pagina in un punto qualsiasi */
+  "premigr-ripristina","copia-ripristina"];
 
 document.addEventListener("click", function(ev){
   var el = ev.target.closest("[data-act]");
@@ -613,6 +617,13 @@ document.addEventListener("click", function(ev){
   }
   else if (act === "flashclose") { S.flash = null; render(); }
   else if (act === "toastclose") { S.toast = null; render(); }
+  /* L'aggiornamento della PWA: la pagina lo chiede, il service worker lo
+     esegue. `skipWaiting` da solo non basta — il worker nuovo prende il
+     controllo ma la pagina resta quella vecchia, quindi si ricarica quando
+     `controllerchange` conferma il cambio. Il salvataggio viene prima: se
+     l'utente aveva scritto qualcosa, non lo perde ricaricando. */
+  else if (act === "aggiorna-ora") { applicaAggiornamento(); }
+  else if (act === "aggiorna-dopo") { S.aggiornamento = null; render(); }
   else if (act === "undoclose") { S.undo = null; render(); }
   else if (act === "undo") { undoNow(); }
   else if (act === "search") {
@@ -690,6 +701,15 @@ document.addEventListener("click", function(ev){
   /* --- onboarding --- */
   else if (act === "onb-avanti") { salvaPrioritaOnboarding(); passoOnboarding(S.onboarding.passo + 1); }
   else if (act === "onb-indietro") { salvaPrioritaOnboarding(); passoOnboarding(S.onboarding.passo - 1); }
+  /* Salta il solo passo della fascia: riporta gli orari al predefinito, così
+     `applicaScelteOnboarding()` trova una fascia valida da applicare invece di
+     scartarne una impossibile in silenzio. */
+  else if (act === "onb-fascia-salta") {
+    S.onboarding.fascia = { da: FASCIA_PREDEFINITA.da, a: FASCIA_PREDEFINITA.a };
+    svuota("onbfda", "onbfa");
+    salvaPrioritaOnboarding();
+    passoOnboarding(S.onboarding.passo + 1);
+  }
   else if (act === "onb-salta") { saltaOnboarding(); }
   else if (act === "onb-fine") { applicaScelteOnboarding(); chiudiOnboarding(); }
   else if (act === "onb-demo") { caricaDemo(); passoOnboarding(2); }
@@ -976,6 +996,37 @@ document.addEventListener("click", function(ev){
       S.data.lastBackup = dk();
       commit();
     }
+  }
+  /* Le copie di sicurezza locali: fino a questa correzione venivano create e
+     non erano raggiungibili da nessuna schermata. La scheda sta in
+     js/features/settings-ui.js. */
+  else if (act === "premigr-scarica") {
+    var pm = backupPreMigrazione();
+    if (!pm || !pm.dati) { S.err = "Non c'è una copia pre-migrazione su questo dispositivo."; render(); return; }
+    if (download(String(pm.dati), "pannello-tempo-pre-migrazione-"+String(pm.quando).slice(0,10)+".json",
+                 "application/json"))
+      toast("Copia scaricata: i dati sono come erano prima dell'aggiornamento", "ok");
+    else { S.err = "Il download non è partito."; render(); }
+  }
+  else if (act === "premigr-ripristina") {
+    if (!confirm("Rimettere i dati come erano prima dell'aggiornamento dello schema?\n\n"+
+                 "Quelli attuali vengono prima copiati, e il ripristino si può annullare.")) return;
+    var rp = ripristinaPreMigrazione();
+    if (rp.ok) toast("Ripristinata la copia del "+shortDate(String(rp.quando).slice(0,10)), "ok");
+    else { S.err = rp.motivo; render(); }
+  }
+  else if (act === "copia-ripristina") {
+    if (!(n >= 0)) return;
+    if (!confirm("Ripristinare questa copia?\n\n"+
+                 "I dati attuali vengono prima copiati, e il ripristino si può annullare.")) return;
+    var rb = ripristinaBackup(n);
+    if (rb.ok) toast("Copia ripristinata", "ok");
+    else { S.err = rb.motivo; render(); }
+  }
+  else if (act === "registro-scarica") {
+    if (!download(registroMigrazioniTesto(), "pannello-tempo-registro-migrazioni-"+dk()+".txt",
+                  "text/plain;charset=utf-8"))
+      { S.err = "Il download non è partito."; render(); }
   }
   else if (act === "sostpulisci") { S.sostDa = ""; S.sostA = ""; svuota("sost-da","sost-a"); render(); }
   else if (act === "sostituisci") {

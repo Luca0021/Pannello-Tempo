@@ -19,7 +19,11 @@ var S = {
   simCache: {}, simVer: 0, simCacheVer: -1, query: "", undo: null, focusKey: null,
   stepsOpen: null, addMore: false, toStep: null, flash: null, toast: null, digest: false, digTxt: "",
   pending: null, clearKeep: {}, ymap: null, chiediCausa: null, chiusura: null, flashChiusura: null,
-  onboarding: null, revisione: null, ancora: null, lDrag: null, sostDa: "", sostA: "", err: ""
+  onboarding: null, revisione: null, ancora: null, lDrag: null, sostDa: "", sostA: "", err: "",
+  /* `null` = nessuna versione nuova in attesa. Lo scrive js/pwa-boot.js quando
+     il service worker ne ha installata una; dichiarato qui come tutti gli altri
+     campi di stato, per la stessa ragione di `guidaAperta`. */
+  aggiornamento: null
 };
 
 /* Rimette in ordine dati arrivati da backup, sincronizzazione o versioni vecchie. */
@@ -72,6 +76,24 @@ function normalizeData(){
 
   var freqs = { daily:1, weekly:1, monthly:1, once:1, yearly:1 };
   d.items = d.items.filter(function(i){ return i && i.id; }).map(function(i){
+    /* DIFETTO CORRETTO — le attività non sapevano quando erano nate.
+
+       js/accumulo.js (REC-005) misura da quanto una voce sta lì con
+       `giorniInSospeso()`, che legge `i.creatoIl` e, in mancanza, la data
+       dell'ultima modifica in `data.versioni`. Ma `creatoIl` non veniva
+       scritto su nessuna attività — solo su modelli e condivisioni — e
+       `data.versioni` non ha una voce per gli elementi che nessuno ha ancora
+       toccato, perché `aggiornaVersioni()` salta di proposito il primo giro.
+       Risultato: `giorniInSospeso()` restituiva 0 per qualunque voce, e il
+       ramo «è qui da tre settimane senza una data» non poteva scattare mai.
+       Verificato: 0 giorni su una voce appena inserita e su tutte le altre.
+
+       Il timbro si mette qui e non nei sette punti che creano attività: è
+       l'unica funzione che le vede tutte, gira dopo ogni modifica ed è
+       idempotente. Per le voci che esistevano già il conteggio parte da oggi,
+       e va bene così: quando sono state create non lo sappiamo, e inventare
+       una data renderebbe falso proprio il numero che REC-005 mostra. */
+    if (!i.creatoIl) i.creatoIl = new Date().toISOString();
     if (!AREAS[i.area]) i.area = "lavoro";
     if (!freqs[i.freq]) i.freq = "daily";
     if (typeof i.label !== "string" || !i.label.trim()) i.label = "Senza nome";
@@ -194,6 +216,31 @@ function load(){
     d = grezzo ? JSON.parse(grezzo) : null;
   } catch (e) { d = null; }
 
+  /* DIFETTO CORRETTO — la migrazione non finiva mai su disco.
+
+     `migra()` restituiva i dati aggiornati, `S.data` li riceveva, e lì si
+     fermava: nessuno salvava. Su disco lo schema restava alla versione
+     vecchia per sempre, e a ogni singola apertura del pannello:
+
+       - l'intera catena di migrazioni veniva rieseguita da capo;
+       - `salvaBackupPreMigrazione()` riscriveva la copia di sicurezza,
+         perché `vecchia < SCHEMA_ATTUALE` era vero ogni volta — tenendo
+         così in memoria permanente due copie complete dei dati, quando il
+         commento qui sotto promette una copia che resta finché non viene
+         sostituita da una migrazione nuova;
+       - i campi creati dalla migrazione (con lo schema 5: `tipo` su 23
+         attività ricorrenti e `settings.routineSpiegata`) esistevano solo in
+         memoria, e sparivano alla chiusura.
+
+     Verificato aggiornando dalla build fcef637a9f70: su disco `v` restava 4 e
+     `tipo` non compariva su nessuna voce, mentre in memoria erano corretti.
+
+     Funzionava per caso, perché i passi di migrazione sono idempotenti e
+     perché la prima modifica dell'utente salvava tutto. Ma un passo non
+     idempotente introdotto in futuro avrebbe corrotto i dati a ogni avvio, e
+     il difetto non si sarebbe visto subito. Ora la migrazione si conclude
+     dove doveva concludersi: salvando. */
+  var migrato = false;
   if (d) {
     /* copia di sicurezza prima di toccare qualsiasi cosa, e migrazione su
        una copia: se qualcosa va storto i dati originali restano dove sono */
@@ -201,6 +248,7 @@ function load(){
     if (vecchia < SCHEMA_ATTUALE) salvaBackupPreMigrazione(grezzo);
     var esito = migra(d, function(t){ REGISTRO_MIGR.push(new Date().toISOString()+" — "+t); });
     d = esito.dati;
+    migrato = (esito.esito === "migrato");
     if (esito.esito === "errore") {
       S.err = "Aggiornamento dei dati non riuscito: sto usando i dati come erano. "+
               "Trovi la copia di sicurezza in Impostazioni.";
@@ -213,6 +261,10 @@ function load(){
   migratePrefs();
   normalizeData();
   rollover();
+  /* dopo la normalizzazione, così su disco finisce la forma definitiva e non
+     una intermedia; solo se una migrazione è avvenuta davvero, per non
+     riscrivere i dati a ogni apertura senza motivo */
+  if (migrato) save();
 }
 /* scorciatoie di lettura e scrittura delle impostazioni */
 function pref(chiave){

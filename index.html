@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-build="29868d4bf9df" data-cache="pt-29868d4b" data-schema="5">
+<html lang="it" data-build="a8ddcc9f88fb" data-cache="pt-a8ddcc9f" data-schema="5">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -11,10 +11,38 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%230F1B24' stroke-width='1.6'/%3E%3Cline x1='12' y1='3' x2='12' y2='6' stroke='%23BE8C36' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <title>Pannello Tempo — le priorità di oggi</title>
 <meta name="description" content="Scegli ciò che conta, organizza una giornata sostenibile, tieni in equilibrio lavoro e vita. Funziona offline, i dati restano tuoi.">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.github.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; form-action 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests">
+<!-- DIFETTO CORRETTO — la CSP bloccava l'aspetto del pannello.
+
+     `style-src 'self'` non vieta soltanto i fogli di stile esterni: vieta anche
+     l'attributo `style` sui singoli elementi. Il pannello ne scrive 141, e non
+     sono decorazioni: l'agenda posiziona ogni blocco orario con `top` e
+     `height` calcolati sull'ora. Con la CSP attiva il contenitore dell'agenda
+     restava alto 0 pixel e tutte le righe delle ore finivano sovrapposte a
+     top:0. Verificato in un browser: 57 elementi con attributo `style` nel
+     documento, zero stili applicati.
+
+     `style-src-elem 'self'` tiene la regola severa dove serve davvero — nessun
+     foglio di stile e nessun blocco <style> da fuori — e `style-src-attr
+     'unsafe-inline'` riammette i soli attributi `style`. I due nomi separati
+     non esistono però in tutti i browser (Firefox non li applica): per questo
+     `style-src` porta entrambi i valori, che è ciò a cui quei browser
+     ricadono. `script-src 'self'` resta intatto, ed è quello che conta contro
+     l'esecuzione di codice: un attributo `style` non esegue nulla.
+
+     La correzione giusta a lungo termine è togliere i 141 stili inline e
+     passare le misure con variabili CSS; è un lavoro a parte, e lasciare
+     l'agenda rotta nel frattempo non è un'opzione. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.github.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; form-action 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests">
+<!-- Nota, non un difetto da correggere qui: come `frame-ancestors`, anche
+     questo non ha effetto in un `<meta>`. L'elenco degli `http-equiv` che il
+     browser interpreta è chiuso, e `X-Content-Type-Options` non ne fa parte:
+     vale solo come intestazione HTTP. Resta perché GitHub Pages manda già
+     `x-content-type-options: nosniff` da sé, quindi la protezione c'è dove il
+     pannello è pubblicato — ma non è questa riga a darla, e valeva la pena
+     scriverlo invece di lasciar credere il contrario. -->
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="referrer" content="same-origin">
-<meta name="build" content="1.0.0 29868d4bf9df 2026-09-01T09:31:56Z">
+<meta name="build" content="1.0.0 a8ddcc9f88fb 2026-09-02T14:26:10Z">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icona-180.png">
 <!--CSS-->

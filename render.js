@@ -331,7 +331,7 @@ function renderInner(){
   var pross = prossimaCosa();
   h += '<!--Z:hero-->';
   h += '<div class="hero"><div class="heromain"><h1>'+
-       esc(S.now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"}))+'</h1>'+
+       esc(maiuscolaIniziale(S.now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})))+'</h1>'+
        '<div class="metriche">'+
        '<span class="metrica" role="button" tabindex="0" data-act="vaioggi" '+
        'title="Vai alle attività di oggi"><b>'+mineDone+'/'+mine.length+'</b> da fare</span>'+
@@ -701,7 +701,7 @@ function renderInner(){
       ? days[0].getDate()+" – "+days[6].toLocaleDateString("it-IT",{day:"numeric",month:"long"})
       : cursor().toLocaleDateString("it-IT",{month:"long",year:"numeric"});
   h += '<div class="nav"><button class="tiny" data-act="shift" data-n="-1" data-u="'+unit+'">‹</button>'+
-       '<b>'+esc(label)+'</b>'+
+       '<b>'+esc(maiuscolaIniziale(label))+'</b>'+
        '<button class="tiny" data-act="shift" data-n="1" data-u="'+unit+'">›</button>'+
        (isToday() ? '' : '<button class="tiny" data-act="gotoday">Oggi</button>')+'</div>';
   var yNow = new Date().getFullYear(), years = [];
@@ -1011,6 +1011,19 @@ function renderInner(){
       '<span class="sub">'+esc(S.undo.label)+'</span></span>'+
       '<span class="noteact"><button class="tiny warn2" data-act="undo">annulla</button>'+
       '<button class="chiudi" data-act="undoclose" title="Chiudi" aria-label="Chiudi"></button>'+
+      '</span></div>';
+  /* DIFETTO CORRETTO — la nuova versione non veniva mai annunciata.
+     js/pwa-boot.js chiamava mostraAggiornamento(), che non esisteva in nessun
+     modulo, e nessuno mandava mai «aggiorna-ora» al service worker: il worker
+     nuovo restava in attesa per sempre e il pannello continuava a mostrare la
+     build vecchia. Questa striscia è la parte mancante. Non ricarica da sola:
+     l'utente potrebbe stare scrivendo. */
+  if (S.aggiornamento)
+    strisce += '<div class="note note-undo"><span class="noteico">⟳</span>'+
+      '<span class="notetx"><b>C\'è una versione nuova del pannello</b>'+
+      '<span class="sub">Si applica ricaricando la pagina. Quello che hai scritto è già salvato.</span></span>'+
+      '<span class="noteact"><button class="tiny pos" data-act="aggiorna-ora">aggiorna</button>'+
+      '<button class="chiudi" data-act="aggiorna-dopo" title="Più tardi" aria-label="Più tardi"></button>'+
       '</span></div>';
   if (strisce) h += '<div class="notes">'+strisce+'</div>';
   /* NAV-001 — la navigazione resta anche durante ricerca e riepilogo: è il

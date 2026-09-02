@@ -62,8 +62,11 @@ function costanza(i, finestra){
   finestra = finestra || 28;
   if (!eRoutine(i)) return null;
   var dovuti = giorniDovuti(i, finestra);
-  if (!dovuti.length) return { dovuti:0, fatti:0, percentuale:null, testo:"non ancora in programma" };
-  var reg = String((S.data.log || {})[i.id] || "");
+  /* `giudizio` c'è anche qui: chi legge il risultato non deve scoprire che il
+     campo manca solo in questo caso */
+  if (!dovuti.length) return { dovuti:0, fatti:0, percentuale:null,
+                               testo:"non ancora in programma",
+                               giudizio:"troppo presto per dire qualcosa" };
   var fatti = dovuti.filter(function(g){ return fattoIl(i, g); }).length;
   var pc = Math.round(fatti * 100 / dovuti.length);
   return {

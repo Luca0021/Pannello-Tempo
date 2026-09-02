@@ -1,8 +1,9 @@
 {
  "app": "1.0.0",
- "sorgenti": "29868d4bf9df",
+ "sorgenti": "a8ddcc9f88fb",
+ "base": "29868d4bf9df",
  "commit": "",
  "schema": 5,
- "cache": "pt-29868d4b",
- "costruito": "2026-09-01T09:31:56Z"
+ "cache": "pt-a8ddcc9f",
+ "costruito": "2026-09-02T14:26:10Z"
 }

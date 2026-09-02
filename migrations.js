@@ -191,6 +191,46 @@ function backupPreMigrazione(){
   try { return JSON.parse(Platform.archivio.leggi(CHIAVE_BACKUP) || "null"); }
   catch (e) { return null; }
 }
+/* DIFETTO CORRETTO — la copia esisteva e non si poteva raggiungere.
+
+   `backupPreMigrazione()` era definita e non veniva chiamata da nessun modulo,
+   mentre js/state.js in caso di migrazione fallita diceva all'utente «Trovi la
+   copia di sicurezza in Impostazioni». Non c'era niente in Impostazioni: la
+   copia stava in memoria locale e nessuna schermata la mostrava. Lo stesso
+   valeva per `registroMigrazioniTesto()`, e per l'intero sistema di copie
+   automatiche di js/backup.js — `elencoBackup()` e `ripristinaBackup()` erano
+   anch'esse senza chiamanti, pur essendo alimentate a ogni azione distruttiva.
+
+   Questa funzione è la parte che mancava per la copia pre-migrazione. Il
+   pannello che le mostra tutte vive in js/features/settings-ui.js. */
+function ripristinaPreMigrazione(){
+  var b = backupPreMigrazione();
+  if (!b || !b.dati) return { ok:false, motivo:"Nessuna copia pre-migrazione su questo dispositivo." };
+  var d;
+  try { d = JSON.parse(b.dati); }
+  catch (e) { return { ok:false, motivo:"La copia risulta illeggibile e non viene applicata." }; }
+  if (!d || typeof d !== "object" || !Array.isArray(d.items))
+    return { ok:false, motivo:"La copia non contiene un insieme di dati valido." };
+  /* una copia prima del ripristino: tornare indietro dal ripristino deve
+     essere possibile quanto farlo */
+  salvaBackupAutomatico("prima del ripristino della copia pre-migrazione");
+  snapshot("Hai ripristinato i dati come erano prima dell'aggiornamento dello schema.",
+           "Vuoi annullare il ripristino?");
+  S.data = Object.assign(seed(), d);
+  /* La migrazione viene riapplicata, come fa `ripristinaBackup()`: far girare
+     il pannello su uno schema che il codice non si aspetta più sarebbe un
+     difetto peggiore di quello da cui si sta scappando. Chi ha bisogno dei
+     dati esattamente come erano usa «Scarica questa copia», che non li tocca. */
+  var m3 = migra(S.data);
+  S.data = m3.dati;
+  normalizeData();
+  if (typeof forzaProssimoCompleto === "function") {
+    S.disegnoCompleto = "dataset-sostituito"; forzaProssimoCompleto();
+  }
+  registraOperazione("ripristino", "copia pre-migrazione del " + b.quando);
+  commit();
+  return { ok:true, quando: b.quando };
+}
 function registroMigrazioniTesto(){
   return REGISTRO_MIGR.length
     ? REGISTRO_MIGR.join("\n")

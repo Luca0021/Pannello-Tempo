@@ -428,13 +428,14 @@ function zonaImpostazioni(){
     '<span class="cnt">'+esc(BUILD.app)+'</span></button></h2>'+
     '<p class="hint" style="margin-top:0">'+esc(PROMESSA)+'</p>'+
     '<ul class="linklist">'+[
-      ["Versione", BUILD.app],
+      ["Versione", BUILD.app]
+    ].concat(BUILD.base ? [["Derivata dalla build", BUILD.base]] : []).concat([
       ["Impronta dei sorgenti", BUILD.sorgenti],
       ["Commit", BUILD.commit || "non disponibile (fuori da un repository)"],
       ["Schema dati", "v"+BUILD.schema],
       ["Cache del service worker", BUILD.cache],
       ["Costruito il", BUILD.costruito]
-    ].map(function(x){
+    ]).map(function(x){
       return '<li><span class="txt">'+esc(x[0])+'</span>'+
              '<span class="acts"><code class="tec">'+esc(String(x[1]))+'</code></span></li>';
     }).join("")+'</ul>'+
@@ -524,28 +525,20 @@ function zonaImpostazioni(){
     })()+
     '<p class="hint">'+esc(tempoTesto(cursor()))+'</p></div>';
 
-  /* PRV-001 — privacy e dati */
-  SEZ[sezCorrente] += '<div class="card'+(folded("setpriv") ? " chiusa" : "")+'">'+
-    '<h2 data-ico="dati" ><button class="foldbtn" type="button" data-act=\"fold\" data-v="setpriv" '+
-    'aria-expanded="'+(!folded("setpriv"))+'"><span>Privacy e dati</span>'+
-    '<span class="caret">'+(folded("setpriv") ? "▸" : "▾")+'</span></button></h2>'+
-    '<p class="hint" style="margin-top:0"><b>Dove stanno i tuoi dati.</b> Nella memoria di '+
-    'questo browser. '+(syncReady()
-      ? 'In più vengono inviati al servizio che hai collegato tu.'
-      : 'Non esiste alcun server nostro che li riceva.')+'</p>'+
-    '<p class="grp">Porta via i tuoi dati</p>'+
-    '<div class="row"><button class="tiny" data-act="exp-json">Tutto (JSON)</button>'+
-    '<button class="tiny" data-act="exp-csv">Attività (CSV)</button>'+
-    '<button class="tiny" data-act="exp-ics">Impegni (ICS)</button></div>'+
-    '<p class="grp">Analisi personali</p>'+
-    '<label class="riga-flag"><input type="checkbox" data-chg="set-analisi"'+
-    (analisiAttive() ? " checked" : "")+'> Fammi notare gli schemi che emergono dai miei dati</label>'+
-    '<p class="hint">Il calcolo avviene su questo dispositivo. Ogni osservazione dichiara su '+
-    'quanti dati si basa.</p>'+
-    '<p class="grp">Cancella</p>'+
-    '<div class="row"><button class="tiny" data-act="del-cronologia">Cancella la cronologia</button>'+
-    '<button class="tiny danger" data-act="del-tutto">Cancella tutto</button></div></div>';
+  /* DIFETTO CORRETTO — «Privacy e dati» compariva due volte.
 
+     Qui c'era una seconda copia della scheda, più corta e priva dell'elenco
+     dei dati usati dalle analisi. La versione completa di PRV-001 è quella
+     sopra, nella sezione «privacy»; questa era rimasta indietro in «giornata»,
+     che parla della fascia oraria e non della privacy.
+
+     Non era solo disordine: le due schede condividevano la chiave di
+     piegatura `setpriv`, quindi si aprivano e si chiudevano insieme, e
+     duplicavano i comandi. In particolare due caselle diverse pilotavano la
+     stessa impostazione `set-analisi` e due pulsanti «Cancella tutto»
+     comparivano nella stessa pagina: verificato nel documento, due caselle e
+     due pulsanti. Un comando distruttivo presentato due volte in posti
+     diversi è esattamente ciò che BCK-002 aveva cercato di eliminare. */
 
   inSezione("backup");
   /* BCK-002 — le azioni distruttive, ciascuna con il proprio effetto */
@@ -583,6 +576,73 @@ function zonaImpostazioni(){
        '<button class="add ghost" data-act="wipe">Svuota tutto</button>'+
        '<button class="add ghost" data-act="importclick">Importa backup</button>'+
        '<input type="file" id="importfile" accept="application/json,.json" style="display:none"></div></div>';
+
+  /* DIFETTO CORRETTO — le copie di sicurezza esistevano e non si vedevano.
+
+     Il pannello ne creava due famiglie e non mostrava né l'una né l'altra:
+
+       - le copie automatiche di js/backup.js, scritte prima di ogni azione
+         distruttiva (fino a cinque, a rotazione). `elencoBackup()` e
+         `ripristinaBackup()` non avevano un solo chiamante in tutti i 58
+         moduli, e la scheda «Rimuovere e ripristinare» qui sopra prometteva
+         «Copia di sicurezza prima di procedere» senza dare il modo di usarla;
+       - la copia pre-migrazione di js/migrations.js, con js/state.js che in
+         caso di migrazione fallita diceva «Trovi la copia di sicurezza in
+         Impostazioni». Non c'era.
+
+     Il risultato peggiore non era l'assenza del comando: era che quelle copie
+     occupavano memoria locale — fino a sei insiemi di dati completi — mentre
+     `save()` poteva fallire con «Spazio esaurito» e nessuno poteva liberarle
+     né usarle. Una copia che non si può ripristinare non è una copia.
+
+     Anche `registroMigrazioniTesto()` era senza chiamanti, mentre le migrazioni
+     dichiarano un «registro tecnico esportabile». Ora è qui. */
+  (function(){
+    var auto = elencoBackup();
+    var pre = backupPreMigrazione();
+    var reg = registroMigrazioniTesto();
+    if (!auto.length && !pre && REGISTRO_MIGR.length === 0) return;
+    var byte = 0;
+    auto.forEach(function(b){ byte += (b.byte || 0); });
+    if (pre && pre.dati) byte += String(pre.dati).length;
+
+    SEZ.backup += '<div class="card'+(folded("setcopie") ? " chiusa" : "")+'">'+
+      '<h2 data-ico="dati" ><button class="foldbtn" type="button" data-act=\"fold\" data-v="setcopie" '+
+      'aria-expanded="'+(!folded("setcopie"))+'"><span>Copie su questo dispositivo</span>'+
+      '<span class="caret">'+(folded("setcopie") ? "▸" : "▾")+'</span>'+
+      '<span class="cnt">'+(auto.length + (pre ? 1 : 0))+'</span></button></h2>'+
+      '<p class="hint" style="margin-top:0">Copie che il pannello ha creato da sé, '+
+      'prima delle azioni che possono far perdere dati. Occupano '+
+      Math.round(byte/1024)+' KB nella memoria di questo browser. '+
+      'Non sostituiscono un backup esportato: se cancelli i dati del sito, spariscono anche loro.</p>';
+
+    if (pre)
+      SEZ.backup += '<ul class="linklist"><li><span class="txt">Prima dell\'aggiornamento dello schema'+
+        '<span class="sub">Del '+esc(shortDate(String(pre.quando).slice(0,10)))+
+        '. È lo stato dei dati prima che le migrazioni li toccassero.'+
+        ' «Scarica» non li modifica; «Ripristina» riapplica le migrazioni, come per le altre copie.</span></span>'+
+        '<span class="acts"><button class="tiny" data-act="premigr-scarica">Scarica</button>'+
+        '<button class="tiny warn2" data-act="premigr-ripristina">Ripristina</button></span></li></ul>';
+
+    if (auto.length)
+      SEZ.backup += '<ul class="linklist">'+auto.map(function(b, n){
+        var integro = backupIntegro(b);
+        return '<li><span class="txt">'+esc(b.motivo || "copia automatica")+
+          '<span class="sub">Del '+esc(shortDate(String(b.quando).slice(0,10)))+
+          ' · '+Math.round((b.byte||0)/1024)+' KB'+
+          (integro ? '' : ' · <b>risulta danneggiata: non verrà applicata</b>')+'</span></span>'+
+          '<span class="acts"><button class="tiny'+(integro ? " warn2" : "")+'" '+
+          'data-act="copia-ripristina" data-n="'+n+'"'+(integro ? '' : ' disabled')+'>Ripristina</button>'+
+          '</span></li>';
+      }).reverse().join("")+'</ul>';
+
+    if (REGISTRO_MIGR.length)
+      SEZ.backup += '<p class="lbl">Registro delle migrazioni di questa sessione</p>'+
+        '<textarea class="icsbox" readonly>'+esc(reg)+'</textarea>'+
+        '<div class="row"><button class="tiny" data-act="registro-scarica">Scarica il registro</button></div>';
+
+    SEZ.backup += '</div>';
+  })();
 
 
   h += '<!--Z:settings-->';

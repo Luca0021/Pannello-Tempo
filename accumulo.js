@@ -18,14 +18,24 @@ var SOGLIA_GIORNI_FERMA = 21; /* una voce senza data che sta lì da tre settiman
 
 function rinviiDi(id){ return (S.data.rinvii || {})[id] || 0; }
 
-/* Da quanto una voce sta nel pannello senza essere stata completata. */
+/* Da quanto una voce sta nel pannello senza essere stata completata.
+
+   `creatoIl` viene ora timbrato da `normalizeData()` in js/state.js: prima non
+   lo scriveva nessuno e questa funzione restituiva 0 su qualunque voce, il che
+   rendeva irraggiungibile il ramo «ferma» di `inAccumulo()`.
+
+   La data dell'ultima modifica resta come ripiego per i dati che arrivano da
+   un backup vecchio, ma è un ripiego e non un equivalente: `mod` si sposta a
+   ogni modifica, quindi una voce ritoccata ieri risulterebbe nata ieri. Con
+   `creatoIl` presente non viene mai usata. */
 function giorniInSospeso(i){
   if (!i) return 0;
   var da = i.creatoIl || (S.data.versioni && S.data.versioni[i.id] && S.data.versioni[i.id].mod);
   if (!da) return 0;
   var d = new Date(da);
   if (isNaN(d.getTime())) return 0;
-  return Math.max(0, Math.round((Date.now() - d.getTime()) / 86400000));
+  var ora = (S.now instanceof Date) ? S.now.getTime() : Date.now();
+  return Math.max(0, Math.round((ora - d.getTime()) / 86400000));
 }
 
 /* Le voci che si stanno accumulando, con il motivo. Ordinate per gravità:
@@ -40,9 +50,27 @@ function inAccumulo(){
     if (r >= SOGLIA_RINVII)
       out.push({ item:i, rinvii:r, giorni:g, motivo:"rimandata",
                  testo:"L'hai rimandata " + r + " volte." });
-    else if (i.freq === "once" && g >= SOGLIA_GIORNI_FERMA && !validKey(i.date))
+    /* DIFETTO CORRETTO — questo ramo non poteva scattare.
+
+       La condizione era `!validKey(i.date)`: una voce singola senza una data
+       valida. Ma `normalizeData()` in js/state.js contiene la riga
+
+         if (i.freq === "once" && !validKey(i.date)) i.date = dayKey(new Date());
+
+       e gira a ogni caricamento e dopo ogni modifica. Quello stato non esiste
+       mai: la condizione era falsa per costruzione, non per i dati. Insieme a
+       `giorniInSospeso()` che restituiva sempre 0, metà di REC-005 era codice
+       che non si eseguiva.
+
+       Ciò che si può davvero riconoscere è una voce singola aperta da tre
+       settimane per cui nessuno ha mai spostato la data avanti: la data c'è,
+       ma non è una decisione, è il giorno in cui è stata scritta. Il testo
+       dice adesso quello che il pannello sa, invece di parlare di una data
+       mancante che non può mancare. */
+    else if (i.freq === "once" && g >= SOGLIA_GIORNI_FERMA &&
+             String(i.date || "") <= dk())
       out.push({ item:i, rinvii:r, giorni:g, motivo:"ferma",
-                 testo:"È qui da " + g + " giorni senza una data." });
+                 testo:"È qui da " + g + " giorni e non l'hai mai programmata." });
   });
   out.sort(function(a, b){ return (b.rinvii - a.rinvii) || (b.giorni - a.giorni); });
   return out;

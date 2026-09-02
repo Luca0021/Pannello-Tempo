@@ -65,9 +65,28 @@ function onboardingHtml(){
       '<div class="ctrl"><label class="lbl" for="onbfa">Finisco alle</label>'+
       '<input type="time" id="onbfa" data-keep="onbfa" data-chg="onb-fa" step="900" '+
       'value="'+esc(oraHHMM(fa))+'"></div></div>'+
-      '<p class="hint">Sono '+esc(dur2s(Math.max(0, fa - fda)))+' al giorno. '+
-      'Potrai dare orari diversi ai singoli giorni dalle impostazioni.</p>'+
-      '<div class="schazioni"><button class="add" data-act="onb-avanti">Avanti</button>'+
+      /* DIFETTO CORRETTO — una fascia impossibile veniva scartata senza dirlo.
+
+         `applicaScelteOnboarding()` in js/onboarding.js applica la fascia solo
+         se `o.fascia.a > o.fascia.da`. Giusto: una giornata che finisce prima
+         di cominciare non esiste. Ma qui non lo si diceva: mettendo 08:00 e
+         07:00 il suggerimento passava a «Sono 0m al giorno», «Avanti» restava
+         attivo, e la scelta veniva buttata via lasciando la fascia
+         predefinita. L'utente credeva di aver impostato la sua giornata e ne
+         aveva un'altra. Ora il problema è dichiarato dove nasce, e «Avanti»
+         non finge di accettare un valore che verrà ignorato. */
+      (fa > fda
+        ? '<p class="hint">Sono '+esc(dur2s(fa - fda))+' al giorno. '+
+          'Potrai dare orari diversi ai singoli giorni dalle impostazioni.</p>'
+        : '<p class="warn">L\'ora di fine deve venire dopo quella di inizio. '+
+          'Correggila, oppure salta questo passo: la fascia resta '+
+          esc(oraHHMM(FASCIA_PREDEFINITA.da))+'–'+esc(oraHHMM(FASCIA_PREDEFINITA.a))+
+          ' e la cambi quando vuoi dalle impostazioni.</p>')+
+      '<div class="schazioni">'+
+      (fa > fda
+        ? '<button class="add" data-act="onb-avanti">Avanti</button>'
+        : '<button class="add" data-act="onb-avanti" disabled>Avanti</button>'+
+          '<button class="tiny" data-act="onb-fascia-salta">Salta questo passo</button>')+
       '<button class="tiny" data-act="onb-indietro">Indietro</button></div>';
   }
   else if (o.passo === 4) {

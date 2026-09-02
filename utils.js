@@ -4,6 +4,14 @@
    anche da file:// senza server. */
 /* ---------- utilità ---------- */
 function pad(n){ return String(n).padStart(2,"0"); }
+/* Solo la prima lettera. Sostituisce `text-transform:capitalize`, che in
+   italiano è sbagliato — i nomi dei mesi e dei giorni vanno minuscoli, e sui
+   titoli produceva un maiuscolo alla inglese. Vedi la nota su `.pt h1` in
+   css/components.css. */
+function maiuscolaIniziale(t){
+  t = String(t == null ? "" : t);
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+}
 function dayKey(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
 function monthKey(d){ return d.getFullYear()+"-M"+pad(d.getMonth()+1); }
 function weekKey(d){
