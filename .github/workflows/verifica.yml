@@ -1,0 +1,247 @@
+name: Verifica
+
+# Si avvia da sola su ogni push su main e su ogni pull request, e a mano dal
+# pulsante «Run workflow»: `workflow_dispatch` è dichiarato, quindi il
+# pulsante c'è. Istruzioni passo per passo in RUN-CI.md.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: "Ambiente della configurazione Firebase generata"
+        required: true
+        default: "emulatore"
+        type: choice
+        options: [emulatore, non-configurato, staging]
+      aggiorna_riferimenti_visivi:
+        description: "Rigenera gli scatti di riferimento (usare con cautela)"
+        required: false
+        default: false
+        type: boolean
+
+# Il progetto di produzione non deve essere raggiungibile da qui.
+# `PT_PROGETTO_TEST` comincia per `demo-`, che l'emulatore riconosce come
+# progetto dimostrativo, e i collaudi si interrompono se non è così.
+env:
+  PT_PROGETTO_TEST: demo-pannello
+  PT_BASE_URL: http://127.0.0.1:8765
+  # `__PT_TEST__` fa scattare vietaProduzioneNeiTest() nel codice.
+  PT_MODO_TEST: "1"
+
+jobs:
+
+  # ───────────────────────────────────────────────────────────────────────
+  # 1. BUILD — determinismo, unit, integrazione, avvio, sicurezza statica
+  # ───────────────────────────────────────────────────────────────────────
+  build:
+    name: Build e collaudi locali
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Java (serve all'emulatore Firestore)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Dipendenze
+        run: npm ci || npm install
+
+      - name: Configurazione Firebase per i collaudi
+        # Mai la produzione: l'ambiente arriva dall'input, e il valore
+        # predefinito è l'emulatore.
+        run: node strumenti/genera-config-firebase.mjs --ambiente "${{ inputs.ambiente || 'emulatore' }}"
+
+      - name: Nessun segreto nell'albero
+        # Prima di tutto il resto: se un segreto è entrato nel repository,
+        # tutto ciò che segue è secondario.
+        run: node strumenti/controlla-segreti.mjs
+
+      - name: Build
+        run: node strumenti/build.mjs
+
+      - name: Doppia build deterministica
+        # Due build consecutive devono produrre la stessa impronta. Se
+        # cambia, qualcosa dipende dall'ora o dall'ordine dei file, e le
+        # cache dei service worker degli utenti diventano inaffidabili.
+        run: |
+          node strumenti/build.mjs --solo-impronta > /tmp/impronta-1.txt
+          node strumenti/build.mjs --solo-impronta > /tmp/impronta-2.txt
+          diff /tmp/impronta-1.txt /tmp/impronta-2.txt || {
+            echo "BUILD NON DETERMINISTICA";
+            cat /tmp/impronta-1.txt /tmp/impronta-2.txt;
+            exit 1;
+          }
+          echo "impronta stabile: $(cat /tmp/impronta-1.txt)"
+
+      - name: Impronta coerente nei quattro punti
+        # build.json, js/versione.js, sw.js e index.html devono coincidere.
+        # Se divergono, il service worker serve una build e la pagina un'altra.
+        run: node strumenti/controlla-impronta.mjs
+
+      - name: Unit test
+        run: node tests/runner.js --solo unit
+
+      - name: Integration test
+        run: node tests/runner.js --solo integration
+
+      - name: Test di avvio
+        # Il pannello deve disegnarsi senza errori in un DOM finto: un
+        # ReferenceError in un modulo lascia la pagina bianca, e questo lo
+        # scopre prima del browser.
+        run: node tests/avvio.test.js
+
+      - name: Regole Firestore su Emulator
+        # `emulators:exec` avvia l'emulatore, esegue e spegne. Il codice 2
+        # del collaudo significa SALTATO, e qui è un fallimento: in CI la
+        # libreria c'è, quindi «saltato» vuol dire che qualcosa non va.
+        run: |
+          npx firebase emulators:exec \
+            --only firestore,auth \
+            --project "$PT_PROGETTO_TEST" \
+            "node tests/security/regole.test.js"
+
+      - name: Artefatti della build
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: |
+            build.json
+            /tmp/impronta-*.txt
+          retention-days: 30
+
+  # ───────────────────────────────────────────────────────────────────────
+  # 2. BROWSER — Playwright, CSP, PWA, offline, responsive, accessibilità
+  # ───────────────────────────────────────────────────────────────────────
+  browser:
+    name: Collaudi in browser
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Dipendenze
+        run: npm ci || npm install
+
+      - name: Configurazione Firebase per i collaudi
+        run: node strumenti/genera-config-firebase.mjs --ambiente "${{ inputs.ambiente || 'emulatore' }}"
+
+      - name: Build
+        run: node strumenti/build.mjs
+
+      - name: Installa il browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Servi il sito
+        # Un server statico vero: `file://` non registra i service worker e
+        # non applica la Content Security Policy, quindi collaudarci non
+        # dimostra niente. È l'errore che ha lasciato passare una CSP rotta.
+        run: |
+          npx http-server . -p 8765 -c-1 --silent &
+          npx wait-on http://127.0.0.1:8765/build.json -t 30000
+
+      - name: Terminologia della UI consumer
+        run: npx playwright test tests/ui/terminologia.spec.js --project=${{ matrix.browser }}
+
+      - name: Indicatore Lavoro/Vita (UI-006)
+        run: npx playwright test tests/ui/ui006.spec.js --project=${{ matrix.browser }}
+        env:
+          # Rigenera i riferimenti solo se richiesto a mano.
+          PW_UPDATE_SNAPSHOTS: ${{ inputs.aggiorna_riferimenti_visivi && 'all' || 'none' }}
+
+      - name: Sentinelle dei segreti
+        run: npx playwright test tests/security/sentinelle.test.js --project=${{ matrix.browser }}
+
+      - name: Cancellazione
+        run: npx playwright test tests/e2e/cancellazione.spec.js --project=${{ matrix.browser }}
+
+      - name: CSP, PWA, offline, responsive
+        run: npx playwright test tests/e2e/piattaforma.spec.js --project=${{ matrix.browser }}
+
+      - name: Accessibilità
+        run: npx playwright test tests/a11y/ --project=${{ matrix.browser }}
+
+      - name: Rapporto e scatti
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ matrix.browser }}
+          path: |
+            playwright-report/
+            test-results/
+            tests/ui/ui006.spec.js-snapshots/
+          retention-days: 30
+
+  # ───────────────────────────────────────────────────────────────────────
+  # 3. VERDETTO — un solo posto dove guardare
+  # ───────────────────────────────────────────────────────────────────────
+  verdetto:
+    name: Verdetto
+    runs-on: ubuntu-latest
+    needs: [build, browser]
+    if: always()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scarica gli artefatti
+        uses: actions/download-artifact@v4
+        with:
+          path: artefatti
+
+      - name: Riepilogo
+        run: |
+          {
+            echo "## Verifica di Pannello Tempo"
+            echo ""
+            echo "| Lavoro | Esito |"
+            echo "|---|---|"
+            echo "| Build e collaudi locali | ${{ needs.build.result }} |"
+            echo "| Collaudi in browser | ${{ needs.browser.result }} |"
+            echo ""
+            echo "Impronta: \`$(cat artefatti/build/impronta-1.txt 2>/dev/null || echo 'non disponibile')\`"
+            echo ""
+            echo "### Che cosa fare di questo esito"
+            echo ""
+            echo "Gli stati dei ticket in BACKLOG-COVERAGE.md si aggiornano SOLO"
+            echo "con un esito reale davanti. In particolare:"
+            echo ""
+            echo "- **SEC-002** passa a COMPLETATO solo se il passo «Regole Firestore"
+            echo "  su Emulator» riporta \`falliti: 0\`."
+            echo "- **UI-006** passa a COMPLETATO solo se la regressione visiva è"
+            echo "  verde con riferimenti approvati, non appena generati."
+            echo "- **PRV-002** passa a COMPLETATO solo se «Cancellazione» è verde."
+            echo ""
+            echo "Vedi RUN-CI.md, sezione «Che cosa restituire»."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fallisci se qualcosa è rosso
+        if: needs.build.result != 'success' || needs.browser.result != 'success'
+        run: |
+          echo "Almeno un lavoro non è riuscito: vedi il riepilogo."
+          exit 1

@@ -1,0 +1,44 @@
+{
+  "name": "pannello-tempo",
+  "version": "1.0.0",
+  "description": "Pannello Tempo — le priorità di oggi. Applicazione web e PWA senza dipendenze a runtime.",
+  "private": true,
+  "type": "module",
+  "_commento": [
+    "Nessuna dipendenza a RUNTIME, e non è un vanto casuale: il pannello",
+    "carica solo i propri file, quindi non esiste una catena di fornitura",
+    "da cui possa arrivare codice ostile, e `script-src 'self'` è",
+    "sostenibile. Le dipendenze qui sotto servono ai collaudi e alla build,",
+    "e non finiscono nel sito.",
+    "",
+    "Vedi RUN-CI.md per i comandi, FIREBASE-SETUP.md per la configurazione."
+  ],
+  "scripts": {
+    "build": "node strumenti/build.mjs",
+    "impronta": "node strumenti/build.mjs --solo-impronta",
+    "config": "node strumenti/genera-config-firebase.mjs --ambiente emulatore",
+    "config:produzione": "node strumenti/genera-config-firebase.mjs --ambiente produzione",
+    "segreti": "node strumenti/controlla-segreti.mjs",
+    "coerenza": "node strumenti/controlla-impronta.mjs",
+    "servi": "http-server . -p 8765 -c-1",
+    "test:unit": "node tests/runner.js --solo unit",
+    "test:integration": "node tests/runner.js --solo integration",
+    "test:avvio": "node tests/avvio.test.js",
+    "test:regole": "firebase emulators:exec --only firestore,auth --project demo-pannello \"node tests/security/regole.test.js\"",
+    "test:browser": "playwright test",
+    "test:visivi": "playwright test tests/ui/ui006.spec.js",
+    "test:visivi:approva": "playwright test tests/ui/ui006.spec.js --update-snapshots",
+    "verifica": "npm run segreti && npm run build && npm run coerenza && npm run test:unit && npm run test:integration && npm run test:avvio"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "@playwright/test": "^1.48.0",
+    "firebase-tools": "^13.0.0",
+    "http-server": "^14.1.1",
+    "wait-on": "^8.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
