@@ -19,6 +19,7 @@ js/stati.js
 js/sync.js
 js/sync-provider.js
 js/coda.js
+js/appcheck.js
 js/account.js
 js/privacy.js
 js/routine.js

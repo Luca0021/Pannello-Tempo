@@ -487,6 +487,33 @@ function verificaCollegamento(){
 }
 function pushNow(force){
   if (!syncReady() || sync.busy) return;
+  /* SEC-008 — tre cancelli prima di parlare col servizio: sospensione in
+     corso, attesa dopo un errore, e invio già partito da poco. Ognuno
+     restituisce il proprio motivo, che finisce nello stato invece di
+     produrre un silenzio inspiegabile. */
+  if (typeof puoInviare === "function") {
+    var via = puoInviare();
+    if (!via.ok && !force) { sync.attesaMotivo = via.motivo; render(); return; }
+  }
+  /* Un dataset oltre il limite non va spedito a pezzi: si dice all'utente
+     che è troppo grande e cosa può fare. */
+  if (typeof datasetTroppoGrande === "function") {
+    var g = datasetTroppoGrande();
+    if (g.troppo) {
+      sync.err = erroreSync("Dati troppo grandi per la sincronizzazione", g.motivo,
+        "I dati restano al sicuro su questo dispositivo.");
+      setStatus("errore"); render(); return;
+    }
+  }
+  sync.attesaMotivo = "";
+  if (typeof registraScambio === "function") {
+    var c = registraScambio("invio");
+    if (c.ciclo) {
+      sync.err = erroreSync("Sincronizzazione sospesa", c.motivo,
+        "Riprova fra qualche minuto.");
+      setStatus("errore"); render(); return;
+    }
+  }
   sync.busy = true; setStatus("salvataggio…"); render();
   readRemote().then(function(txt){
     var r = remoteRevOf(txt);
@@ -497,24 +524,36 @@ function pushNow(force){
                     savedAt:new Date().toISOString(), data:S.data };
     return writeRemote(JSON.stringify(payload)).then(function(){
       sync.rev = payload.rev; sync.dirty = false; sync.conflict = null;
-      /* invio riuscito: la coda si svuota e l'attesa di riprova si azzera */
+      /* invio riuscito: la coda si svuota e il ritmo si azzera */
       if (typeof svuotaCoda === "function") { svuotaCoda(); save(); }
-      if (typeof ATTESA_RIPROVA !== "undefined") ATTESA_RIPROVA = 0;
+      if (typeof azzeraRitmo === "function") azzeraRitmo();
+      else if (typeof ATTESA_RIPROVA !== "undefined") ATTESA_RIPROVA = 0;
       setStatus("sincronizzato"); saveSync(); sync.busy = false; render();
     });
   }).catch(function(e){
-    /* attesa crescente prima di riprovare: niente martellamento (SEC-008) */
-    if (typeof ATTESA_RIPROVA !== "undefined") {
-      sync.tentativi = (sync.tentativi || 0) + 1;
-      ATTESA_RIPROVA = Date.now() + Math.min(300000, 5000 * Math.pow(2, Math.min(6, sync.tentativi)));
-    }
-    sync.err = dettaglioErrore(e); setStatus("errore"); sync.busy = false; render();
+    /* SEC-008 — l'attesa crescente e il limite dei tentativi vivono in
+       js/appcheck.js: erano calcolati qui, due volte, con la stessa formula
+       copiata. Due copie della stessa regola di ritmo divergono al primo
+       cambiamento, e nessuno se ne accorge perché il sintomo è «a volte
+       riprova troppo presto». */
+    if (typeof registraErroreSync === "function") registraErroreSync(e);
+    sync.err = dettaglioErrore(e);
+    if (typeof RITMO !== "undefined" && RITMO.motivoSospensione)
+      sync.err.cosa = RITMO.motivoSospensione;
+    setStatus("errore"); sync.busy = false; render();
   });
 }
 function pullNow(){
   if (!syncReady() || sync.busy) return;
   if (S.editId || S.linkEdit || S.dragging) { sync.pendingPull = true; return; }
   sync.pendingPull = false;
+  if (typeof registraScambio === "function") {
+    var cl = registraScambio("lettura");
+    if (cl.ciclo) {
+      sync.err = erroreSync("Sincronizzazione sospesa", cl.motivo, "Riprova fra qualche minuto.");
+      setStatus("errore"); render(); return;
+    }
+  }
   sync.busy = true; setStatus("lettura…"); render();
   readRemote().then(function(txt){
     var r = remoteRevOf(txt);
@@ -551,12 +590,16 @@ function pullNow(){
     } else setStatus("sincronizzato");
     sync.busy = false; render();
   }).catch(function(e){
-    /* attesa crescente prima di riprovare: niente martellamento (SEC-008) */
-    if (typeof ATTESA_RIPROVA !== "undefined") {
-      sync.tentativi = (sync.tentativi || 0) + 1;
-      ATTESA_RIPROVA = Date.now() + Math.min(300000, 5000 * Math.pow(2, Math.min(6, sync.tentativi)));
-    }
-    sync.err = dettaglioErrore(e); setStatus("errore"); sync.busy = false; render();
+    /* SEC-008 — l'attesa crescente e il limite dei tentativi vivono in
+       js/appcheck.js: erano calcolati qui, due volte, con la stessa formula
+       copiata. Due copie della stessa regola di ritmo divergono al primo
+       cambiamento, e nessuno se ne accorge perché il sintomo è «a volte
+       riprova troppo presto». */
+    if (typeof registraErroreSync === "function") registraErroreSync(e);
+    sync.err = dettaglioErrore(e);
+    if (typeof RITMO !== "undefined" && RITMO.motivoSospensione)
+      sync.err.cosa = RITMO.motivoSospensione;
+    setStatus("errore"); sync.busy = false; render();
   });
 }
 function scheduleSync(){
