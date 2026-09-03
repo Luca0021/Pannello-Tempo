@@ -1070,16 +1070,28 @@ document.addEventListener("click", function(ev){
   else if (act === "syncprova") { verificaCollegamento(); }
   else if (act === "errchiudi") { sync.err = null; setStatus(sync.status === "errore" ? "" : sync.status); render(); }
   else if (act === "syncprovachiudi") { sync.prova = null; render(); }
-  else if (act === "syncoff") {
-    if (!confirm("Disconnettere l'account? I dati restano su questo dispositivo.")) return;
-    /* una sola via d'uscita, quella che verifica di non lasciare residui */
-    var u = esciAccount();
-    if ((u.residui || []).length)
+  /* SEC-001 — la disconnessione chiede COSA FARE DEI DATI LOCALI invece di
+     decidere al posto dell'utente. Prima li teneva sempre, senza dirlo:
+     chi si disconnette su un computer condiviso si aspetta il contrario. */
+  else if (act === "syncoff") { S.confermaUscita = { pendenti: (typeof inCoda === "function") ? inCoda() : 0,
+                                                     daInviare: !!sync.dirty }; render(); }
+  else if (act === "uscita-annulla") { S.confermaUscita = null; render(); }
+  else if (act === "uscita-conferma") {
+    var tieni = v !== "cancella";
+    var u = esciAccount(tieni);
+    S.confermaUscita = null;
+    /* la verifica indipendente vale più della dichiarazione della funzione */
+    var problemi = (u.residui || []).concat(u.sentinelle || []);
+    if (problemi.length)
       sync.err = erroreSync("Disconnessione incompleta",
-        "Sul dispositivo è rimasto qualcosa: "+u.residui.join(", ")+".",
+        "Sul dispositivo è rimasto qualcosa: "+problemi.join(", ")+".",
         "Usa «Elimina i dati di questo dispositivo» dal Centro privacy.");
-    else toast("Disconnesso. Sul dispositivo non resta nulla per rientrare.", "ok");
-    render();
+    else if (u.eranoDaInviare && tieni)
+      toast("Disconnesso. C'erano modifiche non inviate: restano qui e partiranno se rientri.", "info");
+    else
+      toast(tieni ? "Disconnesso. I dati restano su questo dispositivo."
+                  : "Disconnesso e dati di questo dispositivo eliminati.", "ok");
+    commit();
   }
   else if (act === "keeplocal") { resolveConflict(true); }
   else if (act === "keepremote") { resolveConflict(false); }

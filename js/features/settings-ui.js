@@ -356,6 +356,22 @@ function zonaImpostazioni(){
          '<button class="tiny" data-act="syncpush">Invia ora</button>'+
          '<button class="tiny" data-act="syncprova">Verifica</button>'+
          '<button class="tiny" data-act="syncoff">Disconnetti</button></div>';
+    /* SEC-001 — la disconnessione chiede cosa fare dei dati locali.
+       Due comandi distinti, non una casella nascosta in un modale: chi si
+       disconnette su un computer condiviso vuole la seconda. */
+    if (S.confermaUscita)
+      SEZ[sezCorrente] += '<div class="card liv-attenzione" role="region" aria-label="Disconnessione">'+
+        '<p class="cnome">Disconnettere l\'account<span class="sub">'+
+        (S.confermaUscita.daInviare || S.confermaUscita.pendenti
+          ? 'Ci sono modifiche non ancora inviate: restano su questo dispositivo e partiranno se rientri.'
+          : 'Tutto è già sincronizzato.')+'</span></p>'+
+        '<p class="hint">I dati sincronizzati restano nel tuo account. Che cosa faccio con '+
+        'la copia su <b>questo</b> dispositivo?</p>'+
+        '<div class="row"><button class="add" data-act="uscita-conferma" data-v="tieni">Tienila qui</button>'+
+        '<button class="add ghost" data-act="uscita-conferma" data-v="cancella">Eliminala da questo dispositivo</button>'+
+        '<button class="tiny" data-act="uscita-annulla">Annulla</button></div>'+
+        '<p class="hint">«Eliminala» serve su un computer condiviso o prestato. Non toccа '+
+        'i dati nel tuo account: rientrando li ritrovi.</p></div>';
   }
   SEZ[sezCorrente] += '</div>';
   }

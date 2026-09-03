@@ -115,18 +115,84 @@ function applicaSessione(d, email){
 /* SEC-001: l'uscita non lascia nulla che permetta di rientrare. Non basta
    azzerare l'oggetto in memoria: va riscritto anche ciò che è già su disco,
    e va verificato che non sia rimasto niente. */
-function esciAccount(){
+/* SEC-001 — L'uscita, in ordine. L'ordine conta: prima si BLOCCA la
+   sincronizzazione, poi si azzerano le credenziali. Al contrario, un timer
+   già in volo potrebbe partire fra le due cose e inviare i dati con una
+   sessione che stiamo chiudendo.
+
+   `tieniDatiLocali` è una scelta esplicita di chi chiama, non un valore
+   predefinito nascosto: `false` cancella anche i dati di questo
+   dispositivo. */
+function esciAccount(tieniDatiLocali){
+  /* 1. blocca: niente parte più */
+  sync.auto = false;
+  if (typeof syncTimer !== "undefined" && syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+  sync.busy = false;
+  sync.pendingPull = false;
+  /* 2. annulla le ripetizioni in attesa */
+  if (typeof azzeraRitmo === "function") azzeraRitmo();
+  if (typeof ATTESA_RIPROVA !== "undefined") ATTESA_RIPROVA = 0;
+  if (typeof RITMO !== "undefined") { RITMO.scambi = []; RITMO.ultimoInvio = 0; }
+  /* 3. modifiche pendenti: non si perdono in silenzio.
+        La coda vive nei dati, quindi resta; ma se c'era qualcosa da inviare
+        lo diciamo a chi chiama, che decide se avvisare l'utente. */
+  var pendenti = (typeof inCoda === "function") ? inCoda() : 0;
+  var eranoDaInviare = !!sync.dirty || pendenti > 0;
+  /* 4. azzera memoria */
   sync.account = false;
   sync.provider = "locale";      /* si torna al predefinito, non a un servizio */
   sync.fb = { email:"", uid:"", refresh:"", idToken:"", expAt:0, inizioSessione:0 };
   sync.gist = { id:"", token:"", file:"pannello.json" };
   sync.status = ""; sync.err = null; sync.rev = 0; sync.dirty = false;
   sync.conflict = null; sync.prova = null;
+  sync.attesaMotivo = "";
+  /* 5. lo stato dei conflitti e dei dati fusi appartiene alla sessione:
+        restare farebbe riapparire le scelte di un altro account */
+  S.conflitti = null; S.datiFusi = null; S.migrazione = null;
+  /* 6. azzera l'istantanea dei record: senza, il primo salvataggio del
+        prossimo account segnerebbe come «modificato qui» tutto il dataset
+        precedente, e lo spingerebbe nel suo spazio */
+  if (typeof azzeraIstantanea === "function") azzeraIstantanea();
+  /* 7. disco */
   saveSync();
-  /* sovrascrittura e rimozione del blocco su disco, con verifica */
   eliminaSicuro(SKEY);
   saveSync();
-  return { residui: residuiCredenziali() };
+  /* 8. dati locali, solo se richiesto esplicitamente */
+  var localiRimossi = false;
+  if (tieniDatiLocali === false) {
+    try { localiRimossi = eliminaSicuro(KEY); } catch (e) {}
+    try { S.data = seed(); normalizeData(); } catch (e) {}
+  }
+  sync.auto = true;   /* riabilitato per il prossimo accesso */
+  return { residui: residuiCredenziali(),
+           sentinelle: residuiSegretiSuDisco(),
+           eranoDaInviare: eranoDaInviare,
+           pendenti: pendenti,
+           datiLocaliRimossi: localiRimossi };
+}
+
+/* SYN-005 — cambio account senza contaminazione.
+   Il rischio: entrare con B mentre in memoria ci sono i dati di A, e al
+   primo salvataggio spingerli nello spazio di B. Succede perché i dati
+   locali e la sessione sono due cose separate, ed è esattamente il tipo di
+   errore che nessuno nota finché non è capitato a qualcuno. */
+function cambiaAccount(email, password, poi){
+  var uidPrima = sync.fb.uid;
+  var uscita = esciAccount(true);   /* i dati locali restano: decide l'utente dopo */
+  entraAccount(email, password, function(r){
+    if (r && r.ok && uidPrima && sync.fb.uid && sync.fb.uid !== uidPrima) {
+      /* account diverso: i dati in memoria sono dell'altro. Non li spingo
+         da nessuna parte: chiedo, e finché non si decide non si sincronizza. */
+      sync.auto = false;
+      S.attivazione = {
+        motivo: "cambio-account",
+        localiVoci: (S.data.items || []).length,
+        emailPrecedente: "",     /* mai mostrata: è un dato dell'altro account */
+        eranoDaInviare: uscita.eranoDaInviare
+      };
+    }
+    poi(r);
+  });
 }
 
 /* Elenca ciò che, dopo un'uscita, permetterebbe ancora di rientrare.
@@ -194,20 +260,139 @@ function ripulisciTokenPersistenti(){
   return { tolti: tolti, quanti: tolti.length, serveRicollegare: serveRicollegare };
 }
 
-/* Verifica indipendente: rilegge il disco e cerca le STRINGHE, non i campi.
-   Serve a non fidarsi della funzione di pulizia. Restituisce i nomi delle
-   chiavi trovate, mai i valori. */
+/* ─────────────────────────────────────────────────────────────────────────
+   SEC-001 — VERIFICA INDIPENDENTE, SU TUTTI I MECCANISMI DI PERSISTENZA
+
+   Non si fida della funzione di pulizia: rilegge e cerca le STRINGHE, non i
+   campi. Una pulizia che azzera `o.fb.refresh` e lascia
+   `o.fb.credenziali.refresh` supererebbe un controllo sui campi noti e
+   fallisce questo.
+
+   Copre tutti i posti dove un browser può conservare qualcosa, non solo
+   `localStorage`: la prima versione guardava quattro chiavi e dichiarava
+   «nessun residuo» mentre `sessionStorage` e IndexedDB non erano nemmeno
+   stati aperti.
+
+   Restituisce i NOMI di ciò che ha trovato, mai i valori: un rapporto di
+   sicurezza che contiene il token non è un rapporto di sicurezza.
+   ───────────────────────────────────────────────────────────────────────── */
+
+var MODELLI_SENTINELLA = [
+  { nome:"token di sessione",  re:/"(idToken|id_token|refreshToken|refresh_token|refresh)"\s*:\s*"[^"]{8,}"/ },
+  { nome:"token GitHub",       re:/gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{20,}/ },
+  { nome:"JWT",                re:/eyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\./ },
+  { nome:"password",           re:/"(password|passwd|pwd|pw|pass|secret|clientSecret)"\s*:\s*"[^"]+"/ },
+  { nome:"chiave API Google",  re:/AIza[0-9A-Za-z_\-]{30,}/ },
+  { nome:"private key",        re:/-----BEGIN [A-Z ]*PRIVATE KEY-----/ }
+];
+
+function cercaSentinelle(dove, testo){
+  var out = [];
+  if (!testo) return out;
+  MODELLI_SENTINELLA.forEach(function(m){
+    if (m.re.test(testo)) out.push(dove + " → " + m.nome);
+  });
+  return out;
+}
+
+/* Sincrona: localStorage, sessionStorage, URL. Chiamabile dai test. */
 function residuiSegretiSuDisco(){
   var trovati = [];
-  [SKEY, KEY, "pannello-tempo:backup", "pannello-tempo:pre-migrazione"].forEach(function(chiave){
-    var raw;
-    try { raw = Platform.archivio.leggi(chiave); } catch (e) { return; }
-    if (!raw) return;
-    if (/"(idToken|refreshToken|refresh)"\s*:\s*"[^"]{8,}"/.test(raw)) trovati.push(chiave+" → token di sessione");
-    if (/gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{20,}/.test(raw)) trovati.push(chiave+" → token GitHub");
-    if (/"(password|pw|pass|secret)"\s*:\s*"[^"]+"/.test(raw)) trovati.push(chiave+" → password");
-  });
+
+  /* 1. localStorage — tutte le chiavi, non un elenco scritto a mano:
+        una chiave nuova aggiunta domani viene controllata da sola */
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      trovati = trovati.concat(cercaSentinelle("localStorage[" + k + "]", localStorage.getItem(k)));
+    }
+  } catch (e) {}
+
+  /* 2. sessionStorage — non lo usiamo, e proprio per questo va controllato:
+        se qualcosa ci finisse sarebbe per errore */
+  try {
+    for (var j = 0; j < sessionStorage.length; j++) {
+      var sk = sessionStorage.key(j);
+      trovati = trovati.concat(cercaSentinelle("sessionStorage[" + sk + "]", sessionStorage.getItem(sk)));
+    }
+  } catch (e) {}
+
+  /* 3. URL: percorso, query e frammento. Un token in un indirizzo finisce
+        nella cronologia del browser, nei log dei server e negli screenshot */
+  try {
+    if (typeof location !== "undefined") {
+      trovati = trovati.concat(cercaSentinelle("URL (query)", location.search || ""));
+      trovati = trovati.concat(cercaSentinelle("URL (frammento)", location.hash || ""));
+      trovati = trovati.concat(cercaSentinelle("URL (percorso)", location.pathname || ""));
+    }
+  } catch (e) {}
+
+  /* 4. cookie: non ne usiamo nessuno */
+  try {
+    if (typeof document !== "undefined" && document.cookie)
+      trovati = trovati.concat(cercaSentinelle("cookie", document.cookie));
+  } catch (e) {}
+
   return trovati;
+}
+
+/* Asincrona: IndexedDB e Cache API, che richiedono promesse.
+   Restituisce una promessa con lo stesso formato. */
+function residuiSegretiAsincroni(){
+  var trovati = [];
+  var lavori = [];
+
+  /* 5. Cache API — il service worker mette in cache lo scheletro dell'app.
+        Se una risposta con un token vi finisse, resterebbe lì per sempre. */
+  if (typeof caches !== "undefined" && caches.keys) {
+    lavori.push(caches.keys().then(function(nomi){
+      return Promise.all(nomi.map(function(n){
+        return caches.open(n).then(function(c){
+          return c.keys().then(function(richieste){
+            richieste.forEach(function(r){
+              trovati = trovati.concat(cercaSentinelle("cache[" + n + "] URL", r.url));
+            });
+            /* i corpi delle risposte in cache: solo i file di testo del
+               pannello, che non contengono segreti per costruzione. Li
+               controlliamo comunque: «per costruzione» è un'affermazione
+               che va verificata. */
+            return Promise.all(richieste.slice(0, 100).map(function(r){
+              return c.match(r).then(function(risp){
+                if (!risp) return;
+                var ct = risp.headers.get("content-type") || "";
+                if (!/text|json|javascript/.test(ct)) return;
+                return risp.clone().text().then(function(t){
+                  trovati = trovati.concat(cercaSentinelle("cache[" + n + "] " + r.url.split("/").pop(), t));
+                }, function(){});
+              }, function(){});
+            }));
+          });
+        }, function(){});
+      }));
+    }, function(){}));
+  }
+
+  /* 6. IndexedDB — non lo usiamo. Se esistesse un database, il solo fatto
+        che esista è un'informazione: qualcosa lo ha creato. */
+  if (typeof indexedDB !== "undefined" && indexedDB.databases) {
+    lavori.push(indexedDB.databases().then(function(elenco){
+      (elenco || []).forEach(function(db){
+        trovati.push("IndexedDB[" + db.name + "] → database presente, e il pannello non ne usa nessuno");
+      });
+    }, function(){}));
+  }
+
+  return Promise.all(lavori).then(function(){ return trovati; });
+}
+
+/* Il controllo completo, per i test e per la schermata Informazioni. */
+function auditSegreti(){
+  var sincroni = residuiSegretiSuDisco();
+  return residuiSegretiAsincroni().then(function(asincroni){
+    var tutti = sincroni.concat(asincroni);
+    return { pulito: tutti.length === 0, trovati: tutti,
+             controllati: ["localStorage","sessionStorage","URL","cookie","Cache API","IndexedDB"] };
+  });
 }
 
 function residuiCredenziali(){
