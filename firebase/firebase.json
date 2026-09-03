@@ -1,0 +1,29 @@
+{
+  "_commento": [
+    "Configurazione degli emulatori e del deploy delle regole.",
+    "Non contiene identificativi di progetto: il progetto si passa con",
+    "--project, così questo file va bene per demo-pannello nei collaudi,",
+    "per lo staging e per la produzione senza essere modificato.",
+    "Vedi FIREBASE-SETUP.md."
+  ],
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9099
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 4000
+    },
+    "singleProjectMode": true
+  }
+}

@@ -384,13 +384,27 @@ function fbRead(){
     }, function(){ return ""; });
   });
 }
+/* I tre campi che le regole validano (firebase/firestore.rules):
+     payload      il dataset serializzato, sotto i 900 000 caratteri
+     schema       non può regredire: un client vecchio non deve poter
+                  riscrivere dati di uno schema nuovo appiattendoli
+     aggiornatoIl un istante non nel futuro: un timestamp futuro farebbe
+                  vincere per sempre questo dispositivo in ogni confronto
+   Ometterne uno fa rifiutare la scrittura dalle regole, non passare in
+   silenzio: è la ragione per cui la validazione sta là e non solo qui. */
 function fbWrite(text){
+  if (text && text.length >= 900000)
+    return Promise.reject(erroreSync("Dati troppo grandi",
+      "L'insieme dei dati supera il limite di un singolo documento del servizio.",
+      "Archivia le voci che non ti servono più, oppure cancella la cronologia dal Centro privacy."));
   return fbToken().then(function(tok){
-    return fetch(fbDocUrl()+"?updateMask.fieldPaths=payload&updateMask.fieldPaths=aggiornatoIl",
+    return fetch(fbDocUrl()+"?updateMask.fieldPaths=payload"+
+                 "&updateMask.fieldPaths=schema&updateMask.fieldPaths=aggiornatoIl",
       { method:"PATCH",
         headers:{ "Authorization":"Bearer "+tok, "Content-Type":"application/json" },
         body: JSON.stringify({ fields:{
           payload:{ stringValue: text },
+          schema:{ integerValue: String(SCHEMA_ATTUALE) },
           aggiornatoIl:{ timestampValue: new Date().toISOString() }
         } }) });
   }).then(function(r){ if (!r.ok) throw new Error("HTTP "+r.status); return true; });

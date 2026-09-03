@@ -1,0 +1,212 @@
+rules_version = '2';
+
+/* firebase/firestore.rules — UNICA fonte delle regole di sicurezza.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * PRIMA C'ERANO TRE COPIE DIVERGENTI.
+ * ─────────────────────────────────────────────────────────────────────────
+ *
+ * Una in `js/account.js` (`REGOLE_ACCOUNT`), una in un <textarea> delle
+ * impostazioni che l'utente doveva copiare a mano nella console, e una
+ * citata nei commenti di `js/sync.js`. Le prime due erano piatte su
+ * `pannello/{uid}` e nessuna delle due aveva la clausola di chiusura
+ * negativa: una collezione creata per sbaglio sarebbe rimasta accessibile.
+ *
+ * Tre copie di una regola di sicurezza significano che almeno due sono
+ * sbagliate, e non si sa quale sia in produzione. Ora la fonte è questa, e
+ * si pubblica con:
+ *
+ *     firebase deploy --only firestore:rules
+ *
+ * L'utente non le vede e non le tocca. Vedi FIREBASE-SETUP.md §7.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * IL PRINCIPIO: L'UID STA NEL PERCORSO
+ * ─────────────────────────────────────────────────────────────────────────
+ *
+ * La proprietà si deduce dal PERCORSO del documento confrontato con
+ * `request.auth.uid`, mai da un campo dentro il documento. Un campo lo
+ * scrive il client, e un client può scrivere quello che vuole: fidarsi di
+ * `resource.data.owner` equivale a chiedere al ladro se è il proprietario.
+ *
+ * Non esiste nessuna collezione globale filtrata dal client. Se esistesse,
+ * una query senza filtro — o con un filtro che il client può cambiare —
+ * restituirebbe i documenti di tutti.
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ─── funzioni di supporto ─────────────────────────────────────────── */
+
+    function autenticato() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    /* L'unico controllo di proprietà che usiamo. */
+    function proprietario(uid) {
+      return autenticato() && request.auth.uid == uid;
+    }
+
+    /* Verifica dell'email.
+     *
+     * NON attiva, di proposito. Attivandola, un utente che non riceve
+     * l'email di verifica resta chiuso fuori dai propri dati — compresi
+     * quelli che aveva già caricato. La scelta e le sue conseguenze sono
+     * discusse in FIREBASE-SETUP.md §5.
+     *
+     * Per renderla obbligatoria: aggiungere `&& emailVerificata()` alle
+     * condizioni di scrittura qui sotto. È una riga, ed è una decisione di
+     * prodotto, non di sicurezza.
+     */
+    function emailVerificata() {
+      return autenticato() && request.auth.token.email_verified == true;
+    }
+
+    /* Campi che il client non deve poter falsificare.
+     *
+     * `uid` dentro il documento è ridondante — la proprietà la stabilisce il
+     * percorso — ma se c'è deve coincidere, altrimenti un documento
+     * mentirebbe su se stesso e i backup esportati sarebbero incoerenti. */
+    function uidCoerente(uid) {
+      return !('uid' in request.resource.data)
+             || request.resource.data.uid == uid;
+    }
+
+    /* `aggiornatoIl` deve essere una data plausibile e non nel futuro:
+     * un timestamp futuro farebbe vincere per sempre questo dispositivo in
+     * ogni confronto «chi ha modificato per ultimo». */
+    function tempoPlausibile() {
+      return !('aggiornatoIl' in request.resource.data)
+             || (request.resource.data.aggiornatoIl is timestamp
+                 && request.resource.data.aggiornatoIl <= request.time);
+    }
+
+    /* Lo schema non può regredire: un client vecchio non deve poter
+     * riscrivere dati di uno schema nuovo, perché li appiattirebbe. */
+    function schemaNonRegredisce() {
+      return !('schema' in request.resource.data)
+             || !(resource != null && 'schema' in resource.data)
+             || request.resource.data.schema >= resource.data.schema;
+    }
+
+    /* Limite di dimensione. Firestore ferma comunque a 1 MiB per documento;
+     * 900 000 lascia margine e produce un errore nostro invece di uno del
+     * servizio, che è più facile da spiegare all'utente. */
+    function dimensioneAmmessa() {
+      return !('payload' in request.resource.data)
+             || (request.resource.data.payload is string
+                 && request.resource.data.payload.size() < 900000);
+    }
+
+    function scritturaValida(uid) {
+      return proprietario(uid)
+             && uidCoerente(uid)
+             && tempoPlausibile()
+             && schemaNonRegredisce()
+             && dimensioneAmmessa();
+    }
+
+    /* ─── lo spazio di un utente ───────────────────────────────────────────
+     *
+     * users/{uid}/profile/main          preferenze dell'account
+     * users/{uid}/datasets/current      l'insieme dei dati, in un documento
+     * users/{uid}/records/{recordId}    record singoli (uso futuro)
+     * users/{uid}/backups/{backupId}    copie di sicurezza
+     * users/{uid}/tombstones/{recordId} lapidi delle cancellazioni
+     * users/{uid}/sync/meta             metadati di sincronizzazione
+     */
+
+    /* Il documento `users/{uid}` in sé non contiene nulla e non è leggibile:
+     * esiste solo come contenitore. Negarlo esplicitamente evita che
+     * diventi un posto dove appoggiare dati senza regole. */
+    match /users/{uid} {
+      allow read, write: if false;
+
+      /* profilo */
+      match /profile/{doc} {
+        allow read:   if proprietario(uid);
+        allow create: if scritturaValida(uid);
+        allow update: if scritturaValida(uid);
+        allow delete: if proprietario(uid);
+      }
+
+      /* l'insieme dei dati */
+      match /datasets/{doc} {
+        allow read:   if proprietario(uid);
+        allow create: if scritturaValida(uid);
+        allow update: if scritturaValida(uid);
+        allow delete: if proprietario(uid);
+      }
+
+      /* record singoli */
+      match /records/{recordId} {
+        allow read:   if proprietario(uid);
+        allow create: if scritturaValida(uid)
+                         && request.resource.data.keys().hasAll(['id'])
+                         && request.resource.data.id is string
+                         && request.resource.data.id.size() > 0
+                         && request.resource.data.id.size() <= 128
+                         /* l'id nel documento deve coincidere col nome del
+                            documento: altrimenti due percorsi diversi
+                            potrebbero dichiarare lo stesso record */
+                         && request.resource.data.id == recordId;
+        allow update: if scritturaValida(uid)
+                         && (!('id' in request.resource.data)
+                             || request.resource.data.id == recordId);
+        allow delete: if proprietario(uid);
+      }
+
+      /* copie di sicurezza: si creano e si leggono, non si modificano.
+       * Una copia di sicurezza modificabile non è una copia di sicurezza. */
+      match /backups/{backupId} {
+        allow read:   if proprietario(uid);
+        allow create: if scritturaValida(uid);
+        allow update: if false;
+        allow delete: if proprietario(uid);
+      }
+
+      /* lapidi: servono a propagare le cancellazioni fra dispositivi.
+       * Non si modificano: una lapide che cambia non ha senso. */
+      match /tombstones/{recordId} {
+        allow read:   if proprietario(uid);
+        allow create: if scritturaValida(uid);
+        allow update: if false;
+        allow delete: if proprietario(uid);
+      }
+
+      /* metadati di sincronizzazione */
+      match /sync/{doc} {
+        allow read:   if proprietario(uid);
+        allow create: if scritturaValida(uid);
+        allow update: if scritturaValida(uid);
+        allow delete: if proprietario(uid);
+      }
+    }
+
+    /* ─── percorso delle versioni precedenti ───────────────────────────────
+     *
+     * `pannello/{uid}`: collezione piatta usata fino allo schema 5. Resta
+     * LEGGIBILE e CANCELLABILE dal proprietario perché il pannello vi legge
+     * una volta, per trasferire i dati nel percorso nuovo, e li cancella
+     * quando l'utente chiede l'eliminazione. Non ci si scrive più. */
+    match /pannello/{uid} {
+      allow read:   if proprietario(uid);
+      allow delete: if proprietario(uid);
+      allow create, update: if false;
+    }
+
+    /* ─── clausola di chiusura ─────────────────────────────────────────────
+     *
+     * Nega tutto ciò che non è esplicitamente permesso sopra. Senza questa
+     * riga, una collezione creata per sbaglio — da un errore di battitura
+     * in un percorso, o da una versione futura che ne aggiunge una senza
+     * aggiornare le regole — resterebbe accessibile a chiunque sia
+     * autenticato.
+     *
+     * Era la riga che mancava in tutte e tre le copie precedenti. */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "_commento": [
+    "Nessun indice composito.",
+    "",
+    "Non è una dimenticanza: il pannello non esegue query. Legge e scrive",
+    "documenti per percorso noto, dentro lo spazio dell'utente autenticato.",
+    "Un indice serve a ordinare o filtrare una collezione, e questo",
+    "modello non lo fa mai — che è anche la ragione per cui non esiste una",
+    "collezione globale da filtrare lato client.",
+    "",
+    "Se in futuro servisse una query su users/{uid}/records, l'indice va",
+    "aggiunto qui e non creato dal collegamento che Firestore propone",
+    "nell'errore: quello lo crea nel progetto e non nel repository, e alla",
+    "prossima ricostruzione dell'ambiente sparisce."
+  ],
+  "indexes": [],
+  "fieldOverrides": []
+}
