@@ -211,6 +211,43 @@ function zonaImpostazioni(){
   if (!folded("setsync") && syncReady() && dettaglioStato(sync.status))
     SEZ[sezCorrente] += '<p class="hint statodett" data-livello="'+
       esc(statoLeggibile(sync.status).livello)+'">'+esc(dettaglioStato(sync.status))+'</p>';
+
+  /* ───────────────────────────────────────────────────────────────────────
+     SYN-006 — il riepilogo prima della PRIMA sincronizzazione.
+
+     Sta qui, fuori dai rami «collegata» e «non collegata», perché il momento
+     in cui serve è esattamente quello in cui l'utente sta passando da uno
+     all'altro: metterlo dentro uno dei due lo farebbe sparire proprio
+     quando deve comparire.
+
+     Conteggi, non titoli: un riepilogo tecnico finisce negli screenshot di
+     assistenza, e i titoli delle attività sono la cosa più personale che il
+     pannello contenga.
+     ─────────────────────────────────────────────────────────────────────── */
+  if (S.attivazioneSync) {
+    var at = S.attivazioneSync;
+    SEZ[sezCorrente] += '<div class="card liv-attenzione" role="region" aria-label="Prima sincronizzazione">'+
+      '<p class="cnome">Ci sono dati in due posti<span class="sub">'+
+      'Decidi tu come procedere: niente viene sovrascritto prima.</span></p>'+
+      '<table class="cdiff"><thead><tr><th>Dove</th><th>Voci</th></tr></thead><tbody>'+
+      '<tr><td>Su questo dispositivo</td><td>'+at.localiVoci+'</td></tr>'+
+      '<tr><td>Nel tuo account'+
+      (at.salvatoIl ? ' (salvati il '+esc(new Date(at.salvatoIl).toLocaleString("it-IT"))+')' : '')+
+      '</td><td>'+at.remoteVoci+'</td></tr></tbody></table>'+
+      (at.inComune
+        ? '<p class="hint"><b>'+at.inComune+
+          (at.inComune===1 ? ' voce è presente' : ' voci sono presenti')+' in entrambi'+
+          (at.conflitti ? ', e '+at.conflitti+' '+
+            (at.conflitti===1?'è cambiata':'sono cambiate')+' in modo diverso nei due posti' : '')+'.</b></p>'
+        : '<p class="hint">Nessuna voce è presente in entrambi: unire non può perdere niente.</p>')+
+      '<p class="hint">Faccio una copia di sicurezza prima di toccare qualcosa, e potrai annullare.</p>'+
+      '<div class="row"><button class="add" data-act="attiva-scegli" data-v="unisci">Unisci</button>'+
+      '<button class="add ghost" data-act="attiva-scegli" data-v="dispositivo">Usa i dati del dispositivo</button>'+
+      '<button class="add ghost" data-act="attiva-scegli" data-v="account">Usa i dati dell\'account</button>'+
+      '<button class="tiny" data-act="attiva-scegli" data-v="annulla">Annulla</button></div>'+
+      '<p class="hint">«Annulla» ti disconnette e ti lascia su questo dispositivo: restare '+
+      'collegati senza aver deciso lascerebbe la prossima modifica a decidere al posto tuo.</p></div>';
+  }
   if (sync.err)
     SEZ[sezCorrente] += '<div class="errbox"><p class="errtit">'+esc(sync.err.titolo)+'</p>'+
            '<p class="errcausa">'+esc(sync.err.causa)+'</p>'+
@@ -309,10 +346,11 @@ function zonaImpostazioni(){
         '<tbody><tr><td>Su questo dispositivo</td><td>'+m.localiVoci+'</td><td>'+m.localeNote+'</td></tr>'+
         '<tr><td>Nel file recuperato</td><td>'+m.voci+'</td><td>'+m.note+'</td></tr></tbody></table>'+
         (m.idInComune
-          ? '<p class="hint"><b>'+m.idInComune+(m.idInComune===1?' voce risulta':' voci risultano')+
-            ' presente sia qui sia nel file.</b> Con «Unisci» vince la versione modificata più '+
-            'di recente, voce per voce; con «Sostituisci» vince il file.</p>'
-          : '<p class="hint">Nessuna voce risulta presente in entrambi: unire non produrrà conflitti.</p>')+
+          ? '<p class="hint"><b>'+m.idInComune+
+            (m.idInComune===1 ? ' voce è presente' : ' voci sono presenti')+
+            ' sia qui sia nel file.</b> Con «Unisci» vince la versione modificata più '+
+            'di recente, voce per voce; con «Usa i dati recuperati» vince il file.</p>'
+          : '<p class="hint">Nessuna voce è presente in entrambi: unire non produrrà conflitti.</p>')+
         (m.conAccountAttivo
           ? '<p class="hint"><b>Sei collegato a un account.</b> Quello che scegli qui verrà '+
             'sincronizzato anche là alla prossima occasione.</p>'

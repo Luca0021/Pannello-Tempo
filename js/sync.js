@@ -602,6 +602,77 @@ function pullNow(){
     setStatus("errore"); sync.busy = false; render();
   });
 }
+/* ─────────────────────────────────────────────────────────────────────────
+   SYN-006 — PRIMA DELLA PRIMA SINCRONIZZAZIONE
+
+   Legge lo stato remoto SENZA applicarlo e prepara il riepilogo su cui
+   l'utente decide. Quattro esiti possibili, e tre di essi non richiedono
+   nessuna domanda:
+
+     locale vuoto, remoto vuoto      → niente da decidere, si parte
+     locale pieno, remoto vuoto      → niente da perdere, si invia
+     locale vuoto, remoto pieno      → niente da perdere, si adotta
+     entrambi pieni                  → SI CHIEDE
+
+   Il quarto caso è l'unico in cui una scelta sbagliata perde dati, e prima
+   veniva risolto in silenzio a favore del locale.
+   ───────────────────────────────────────────────────────────────────────── */
+function preparaAttivazione(){
+  var localiVoci = (S.data.items || []).length + (S.data.capture || []).length;
+  setStatus("controllo…"); render();
+  readRemote().then(function(txt){
+    var r = remoteRevOf(txt);
+    var datiRemoti = (r.payload && r.payload.data) || null;
+    var remoteVoci = datiRemoti
+      ? (datiRemoti.items || []).length + (datiRemoti.capture || []).length : 0;
+
+    /* schema remoto più recente del codice: non si tocca niente */
+    if (datiRemoti && versioneDati(datiRemoti) > SCHEMA_ATTUALE) {
+      sync.err = erroreSync("Dati dell'account più recenti",
+        "Nel tuo account ci sono dati scritti da una versione più nuova del pannello: non li leggo per non rovinarli.",
+        "Aggiorna il pannello su questo dispositivo e riprova.");
+      setStatus("errore"); render(); return;
+    }
+
+    if (remoteVoci === 0) {
+      /* niente di là: si invia senza chiedere, non c'è nulla da perdere */
+      sync.auto = true; sync.dirty = true; saveSync();
+      registraOperazione("sincronizzazione", "attivata, account vuoto, "+localiVoci+" voci inviate");
+      pushNow(true);
+      return;
+    }
+    if (localiVoci === 0) {
+      /* niente di qua: si adotta senza chiedere */
+      S.data = Object.assign(seed(), datiRemoti);
+      normalizeData();
+      sync.rev = r.rev || 0; sync.dirty = false; sync.auto = true;
+      registraOperazione("sincronizzazione", "attivata, dispositivo vuoto, "+remoteVoci+" voci adottate");
+      setStatus("aggiornato dal cloud"); saveSync(); commit();
+      return;
+    }
+
+    /* entrambi pieni: si chiede. Conto anche quante voci si sovrappongono,
+       perché «unisci» su insiemi disgiunti non ha conflitti possibili e
+       dirlo cambia la scelta dell'utente. */
+    var qui = {}; (S.data.items || []).forEach(function(i){ qui[i.id] = 1; });
+    var inComune = (datiRemoti.items || []).filter(function(i){ return qui[i.id]; }).length;
+    var anteprima = fondiPerRecord(S.data, datiRemoti);
+    S.attivazioneSync = {
+      localiVoci: localiVoci,
+      remoteVoci: remoteVoci,
+      inComune: inComune,
+      conflitti: (anteprima.conflitti || []).length,
+      revRemota: r.rev || 0,
+      salvatoIl: (r.payload && r.payload.savedAt) || "",
+      datiRemoti: datiRemoti
+    };
+    setStatus(""); render();
+  }).catch(function(e){
+    sync.err = (e && e.titolo) ? e : dettaglioErrore(e);
+    setStatus("errore"); render();
+  });
+}
+
 function scheduleSync(){
   if (!syncReady() || !sync.auto) return;
   sync.dirty = true; saveSync();

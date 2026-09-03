@@ -952,10 +952,87 @@ document.addEventListener("click", function(ev){
         cosa:"Controlla email e password, oppure crea l'account se non ce l'hai.", tecnico:"" };
         setStatus("errore"); render(); return; }
       svuota("ac2");
-      setStatus("collegata"); toast("Sei dentro", "ok"); pushNow(true); render();
+      /* SYN-006 — NON si sincronizza subito. Prima si guarda cosa c'è di
+         qua e cosa c'è di là, e si chiede. `pushNow(true)` qui sovrascriveva
+         in silenzio i dati dell'account: il caso peggiore è chi entra su un
+         dispositivo appena installato e si porta via i dati veri con un
+         dataset vuoto. */
+      setStatus("collegata"); toast("Sei dentro", "ok");
+      preparaAttivazione();
     };
     if (act === "account-crea") registraAccount(em2, pw2, poi);
     else entraAccount(em2, pw2, poi);   /* SEC-001: nessun «ricordami» da passare */
+  }
+  /* ───────────────────────────────────────────────────────────────────────
+     SYN-006 — ATTIVAZIONE DELLA SINCRONIZZAZIONE
+
+     Prima l'ingresso chiamava `pushNow(true)` e i dati locali finivano nel
+     cloud senza che nessuno avesse chiesto niente. Se nell'account c'erano
+     già dati, venivano sovrascritti in silenzio: il caso peggiore è chi
+     entra su un dispositivo nuovo, appena installato, e si porta via i
+     dati veri con un dataset vuoto.
+
+     Ora fra l'ingresso e la prima sincronizzazione c'è un riepilogo e una
+     scelta. Il riepilogo conta, non elenca: i titoli delle attività non
+     compaiono, perché un riepilogo tecnico finisce negli screenshot di
+     assistenza.
+     ─────────────────────────────────────────────────────────────────────── */
+  else if (act === "attiva-scegli") {
+    if (!S.attivazioneSync) return;
+    var scelta = v || "unisci";
+    var att = S.attivazioneSync;
+    if (scelta === "annulla") {
+      /* annullare significa tornare a solo dispositivo: si esce, perché
+         restare collegati senza aver deciso lascia la prossima modifica a
+         decidere al posto dell'utente */
+      S.attivazioneSync = null;
+      esciAccount(true);
+      toast("Annullato. Resti su questo dispositivo.", "info");
+      commit(); return;
+    }
+    salvaBackupAutomatico("prima della prima sincronizzazione");
+    snapshot("Hai attivato la sincronizzazione.", "Vuoi tornare a prima?");
+    if (scelta === "dispositivo") {
+      /* i dati di questo dispositivo vincono: si forza l'invio */
+      S.attivazioneSync = null;
+      sync.auto = true; sync.dirty = true;
+      registraOperazione("sincronizzazione",
+        "attivata, scelta: dati del dispositivo, "+att.localiVoci+" voci");
+      commit(); pushNow(true);
+      toast("Sincronizzato con i dati di questo dispositivo.", "ok");
+      return;
+    }
+    if (scelta === "account") {
+      /* i dati dell'account vincono: si adotta il remoto */
+      S.data = Object.assign(seed(), att.datiRemoti || {});
+      normalizeData();
+      S.attivazioneSync = null;
+      sync.auto = true; sync.dirty = false; sync.rev = att.revRemota || 0;
+      registraOperazione("sincronizzazione",
+        "attivata, scelta: dati dell'account, "+att.remoteVoci+" voci");
+      saveSync(); commit();
+      toast("Adottati i dati del tuo account.", "ok");
+      return;
+    }
+    /* unisci: record per record, e i conflitti veri restano da decidere */
+    var fus = fondiPerRecord(S.data, att.datiRemoti || {});
+    S.data = Object.assign(seed(), fus.uniti);
+    normalizeData();
+    if (fus.conflitti && fus.conflitti.length) {
+      S.conflitti = fus.conflitti;
+      S.datiFusi = fus.uniti;
+      sync.revRemota = att.revRemota || 0;
+    }
+    S.attivazioneSync = null;
+    sync.auto = true; sync.dirty = true;
+    registraOperazione("sincronizzazione",
+      "attivata, scelta: unione, "+att.localiVoci+" locali e "+att.remoteVoci+" nell'account, "+
+      ((fus.conflitti||[]).length)+" da decidere");
+    commit();
+    if (!(fus.conflitti && fus.conflitti.length)) pushNow(true);
+    toast((fus.conflitti && fus.conflitti.length)
+      ? "Uniti. Restano "+fus.conflitti.length+" voci da decidere."
+      : "Dati uniti e sincronizzati.", "ok");
   }
   else if (act === "account-esci") { esciAccount(); toast("Uscito dall\'account", "info"); render(); }
   /* SEC-001: «Resta collegato» rimosso nella Release 2B insieme alla
