@@ -59,15 +59,36 @@ const SOLO_CALENDARIO = ['Importa da file', 'Esporta nel calendario',
   'Ultima esportazione', 'Ultima importazione', 'Nessun calendario collegato',
   'Integrazione automatica non attiva'];
 
-/* Frasi sbagliate, esplicitamente vietate dal mandato. */
+/* Frasi sbagliate, esplicitamente vietate. L'elenco viene da
+   E2EE-DECISION.md §7, che è la fonte: se là si aggiunge una formula
+   vietata, va aggiunta anche qui.
+ *
+ * Nessuna eccezione «ammessa se citata»: la tentazione era permettere
+ * «non scriviamo "i tuoi dati sono al sicuro"», che è una frase corretta.
+ * Ma un collaudo con eccezioni accumula eccezioni, e alla decima nessuno
+ * sa più che cosa stia verificando. L'interfaccia è stata riformulata per
+ * non contenere la stringa affatto. */
 const FRASI_VIETATE = [
   'sincronizzazione calendario',
   'sincronizzazione del calendario',
   'calendario collegato',        /* ammesso solo dentro «Nessun calendario collegato» */
   'calendario sincronizzato',
   'i tuoi dati sono al sicuro',
+  'dati completamente sicuri',
   'completamente sicuri',
-  'end-to-end encrypted'
+  'end-to-end encrypted',
+  'crittografia militare',
+  'nessuno può leggere i tuoi dati',
+  'privacy garantita'
+];
+
+/* Affermazioni che DEVONO comparire: la loro assenza è un difetto tanto
+   quanto la presenza di una formula vietata. Un'informativa che tace su
+   ciò che non protegge è pubblicità. */
+const AFFERMAZIONI_RICHIESTE = [
+  'Non sono cifrati end-to-end',
+  'La verifica dell\'isolamento non è stata eseguita',
+  'Non esiste un backup del database'
 ];
 
 async function apriTutto(page) {
@@ -187,6 +208,13 @@ test.describe('CPY-002 · terminologia della UI consumer', () => {
     const r = await scansionaSezione(page, '^Sincronizzazione', SOLO_CALENDARIO);
     expect(r.titoli.length, 'la scheda dell\'Account deve esistere').toBeGreaterThan(0);
     expect(r.trovate, 'terminologia del Calendario dentro la sezione Account').toEqual([]);
+  });
+
+  test('l\'informativa dichiara anche ciò che NON protegge', async ({ page }) => {
+    await apriTutto(page);
+    const t = await testoVisibile(page);
+    const mancanti = AFFERMAZIONI_RICHIESTE.filter(a => !t.includes(a));
+    expect(mancanti, 'affermazioni di trasparenza mancanti dall\'interfaccia').toEqual([]);
   });
 
   test('gli stati richiesti dalla Fase 2 sono presenti', async ({ page }) => {

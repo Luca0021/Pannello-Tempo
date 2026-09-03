@@ -300,7 +300,7 @@ function zonaImpostazioni(){
           "<b>Cosa viene sincronizzato:</b> attività, routine, note, priorità, collegamenti e modelli.",
           "<b>Cosa resta su questo dispositivo:</b> tema, densità, sezioni chiuse e le copie di sicurezza locali.",
           "<b>Dove finiscono:</b> su un servizio di Google, in Europa, in uno spazio che è solo tuo e a cui nessun altro utente può accedere.",
-          "<b>Come sono protetti:</b> cifrati mentre viaggiano e cifrati sul server. <b>Non sono cifrati end-to-end:</b> chi gestisce il servizio potrebbe tecnicamente leggerli. Lo diciamo invece di scrivere «i tuoi dati sono al sicuro».",
+          "<b>Come sono protetti:</b> cifrati mentre viaggiano e cifrati dove sono conservati. <b>Non sono cifrati end-to-end:</b> chi gestisce il servizio potrebbe tecnicamente leggerli. Preferiamo dirlo che usare una formula rassicurante.",
           "<b>Puoi tornare indietro:</b> disconnetti quando vuoi, e i dati restano su questo dispositivo. Puoi anche eliminare account e dati.",
           "<b>La sessione dura finché il pannello è aperto:</b> chiudendolo rientri con la password. Sul dispositivo non resta nulla che permetta di rientrare al posto tuo."
         ].map(function(p){ return '<li>'+p+'</li>'; }).join("")+'</ul>';
@@ -604,16 +604,40 @@ function zonaImpostazioni(){
     '<span class="caret">'+(folded("setpriv") ? "▸" : "▾")+'</span></button></h2>'+
     /* PRV-001 — niente gergo e niente formule generiche: si dice dove sono i
        dati, chi li protegge e che cosa NON è protetto. «I tuoi dati sono al
-       sicuro» non è un'informazione. */
+       sicuro» non è un'informazione, e un collaudo verifica che non compaia
+       (tests/ui/terminologia.spec.js). */
     '<p class="hint" style="margin-top:0"><b>Dove stanno i tuoi dati.</b> Nella memoria di '+
     'questo browser, su questo dispositivo. '+
     (syncReady()
       ? 'In più, con il tuo <b>Account Pannello Tempo</b>, in uno spazio che è solo tuo su un '+
-        'servizio di Google in Europa. Sono cifrati mentre viaggiano e cifrati sul server. '+
-        '<b>Non sono cifrati end-to-end:</b> chi gestisce il servizio potrebbe tecnicamente '+
-        'leggerli. Nessun altro utente può, perché ogni spazio è legato al suo proprietario.'
+        'servizio di Google in Europa.'
       : 'Non escono da qui: senza account non c\'è nessun server che li riceva.')+
     '</p>'+
+    /* La tabella delle protezioni: attive e non attive, con lo stesso peso
+       visivo. Un elenco delle sole protezioni attive è pubblicità. */
+    '<p class="grp">Che cosa è protetto, e che cosa no</p>'+
+    '<table class="cdiff"><thead><tr><th>Protezione</th><th>Stato</th></tr></thead><tbody>'+
+    [ ["Cifrati mentre viaggiano (TLS)", syncReady() ? "attiva" : "non serve senza account"],
+      ["Cifrati dove sono conservati", syncReady() ? "attiva, dal servizio" : "non serve senza account"],
+      ["Nessun altro utente vi accede", syncReady() ? "attiva" : "non serve senza account"],
+      ["Verifica dell'isolamento fra utenti", "<b>non eseguita</b>"],
+      ["Protezione dall'abuso", "non attiva"],
+      ["Cifratura end-to-end", "<b>non attiva</b>"],
+      ["Nessun token conservato sul dispositivo", "attiva"],
+      ["Telemetria", "assente"]
+    ].map(function(r){ return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>'; }).join("")+
+    '</tbody></table>'+
+    '<p class="hint"><b>Non sono cifrati end-to-end.</b> Sono cifrati mentre viaggiano e '+
+    'cifrati dove sono conservati, ma il servizio li decifra per usarli: chi gestisce '+
+    'Pannello Tempo può tecnicamente leggerli, e potrebbe essere obbligato a consegnarli '+
+    'da un\'autorità. Nessun altro utente può. Preferiamo dirlo che usare una formula '+
+    'rassicurante, che non sarebbe un\'informazione.</p>'+
+    '<p class="hint"><b>La verifica dell\'isolamento non è stata eseguita.</b> Le regole che '+
+    'impediscono a un utente di leggere i dati di un altro sono scritte, e i collaudi che '+
+    'le mettono alla prova non sono ancora girati. Lo diciamo invece di contarla fra le '+
+    'protezioni verificate.</p>'+
+    '<p class="hint"><b>Non esiste un backup del database.</b> Se perdi l\'accesso, l\'unica '+
+    'copia che si può ripristinare è quella che hai esportato tu. Esportane una.</p>'+
     '<p class="grp">Porta via i tuoi dati</p>'+
     '<p class="hint" style="margin-top:0">Sempre disponibile, in ogni piano. Le esportazioni '+
     'non contengono credenziali.</p>'+
