@@ -199,9 +199,14 @@ footer{padding:34px 0 48px;font-size:13px;color:var(--muted);}
     <div class="scheda"><h3>Nessun server</h3>
       <p>Il pannello vive nel browser. Non esiste un nostro server che riceva i tuoi dati,
         perché non esiste un nostro server.</p></div>
-    <div class="scheda"><h3>Sincronizzazione tua</h3>
-      <p>Se la vuoi, va dal tuo browser al <em>tuo</em> GitHub Gist o al <em>tuo</em>
-        progetto Firebase. Le credenziali restano sul dispositivo.</p></div>
+    <!-- CPY-002 — diceva «Sincronizzazione tua» e nominava GitHub Gist e
+         Firebase, cioè chiedeva all'utente di sapere cosa sono. E lasciava
+         credere che servisse un proprio progetto: quella era l'architettura
+         vecchia, ritirata. Vedi SYNC-DECISION.md. -->
+    <div class="scheda"><h3>Sincronizzazione, se la vuoi</h3>
+      <p>Senza account i dati restano su questo dispositivo. Con un account ritrovi le
+        stesse giornate su telefono e computer, in uno spazio che è solo tuo. Niente da
+        configurare, e puoi tornare indietro quando vuoi.</p></div>
     <div class="scheda"><h3>Esportabili sempre</h3>
       <p>Un file JSON con tutto dentro, quando vuoi. Nessun formato chiuso, nessun
         riscatto sui tuoi dati.</p></div>
@@ -228,10 +233,14 @@ footer{padding:34px 0 48px;font-size:13px;color:var(--muted);}
       <p class="cifra">4 €</p>
       <p class="periodo">al mese, oppure 36 € all'anno</p>
       <ul>
-        <li>Tutto il gratuito</li><li>Sincronizzazione fra dispositivi</li>
+        <li>Tutto il gratuito</li><li>Sincronizzazione dei dati fra dispositivi</li>
         <li>Chiusura di giornata</li><li>Revisione settimanale</li>
         <li>Statistiche lavoro e vita</li><li>Etichette e strumenti avanzati</li>
-        <li>Importi e previsione mensile</li><li>Promemoria nel calendario</li>
+        <!-- CPY-002 — «Promemoria nel calendario» faceva coppia con
+             «Sincronizzazione» e le due voci sembravano la stessa famiglia.
+             Sono cose diverse: una manda i dati altrove, l'altra scarica un
+             file. Ora la differenza è nel testo delle due voci. -->
+        <li>Importi e previsione mensile</li><li>Esportazione nel calendario (file .ics)</li>
       </ul>
       <a class="cta secondaria" href="#faq">Non ancora attivabile</a>
     </div>
@@ -262,9 +271,25 @@ footer{padding:34px 0 48px;font-size:13px;color:var(--muted);}
       account da creare perché non c'è un server dove crearlo.</p></details>
 
   <details><summary>Dove finiscono i miei dati?</summary>
-    <p>Nella memoria del browser, sul tuo dispositivo. Se attivi la sincronizzazione, vanno
-      dove decidi tu: il tuo Gist su GitHub o il tuo progetto Firebase. Le credenziali non
-      lasciano mai il dispositivo e non finiscono nei backup che esporti.</p></details>
+    <p>Nella memoria del browser, sul tuo dispositivo. Senza account non escono da lì.</p>
+    <p>Se crei un <b>Account Pannello Tempo</b>, i tuoi dati vengono conservati anche in uno
+      spazio riservato a te, su un servizio in Europa. Sono cifrati mentre viaggiano e
+      cifrati dov'è conservato. <b>Non sono cifrati end-to-end:</b> chi gestisce il servizio
+      potrebbe tecnicamente leggerli. Nessun altro utente può, perché ogni spazio è legato
+      al suo proprietario. Preferiamo dirlo che scrivere «i tuoi dati sono al sicuro».</p>
+    <p>La sessione dura finché il pannello resta aperto: sul dispositivo non conserviamo
+      nulla che permetta di rientrare al posto tuo. Nei backup che esporti non ci sono
+      credenziali.</p></details>
+
+  <details><summary>Il calendario si sincronizza?</summary>
+    <p>No, e la differenza conta. La <b>sincronizzazione</b> riguarda i tuoi dati fra i tuoi
+      dispositivi, e richiede un account. Il <b>calendario</b> è un'altra cosa: esporti un
+      file <code>.ics</code> e lo apri col tuo calendario, oppure importi un file che lui
+      ha esportato. È una copia in un momento preciso, non un collegamento: se poi cambi un
+      orario, l'altro non se ne accorge.</p>
+    <p>Un collegamento vero nei due sensi con Google Calendar o Outlook richiede
+      un'autorizzazione OAuth e un servizio che la custodisca. Non c'è, e finché non c'è
+      non lo chiamiamo «calendario collegato».</p></details>
 
   <details><summary>Funziona senza rete?</summary>
     <p>Sì. Installandolo come app resta disponibile offline e i dati continuano a salvarsi

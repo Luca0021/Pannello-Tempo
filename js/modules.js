@@ -30,10 +30,14 @@ var MODULI = [
     cosa:"Salvare la forma di una giornata tipo e riapplicarla." },
   { id:"importi",  nome:"Importi",        core:false, predefinito:"avanzato",
     cosa:"Quanto costa una voce e la previsione del mese." },
-  { id:"sync",     nome:"Sincronizzazione", core:false, predefinito:"avanzato",
-    cosa:"Gli stessi dati su più dispositivi, sul tuo servizio." },
-  { id:"calendario",nome:"Calendario",    core:false, predefinito:"avanzato",
-    cosa:"Esportare i blocchi e importare eventi da un file .ics." },
+  /* CPY-002 — «Sincronizzazione» e «Calendario» erano due nomi vaghi e
+     adiacenti, e «sul tuo servizio» descriveva l'architettura ritirata in
+     cui l'utente configurava Firebase da sé. Ora ognuno dice che cos'è, e
+     non si sovrappongono. */
+  { id:"sync",     nome:"Sincronizzazione dei dati", core:false, predefinito:"avanzato",
+    cosa:"Le stesse attività su più dispositivi, con un Account Pannello Tempo." },
+  { id:"calendario",nome:"Calendario e promemoria", core:false, predefinito:"avanzato",
+    cosa:"Esportare i blocchi in un file .ics e importare eventi da un file. Nessun collegamento automatico." },
   { id:"coach",    nome:"Analisi personali",   core:false, predefinito:true,
     cosa:"Quello che i tuoi dati dicono di te, quando dicono qualcosa.",
     dipende:["rituale"] }
@@ -101,7 +105,7 @@ var PROFILI = {
   },
   completo: {
     nome:"Completo",
-    per:"Voglio tutto: etichette, obiettivi, energia, sincronizzazione.",
+    per:"Voglio tutto: etichette, obiettivi, energia, dati sincronizzati.",
     moduli:["routine","note","bloccati","etichette","energia","obiettivi",
             "modelli","importi","sync","calendario","coach"]
   }

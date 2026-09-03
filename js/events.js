@@ -440,6 +440,9 @@ document.addEventListener("click", function(ev){
     S.data.seq = (S.data.seq||0)+1;
     S.ics = buildIcs(list, new Date(), S.data.seq, S.ui.alarm);
     download(S.ics, "pannello-tempo.ics", "text/calendar;charset=utf-8");
+    /* CAL-001 — registro QUANDO, non «sincronizzato». È un file scaricato:
+       da questo momento il calendario ha una copia che non si aggiorna. */
+    setImp("ultimaEsportazioneIcs", new Date().toISOString());
     commit();
   }
   else if (act === "icshide") { S.ics = ""; render(); }
@@ -759,8 +762,11 @@ document.addEventListener("click", function(ev){
   else if (act === "ics-annulla") { S.icsAnteprima = null; render(); }
   else if (act === "ics-importa") {
     if (!S.icsAnteprima) return;
+    /* copia di sicurezza prima di aggiungere voci arrivate da un file */
+    salvaBackupAutomatico("prima dell'importazione da file .ics");
     var ris = importaEventi(S.icsAnteprima.eventi);
     S.icsAnteprima = null;
+    setImp("ultimaImportazioneIcs", new Date().toISOString());
     toast(ris.creati+(ris.creati===1?" evento importato":" eventi importati"), "ok");
   }
   else if (act === "profilo") {

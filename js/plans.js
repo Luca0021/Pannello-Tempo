@@ -33,7 +33,11 @@ var FUNZIONI_PREMIUM = [
 var FLAG = {
   pagamenti: false,          /* nessun provider collegato */
   condivisione: false,       /* richiede un backend multiutente */
-  sincronizzazioneAccount: false,  /* richiede un servizio account */
+  /* SYN-006 — l'account esiste come codice, e diventa disponibile quando la
+     build porta una configurazione Firebase. Finché FIREBASE_CONFIG è vuoto
+     resta `false`, e l'interfaccia lo dichiara invece di offrire un pulsante
+     che fallisce. Vedi FIREBASE-SETUP.md. */
+  sincronizzazioneAccount: false,  /* letto da firebaseConfigurato() a runtime */
   notifichePush: false       /* richiede server push e chiavi VAPID */
 };
 

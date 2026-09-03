@@ -130,26 +130,57 @@ function zonaImpostazioni(){
 
   inSezione("calendario");
 
-  SEZ[sezCorrente] += '<div class="card'+(folded("setcal") ? " chiusa" : "")+'"><h2 data-ico="campana" ><button class="foldbtn" type="button" data-act=\"fold\" data-v="setcal" aria-expanded="'+(!folded("setcal"))+'"><span>Calendario e notifiche</span><span class="caret">'+(folded("setcal") ? '▸' : '▾')+'</span><span class="cnt">'+timedCount+' slot</span></button></h2>'+
-       '<p class="hint" style="margin-top:0">Il pannello non può avvisarti quando è chiuso. '+
-       'Esporta gli slot nel calendario: le notifiche le manda lui, anche a telefono bloccato.</p>'+
-       '<div class="row"><select data-chg="alarm">'+
+  /* ─────────────────────────────────────────────────────────────────────────
+     CAL-001 / CPY-002 — CALENDARIO E PROMEMORIA, SEPARATI DALL'ACCOUNT
+
+     Questa sezione non parla mai di account, di servizi o di
+     sincronizzazione: esporta e importa file. La confusione che si vuole
+     togliere è quella fra «i miei dati si ritrovano su un altro
+     dispositivo» (Account) e «i miei blocchi finiscono nel calendario del
+     telefono» (qui). Sono due cose diverse e prima venivano dette con le
+     stesse parole.
+
+     Tre stati sono dichiarati esplicitamente, perché la loro assenza è
+     un'informazione: nessun calendario è collegato, l'integrazione
+     automatica non è attiva, e le due date dicono «mai» quando è mai.
+     ───────────────────────────────────────────────────────────────────────── */
+  var espIcs = pref("ultimaEsportazioneIcs"), impIcs = pref("ultimaImportazioneIcs");
+  var quando = function(v){
+    if (!v) return "mai";
+    try { return new Date(v).toLocaleString("it-IT",
+      { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }); }
+    catch (e) { return "mai"; }
+  };
+  SEZ[sezCorrente] += '<div class="card'+(folded("setcal") ? " chiusa" : "")+'"><h2 data-ico="campana" ><button class="foldbtn" type="button" data-act=\"fold\" data-v="setcal" aria-expanded="'+(!folded("setcal"))+'"><span>Calendario e promemoria</span><span class="caret">'+(folded("setcal") ? '▸' : '▾')+'</span><span class="cnt">'+timedCount+' slot</span></button></h2>'+
+       '<p class="statoarea" data-stato="locale"><b>Nessun calendario collegato.</b> '+
+       'Integrazione automatica non attiva: i blocchi non finiscono nel tuo calendario da soli, '+
+       'e le modifiche fatte là non tornano qui.</p>'+
+       '<p class="hint" style="margin-top:0">Il pannello non può avvisarti quando è chiuso: '+
+       'nessuna pagina web può programmarsi un avviso da sola. Quello che puoi fare è '+
+       '<b>esportare</b> gli slot in un file e aprirlo col tuo calendario, che poi manda '+
+       'le notifiche lui, anche a telefono bloccato.</p>'+
+       '<p class="grp">Esporta nel calendario</p>'+
+       '<p class="hint" style="margin-top:0">Ultima esportazione: <b>'+esc(quando(espIcs))+'</b>. '+
+       'Scarica un file <code>.ics</code> e aprilo col calendario. È una copia: se poi cambi '+
+       'un orario qui, il calendario non se ne accorge — riesporta.</p>'+
+       '<div class="row"><select data-chg="alarm" aria-label="Avviso prima del blocco">'+
        [["0","Senza avviso"],["5","Avviso 5 min prima"],["10","Avviso 10 min prima"],
         ["15","Avviso 15 min prima"],["30","Avviso 30 min prima"]].map(function(o){
          return '<option value="'+o[0]+'"'+(S.ui.alarm===o[0]?" selected":"")+'>'+o[1]+'</option>';
-       }).join("")+'</select><button class="add" data-act="ics">Aggiungi al calendario</button>'+
+       }).join("")+'</select><button class="add" data-act="ics">Esporta nel calendario</button>'+
        (S.ics ? '<button class="add ghost" data-act="icshide">Nascondi testo</button>' : '')+
-       '<span class="hint" style="margin:0;align-self:center">scarica un file .ics</span></div>'+
+       '</div>'+
        (function(){
          var st = statoNotifiche();
-         return '<p class="grp">Avvisi mentre il pannello è aperto</p>'+
+         return '<p class="grp">Promemoria nell\'app</p>'+
            '<label class="riga-flag"><input type="checkbox" data-chg="set-notifiche"'+
            (pref("notificheAperto") ? " checked" : "")+(st.perche ? " disabled" : "")+
            '> Avvisami poco prima di un blocco</label>'+
            (st.perche ? '<p class="hint">'+esc(st.perche)+'</p>'
-             : '<p class="hint">Funziona con il pannello aperto, anche in una scheda in '+
-               'sottofondo. A pannello chiuso serve il calendario: nessuna pagina web può '+
-               'programmarsi un avviso da sola.</p>')+
+             : '<p class="hint"><b>Limite dei promemoria:</b> funzionano solo col pannello '+
+               'aperto, anche in una scheda in sottofondo. Chiudendolo non arriva niente, '+
+               'ed è un limite del browser, non una scelta: a pannello chiuso serve il '+
+               'calendario, che riceve gli avvisi dal file esportato.</p>')+
            (pref("notificheAperto")
              ? '<div class="ctrls"><div class="ctrl"><label class="lbl" for="antic">Quanto prima</label>'+
                '<select id="antic" data-chg="set-anticipo">'+[5,10,15,30].map(function(x){
@@ -394,19 +425,28 @@ function zonaImpostazioni(){
     SEZ[sezCorrente] += '<p class="empty">Nessun modello salvato.</p>';
   SEZ[sezCorrente] += '</div>';
 
-  inSezione("aspetto");
+  /* CAL-002 — questa scheda stava sotto «Aspetto» e si chiamava «Importa dal
+     calendario». Due imprecisioni: non è aspetto, ed è un'importazione da un
+     FILE, non dal calendario. Ora vive nella sezione Calendario, accanto
+     all'esportazione, con la data dell'ultima volta. */
+  inSezione("calendario");
 
   SEZ[sezCorrente] += '<div class="card'+(folded("setics") ? " chiusa" : "")+'">'+
     '<h2 data-ico="prossimi" ><button class="foldbtn" type="button" data-act=\"fold\" data-v="setics" '+
-    'aria-expanded="'+(!folded("setics"))+'"><span>Importa dal calendario</span>'+
+    'aria-expanded="'+(!folded("setics"))+'"><span>Importa da file .ics</span>'+
     '<span class="caret">'+(folded("setics") ? "▸" : "▾")+'</span></button></h2>'+
-    '<p class="hint" style="margin-top:0">Scegli un file <b>.ics</b> esportato dal tuo '+
-    'calendario: te ne mostro il contenuto e scegli tu cosa importare. '+
-    'Il file viene letto sul dispositivo e non esce da qui.</p>'+
+    '<p class="hint" style="margin-top:0">Ultima importazione: <b>'+esc(quando(impIcs))+'</b>. '+
+    'Scegli un file <b>.ics</b> esportato dal tuo calendario: te ne mostro il contenuto e '+
+    'scegli tu cosa importare. Il file viene letto sul dispositivo e non esce da qui.</p>'+
+    '<p class="hint"><b>È una lettura, non un collegamento:</b> quello che importi diventa '+
+    'una copia qui. Se l\'evento cambia nel calendario, la copia resta com\'era.</p>'+
     '<div class="row"><button class="add ghost" data-act="ics-scegli">Scegli un file</button>'+
     '<input type="file" id="icsfile" accept="text/calendar,.ics" style="display:none">'+
-    '<span class="hint" style="margin:0;align-self:center">Il collegamento diretto con '+
-    'Google o Microsoft richiede un servizio account che questa versione non ha.</span></div>';
+    '</div>'+
+    '<p class="hint"><b>Integrazione automatica non attiva.</b> Un collegamento vero con '+
+    'Google Calendar o Outlook — che legga e scriva da solo, nei due sensi — richiede '+
+    'un\'autorizzazione OAuth e un servizio che la custodisca. Questa versione non ce l\'ha, '+
+    'e finché non c\'è preferiamo dirlo invece di chiamare «collegamento» un file.</p>';
   if (S.icsAnteprima) {
     var ev = S.icsAnteprima.eventi;
     SEZ[sezCorrente] += '<p class="grp">'+ev.length+(ev.length===1?" evento trovato":" eventi trovati")+

@@ -4,7 +4,7 @@
    esportabile. Le migrazioni girano su una copia: se una fallisce, i dati
    originali restano intatti. */
 
-var SCHEMA_ATTUALE = 5;
+var SCHEMA_ATTUALE = 6;
 var CHIAVE_BACKUP  = "pannello-tempo:pre-migrazione";
 var REGISTRO_MIGR  = [];
 
@@ -26,6 +26,13 @@ function impostazioniPredefinite(){
       minutiPredefiniti: 0
     },
     suggerimentoRoutineMostrato: false,
+    /* CAL-001 — il calendario non è «collegato»: si esporta e si importa a
+       mano. Queste due date sono l'unica cosa che il pannello sa dirti, e
+       dirla è meglio che scrivere «sincronizzato» per un file scaricato. */
+    ultimaEsportazioneIcs: null,
+    ultimaImportazioneIcs: null,
+    /* MIG-001 — l'utente ha già trasferito i dati dal servizio precedente? */
+    gistMigrato: false,
     piano: "gratuito",
     installaNascosto: false,
     analisiAttive: true,
@@ -109,6 +116,23 @@ var PASSI_MIGRAZIONE = [
       });
       d.settings = d.settings || {};
       if (d.settings.routineSpiegata === undefined) d.settings.routineSpiegata = false;
+      return d;
+    } },
+  { da: 5, a: 6, nome: "calendario distinto dalla sincronizzazione (CAL-001, MIG-001)",
+    esegui: function(d){
+      /* Tre campi nuovi, nessun dato riscritto. Non deduco nulla dal
+         passato: non sapendo se e quando l'utente ha esportato o importato
+         un file .ics, le due date restano `null` e l'interfaccia dice
+         «mai», che è la verità. Inventare una data sarebbe peggio. */
+      d.settings = d.settings || {};
+      if (d.settings.ultimaEsportazioneIcs === undefined) d.settings.ultimaEsportazioneIcs = null;
+      if (d.settings.ultimaImportazioneIcs === undefined) d.settings.ultimaImportazioneIcs = null;
+      /* MIG-001 — chi arriva da una versione con Gist configurato non ha
+         ancora migrato: il valore predefinito è `false` e il pannello gli
+         proporrà il trasferimento. Chi non ha mai usato Gist non vedrà
+         niente, perché la proposta dipende anche dalla presenza di un
+         identificativo. */
+      if (d.settings.gistMigrato === undefined) d.settings.gistMigrato = false;
       return d;
     } }
 ];

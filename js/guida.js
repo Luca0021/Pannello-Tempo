@@ -140,8 +140,15 @@ var GUIDA_SEZIONI = [
       });
     } },
 
-  { id:"sincronizzazione", titolo:"Sincronizzazione",
-    testo:["Il confronto avviene record per record. Due modifiche su voci "+
+  /* CPY-002 — questa voce si chiamava «Sincronizzazione» e basta, e nel
+     pannello convivevano due cose chiamate con la stessa parola: mandare i
+     propri dati su un altro dispositivo, e scaricare un file per il
+     calendario. Ora sono due voci separate, e ognuna dice che cos'è. */
+  { id:"sincronizzazione", titolo:"Sincronizzazione dei dati",
+    testo:["Riguarda le tue attività, non il calendario. Serve un Account "+
+           "Pannello Tempo: senza account i dati restano su questo dispositivo, "+
+           "che è il comportamento predefinito.",
+           "Il confronto avviene record per record. Due modifiche su voci "+
            "diverse non sono un conflitto e vengono unite da sole.",
            "Quando la stessa voce è cambiata in due posti il pannello si ferma, "+
            "mostra le differenze e ti fa scegliere. Finché non decidi non viene "+
@@ -151,6 +158,27 @@ var GUIDA_SEZIONI = [
         .map(function(k){ return { nome:STATI[k].breve, nota:STATI[k].cosa }; });
     } },
 
+  { id:"calendario", titolo:"Calendario e promemoria",
+    testo:["Non è sincronizzazione, ed è la distinzione che conta di più in "+
+           "questa guida. Il calendario si scambia FILE: nessun collegamento "+
+           "automatico, nessun account, niente che si aggiorni da solo.",
+           "Nessun calendario è collegato, e l'integrazione automatica non è "+
+           "attiva: un collegamento vero nei due sensi con Google Calendar o "+
+           "Outlook richiede un'autorizzazione OAuth e un servizio che la "+
+           "custodisca, che questa versione non ha."],
+    elenco: function(){
+      return [
+        { nome:"Esporta nel calendario",
+          nota:"Scarica un file .ics con i tuoi blocchi e lo apri col calendario, che poi manda le notifiche lui, anche a telefono bloccato. È una copia: se cambi un orario qui, il calendario non se ne accorge." },
+        { nome:"Importa da file .ics",
+          nota:"Leggi un file esportato dal tuo calendario, guardi cosa contiene e scegli quali eventi importare. Il file non esce dal dispositivo." },
+        { nome:"Promemoria nell'app",
+          nota:"Avvisi mentre il pannello è aperto, anche in una scheda in sottofondo. A pannello chiuso non arriva niente: è un limite del browser, non una scelta." },
+        { nome:"Ultima esportazione e ultima importazione",
+          nota:"Le trovi nelle impostazioni, sezione Calendario e promemoria. Sono date, non uno stato di sincronizzazione: dicono quando l'hai fatto, non che sia allineato." }
+      ];
+    } },
+
   { id:"problemi", titolo:"Se qualcosa va storto",
     elenco: function(){
       return [
@@ -158,8 +186,10 @@ var GUIDA_SEZIONI = [
           nota:"«Annulla» compare subito dopo. Più tardi, guarda le copie di sicurezza in Backup e dati: ne vengono tenute cinque." },
         { nome:"Il pannello è vuoto all'apertura",
           nota:"I dati stanno nel browser: controlla di non essere in navigazione privata o su un browser diverso." },
-        { nome:"La sincronizzazione dà errore",
+        { nome:"La sincronizzazione dei dati dà errore",
           nota:"I dati sono comunque salvati sul dispositivo. Il dettaglio dell'errore dice che cosa non ha funzionato." },
+        { nome:"La sessione è scaduta",
+          nota:"Dura finché il pannello resta aperto: chiudendolo rientri con la password. Non conserviamo sul dispositivo nulla che permetta di rientrare al posto tuo, e questo è voluto." },
         { nome:"Non trovo una voce",
           nota:"La ricerca copre anche l'archivio: ciò che hai segnato come «non serve più» è lì." },
         { nome:"Ho spento una parte e mancano delle voci",
@@ -173,8 +203,10 @@ var GUIDA_SEZIONI = [
       return [
         { nome:"Non condivide niente con altre persone", nota:"" },
         { nome:"Non manda notifiche a pannello chiuso", nota:"Gli avvisi arrivano solo mentre è aperto." },
-        { nome:"Non si collega a Google Calendar o Outlook con un account", nota:"Puoi importare un file .ics." },
-        { nome:"Non ha un server", nota:"Se perdi il dispositivo e non hai collegato un servizio, i dati sono persi." },
+        { nome:"Non si collega a Google Calendar o Outlook", nota:"Nessun calendario collegato, integrazione automatica non attiva. Puoi esportare e importare file .ics." },
+        { nome:"Non cifra i dati end-to-end", nota:"Con un account i dati sono cifrati in transito e a riposo, ma chi gestisce il servizio potrebbe tecnicamente leggerli. Vedi E2EE-DECISION.md." },
+        { nome:"Non tiene la sessione aperta fra un'apertura e l'altra", nota:"Servirebbe conservare sul dispositivo una credenziale riutilizzabile, e non esiste un posto sicuro dove metterla senza un server." },
+        { nome:"Non ha un server proprio", nota:"Senza account, se perdi il dispositivo i dati sono persi: esporta un backup." },
         { nome:"Non indovina le priorità al posto tuo", nota:"" }
       ];
     } }
