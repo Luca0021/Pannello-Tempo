@@ -61,7 +61,17 @@ function montaZone(root, diviso, attrWrap){
   elenco.forEach(function(n){
     h += '<div data-zona="'+n+'">'+(diviso.zone[n] || "")+'</div>';
   });
-  h += '<p class="sr" role="status" aria-live="polite" id="annunci"></p></div>';
+  /* DIFETTO CORRETTO — qui c'era una seconda regione di annuncio:
+       <p class="sr" role="status" aria-live="polite" id="annunci"></p>
+     Due difetti in una riga. Primo: `id="annunci"` esiste già in
+     index.html, fuori da #app, quindi il documento ne aveva due, e
+     `document.getElementById("annunci")` restituisce comunque il primo —
+     questa non veniva mai usata. Secondo, ed è il motivo per cui la
+     versione buona sta in index.html: una regione viva ricreata da
+     `innerHTML` viene sostituita nel DOM nello stesso momento in cui il
+     testo cambia, e un lettore di schermo può non annunciare nulla. La
+     regione deve sopravvivere al ridisegno, quindi vive fuori da #app. */
+  h += '</div>';
   root.innerHTML = h;
   _zoneMontate = true;
   STAT_ZONE.montaggi++;
@@ -257,11 +267,8 @@ function serveDisegnoCompleto(motivo){
 }
 function forzaProssimoCompleto(){ _zoneMontate = false; }
 
-/* Passo 4 — annunci mirati in una regione piccola e separata. */
-function annunciaMirato(testo){
-  if (typeof document === "undefined" || !document.getElementById) return;
-  var z = document.getElementById("annunci");
-  if (!z) return;
-  z.textContent = "";
-  setTimeout(function(){ z.textContent = testo; }, 30);
-}
+/* RIMOSSA — `annunciaMirato()` stava qui, senza un solo chiamante in tutto
+   il progetto, e faceva riga per riga la stessa cosa di `annuncia()` in
+   js/accessibility.js. Era la funzione per cui esisteva la seconda regione
+   di annuncio rimossa in `montaZone()`: due copie della stessa cosa, una
+   irraggiungibile. Per annunciare si usa `annuncia()`. */

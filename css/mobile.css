@@ -90,6 +90,9 @@
   .pt .ring{width:62px;height:62px;}
   /* etichette e valore su righe separate: nessun campo strizzato */
   .pt .ctrl{flex-basis:100%;}
+  /* i giorni della settimana prendono la riga intera: divisi con un menù
+     accanto restavano larghi 9px, e si sbagliava giorno */
+  .pt .dayset{flex-basis:100%;}
   .pt .fields{grid-template-columns:1fr 1fr;}
   .pt .fab{right:14px;bottom:14px;width:50px;height:50px;font-size:25px;}
 }

@@ -38,8 +38,14 @@ const FUORI = [
   /^tests(\/|$)/, /^strumenti(\/|$)/, /^firebase(\/|$)/,
   /^node_modules(\/|$)/, /^playwright-report(\/|$)/, /^test-results(\/|$)/,
   /\.md$/, /^\.env/, /^\.gitignore$/, /\.yml$/, /^package(-lock)?\.json$/,
-  /^playwright\.config\./, /^_collaudo\.js$/
+  /^playwright\.config\./, /^_collaudo\.js$/, /^backlog\.json$/
 ];
+/* NOTA: questo elenco è duplicato in _pt_build.ps1, lo strumento con cui
+   l'impronta viene calcolata a mano quando Node non c'è. I due DEVONO
+   coincidere. Se divergono, la prima esecuzione in CI produce un'impronta
+   diversa senza che nulla sia cambiato nel sito, il passo «coerenza
+   dell'impronta» fallisce, e i service worker di tutti gli utenti
+   riscaricano l'intero scheletro per niente. È già successo. */
 
 function elenca(dir, base = RADICE, out = []) {
   for (const nome of readdirSync(dir)) {

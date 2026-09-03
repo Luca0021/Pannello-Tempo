@@ -191,7 +191,7 @@ function zonaImpostazioni(){
        })();
   if (S.ics)
     SEZ[sezCorrente] += '<p class="hint">Se il download non parte, copia il testo e salvalo come <b>pannello-tempo.ics</b>.</p>'+
-         '<textarea class="icsbox" readonly>'+esc(S.ics)+'</textarea>';
+         '<textarea class="icsbox" readonly aria-label="Contenuto del file per il calendario, da copiare">'+esc(S.ics)+'</textarea>';
   SEZ[sezCorrente] += '</div>';
 
   /* sincronizzazione */
@@ -424,19 +424,25 @@ function zonaImpostazioni(){
        '<p class="hint" style="margin-top:0">Durante una pausa il pannello smette di segnalare '+
        'ritardi e non conta come mancate le abitudini saltate. La routine resta, semplicemente '+
        'non ti rimprovera.</p>'+
-       '<div class="row"><label class="lbl" style="align-self:center;margin:0">Dal</label>'+
-       '<input type="date" data-chg="p-from" value="'+esc(pz.from||"")+'">'+
-       '<label class="lbl" style="align-self:center;margin:0">al</label>'+
-       '<input type="date" data-chg="p-to" value="'+esc(pz.to||"")+'">'+
+       /* A11Y-005 — queste etichette si vedevano e non erano associate a
+          niente: nessun `for`, nessun campo annidato. Il risultato era un
+          campo data senza nome accessibile, annunciato come «data, vuoto».
+          Ora l'associazione è esplicita, così l'etichetta è anche
+          cliccabile, e l'`aria-label` completa un nome che da solo sarebbe
+          «Dal» — contenendo la parola visibile, come chiede la 2.5.3. */
+       '<div class="row"><label class="lbl" for="pt-pausa-dal" style="align-self:center;margin:0">Dal</label>'+
+       '<input type="date" id="pt-pausa-dal" data-chg="p-from" aria-label="Pausa: dal giorno" value="'+esc(pz.from||"")+'">'+
+       '<label class="lbl" for="pt-pausa-al" style="align-self:center;margin:0">al</label>'+
+       '<input type="date" id="pt-pausa-al" data-chg="p-to" aria-label="Pausa: al giorno" value="'+esc(pz.to||"")+'">'+
        (pz.from || pz.to ? '<button class="tiny" data-act="pclear2">togli</button>' : '')+
        '</div>'+
-       '<div class="ctrls"><div class="ctrl"><label class="lbl">Motivo</label>'+
-       '<select data-chg="p-motivo"><option value="">Nessuno</option>'+
+       '<div class="ctrls"><div class="ctrl"><label class="lbl" for="pt-pausa-motivo">Motivo</label>'+
+       '<select id="pt-pausa-motivo" data-chg="p-motivo"><option value="">Nessuno</option>'+
        MOTIVI.map(function(o){
          return '<option value="'+o[0]+'"'+(pz.motivo===o[0]?" selected":"")+'>'+o[1]+'</option>';
        }).join("")+'</select></div>'+
-       '<div class="ctrl"><label class="lbl">Sospendi</label>'+
-       '<select data-chg="p-area"><option value="">Lavoro e vita</option>'+
+       '<div class="ctrl"><label class="lbl" for="pt-pausa-area">Sospendi</label>'+
+       '<select id="pt-pausa-area" data-chg="p-area"><option value="">Lavoro e vita</option>'+
        ['lavoro','vita'].map(function(a){
          return '<option value="'+a+'"'+(pz.area===a?" selected":"")+'>Solo '+AREAS[a].label+'</option>';
        }).join("")+'</select></div></div>'+
@@ -451,9 +457,9 @@ function zonaImpostazioni(){
        '<p class="hint" style="margin-top:0">Se cambi banca o fornitore: sostituisce l\'indirizzo '+
        'in tutte le voci che lo contengono. L\'operazione è annullabile.</p>'+
        '<div class="row"><input type="text" data-keep="sost-da" data-chg="sost-da" '+
-       'placeholder="Indirizzo attuale, anche parziale — es. bmedonline" value="'+esc(S.sostDa||"")+'"></div>'+
+       'aria-label="Indirizzo attuale" placeholder="Indirizzo attuale, anche parziale — es. bmedonline" value="'+esc(S.sostDa||"")+'"></div>'+
        '<div class="row"><input type="text" data-keep="sost-a" data-chg="sost-a" '+
-       'placeholder="Nuovo indirizzo — es. https://www.nuovabanca.it" value="'+esc(S.sostA||"")+'"></div>'+
+       'aria-label="Nuovo indirizzo" placeholder="Nuovo indirizzo — es. https://www.nuovabanca.it" value="'+esc(S.sostA||"")+'"></div>'+
        (S.sostDa
          ? (daSost.length
              ? '<p class="hint">Verrà cambiato in <b>'+daSost.length+
@@ -478,7 +484,7 @@ function zonaImpostazioni(){
     'quando serve. Applicare un modello <b>non crea doppioni</b>: le voci già presenti '+
     'vengono saltate.</p>'+
     '<div class="row"><input type="text" id="modnome" data-keep="modnome" '+
-    'placeholder="Nome del modello (es. Giornata in ufficio)">'+
+    'aria-label="Nome del modello" placeholder="Nome del modello (es. Giornata in ufficio)">'+
     '<button class="add" data-act="mod-salva">Salva questa giornata</button></div>';
   if ((S.data.modelli||[]).length)
     SEZ[sezCorrente] += '<ul class="linklist">'+S.data.modelli.map(function(md){
@@ -531,7 +537,7 @@ function zonaImpostazioni(){
           '<span class="txt">'+esc(e.titolo)+'<span class="sub">'+esc(shortDate(e.inizio))+
           (e.ora !== null ? " · "+esc(fmt(e.ora)) : "")+
           (e.esisteGia ? " · già presente" : "")+'</span></span>'+
-          '<span class="acts"><select data-chg="ics-area" data-n="'+n+'">'+
+          '<span class="acts"><select data-chg="ics-area" data-n="'+n+'" aria-label="Area di '+esc(e.titolo)+'">'+
           ["lavoro","vita"].map(function(a){
             return '<option value="'+a+'"'+(e.area===a?" selected":"")+'>'+AREAS[a].label+'</option>';
           }).join("")+'</select></span></li>';
@@ -685,7 +691,10 @@ function zonaImpostazioni(){
         '<input type="time" id="fda" data-keep="fda" step="900" value="'+esc(oraHHMM(da))+'"></div>'+
         '<div class="ctrl"><label class="lbl" for="fa">Finisco alle</label>'+
         '<input type="time" id="fa" data-keep="fa" step="900" value="'+esc(oraHHMM(a))+'"></div>'+
-        '<div class="ctrl"><label class="lbl">&nbsp;</label>'+
+        /* spaziatore per allineare il pulsante ai due campi accanto: non è
+           un'etichetta, e va nascosto a chi ascolta invece di far annunciare
+           uno spazio vuoto */
+        '<div class="ctrl"><span class="lbl" aria-hidden="true">&nbsp;</span>'+
         '<button class="add" data-act="fascia-salva">Salva</button></div></div>'+
         '<p class="grp">Giorni con orari diversi</p><ul class="linklist">';
       [1,2,3,4,5,6,0].forEach(function(g){
@@ -748,8 +757,12 @@ function zonaImpostazioni(){
              ? "Non hai mai fatto un backup e la sincronizzazione non è attiva: i dati vivono solo in questo browser."
              : "Ultimo backup "+giorniBk+" giorni fa.")+'</p>' : '')+
        (giorniBk !== null ? '<p class="hint">Ultimo backup: '+esc(shortDate(lb))+'.</p>' : '')+
-       '<div class="row"><label class="lbl" style="align-self:center;margin:0">Città predefinita</label>'+
-       '<input type="text" data-keep="city" data-chg="city" value="'+esc(d.city||"")+'" '+
+       /* A11Y-005 — il nome del campo stava solo nel `placeholder`, che
+          sparisce appena si scrive: chi torna sul campo con un lettore di
+          schermo non sente più di che campo si tratti. Il nome sta
+          nell'etichetta, associata. */
+       '<div class="row"><label class="lbl" for="pt-citta" style="align-self:center;margin:0">Città predefinita</label>'+
+       '<input type="text" id="pt-citta" data-keep="city" data-chg="city" value="'+esc(d.city||"")+'" '+
        'placeholder="Es. Milano" style="min-width:120px">'+
        '<span class="hint" style="margin:0;align-self:center">completa i luoghi indicati col solo nome</span></div>'+
        '<div class="row"><button class="add" data-act="export">Esporta backup</button>'+
@@ -817,8 +830,8 @@ function zonaImpostazioni(){
       }).reverse().join("")+'</ul>';
 
     if (REGISTRO_MIGR.length)
-      SEZ.backup += '<p class="lbl">Registro delle migrazioni di questa sessione</p>'+
-        '<textarea class="icsbox" readonly>'+esc(reg)+'</textarea>'+
+      SEZ.backup += '<p class="lbl" id="pt-registro-migr">Registro delle migrazioni di questa sessione</p>'+
+        '<textarea class="icsbox" readonly aria-labelledby="pt-registro-migr">'+esc(reg)+'</textarea>'+
         '<div class="row"><button class="tiny" data-act="registro-scarica">Scarica il registro</button></div>';
 
     SEZ.backup += '</div>';

@@ -52,7 +52,7 @@ npx firebase emulators:exec --only firestore,auth \
 
 | Lavoro | Che cosa esegue |
 |---|---|
-| **build** | Node 20, Python 3.12, Java 17, Firebase CLI · genera la configurazione · **cerca segreti nell'albero** · build · **doppia build deterministica** · coerenza dell'impronta nei quattro punti · unit · integrazione · avvio · **regole Firestore su Emulator** |
+| **build** | Node 20, Python 3.12, Java 17, Firebase CLI · genera la configurazione · **cerca segreti nell'albero** · build · **doppia build deterministica** · coerenza dell'impronta nei quattro punti · **backlog coerente con la matrice** · unit · integrazione · avvio · **regole Firestore su Emulator** |
 | **browser** (× chromium, firefox) | terminologia · indicatore Lavoro/Vita e regressione visiva · sentinelle dei segreti · cancellazione · CSP, PWA, offline, responsive · accessibilità |
 | **verdetto** | riepilogo unico, e fallisce se uno dei due è rosso |
 
@@ -133,6 +133,7 @@ Oltre ai collaudi, questi controlli sono progettati per bloccare:
 | bersagli | un comando è sotto 24×24 |
 | contrasto | un testo è sotto 4,5:1, o il punto d'area sotto 3:1 |
 | scorrimento | la pagina eccede la larghezza della finestra |
+| backlog | un conteggio di BACKLOG-COVERAGE.md non coincide con backlog.json, o un ticket COMPLETATO si appoggia a una verifica dichiarata non eseguita |
 
 ## 7. Riprovare
 

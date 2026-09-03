@@ -93,6 +93,13 @@ jobs:
         # Se divergono, il service worker serve una build e la pagina un'altra.
         run: node strumenti/controlla-impronta.mjs
 
+      - name: Backlog coerente con la matrice
+        # I conteggi di BACKLOG-COVERAGE.md non si scrivono a mano: la fonte
+        # è backlog.json. Questo passo li ricalcola e fallisce se non
+        # coincidono, o se un ticket COMPLETATO si appoggia a una verifica
+        # dichiarata non eseguita.
+        run: node strumenti/backlog.mjs
+
       - name: Unit test
         run: node tests/runner.js --solo unit
 

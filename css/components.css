@@ -129,7 +129,7 @@
    comanda con la barra spaziatrice senza che dobbiamo reimplementare nulla. */
 .pt input.box{appearance:none;-webkit-appearance:none;flex:none;margin:2px 0 0;
   width:var(--task-checkbox-size);height:var(--task-checkbox-size);
-  border:1.5px solid var(--line2);border-radius:7px;background:var(--field);
+  border:1.5px solid var(--bordo-campo);border-radius:7px;background:var(--field);
   cursor:pointer;display:inline-block;position:relative;
   transition:background .15s,border-color .15s;}
 .pt input.box:hover{border-color:var(--ink2);}
@@ -242,9 +242,14 @@
 .pt .card.dup h2{color:var(--brass-testo);}
 .pt .card.dup h2::before{background:var(--brass);}
 .pt .seg{display:flex;margin:0 0 17px;padding:3px;border-radius:8px;background:var(--track);}
+/* A11Y-006 — le voci non selezionate erano `--muted`, che è tarato sul
+   fondo delle schede. Qui il fondo è `--track`, cioè la scheda schiarita
+   (o scurita) del 7-9%: in tema scuro il risultato era 4,42:1, appena
+   sotto il minimo. `--ink2` dà 6,30:1 e resta un secondo piano rispetto
+   alla voce attiva, che è `--ink` su `--surface`. */
 .pt .seg button{flex:1;border:none;background:none;padding:9px 4px;cursor:pointer;
     border-radius:8px;font-family:var(--sans);font-size:13px;letter-spacing:0;font-weight:500;
-    color:var(--muted);transition:background .15s,color .15s;}
+    color:var(--ink2);transition:background .15s,color .15s;}
 .pt .seg button[disabled]{opacity:.4;cursor:default;}
 .pt .seg button[data-on="1"]{background:var(--surface);color:var(--ink);
     box-shadow:0 1px 3px rgba(0,0,0,.16);}
@@ -543,13 +548,13 @@
 .pt .sub{display:block;font-size:13px;color:var(--muted);line-height:1.4;margin-top:2px;
     font-variant-numeric:tabular-nums;}
 .pt .lk{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;
-    height:24px;border:1px solid var(--line2);border-radius:6px;color:var(--pen);
+    height:24px;border:1px solid var(--bordo-campo);border-radius:6px;color:var(--pen);
     text-decoration:none;font-size:13px;line-height:1;
     transition:border-color .15s,background .15s;}
 .pt .lk:hover{border-color:var(--pen);background:var(--track);}
 .pt .txt.done{color:var(--muted);text-decoration:line-through;}
 .pt .slot{flex:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;background:none;
-    border:1px solid var(--line2);border-radius:8px;font-family:var(--sans);font-size:12px;
+    border:1px solid var(--bordo-campo);border-radius:8px;font-family:var(--sans);font-size:12px;
     font-variant-numeric:tabular-nums;color:var(--muted);cursor:pointer;padding:3px 9px;
     white-space:nowrap;transition:border-color .15s,color .15s;}
 .pt .slot:hover{border-color:var(--ink);color:var(--ink);}
@@ -586,7 +591,10 @@
    Il disegno della stella resta di 17px, cresce solo l'area toccabile. */
 .pt .star{flex:none;width:24px;height:24px;margin-top:2px;padding:0;border:none;background:none;
     cursor:pointer;--st:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%203.6l2.6%205.4%205.9.8-4.3%204.2%201%205.9-5.2-2.8-5.2%202.8%201-5.9L3.5%209.8l5.9-.8z%22%2F%3E%3C%2Fsvg%3E");
-    background-color:var(--line2);
+    /* A11Y-006 - era --line2: 1,50:1 sulle schede e 1,03:1 sullo
+       sfondo di pagina. La stella e un comando, e la sua unica
+       informazione visiva e la sagoma: sotto 3:1 non si vede che ci sia. */
+    background-color:var(--bordo-campo);
     -webkit-mask:var(--st) center/17px 17px no-repeat;mask:var(--st) center/17px 17px no-repeat;
     transition:background-color .15s,transform .15s;}
 .pt .star:hover{background-color:var(--brass);transform:scale(1.1);}
@@ -618,7 +626,7 @@
     background:var(--editbg);box-shadow:var(--sh);}
 .pt .edit .lbl{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.08em;
     text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;}
-.pt .notebox{border:1px solid var(--line2);border-radius:8px;padding:9px 11px;font:inherit;
+.pt .notebox{border:1px solid var(--bordo-campo);border-radius:8px;padding:9px 11px;font:inherit;
     font-size:14px;background:var(--field);color:var(--ink);min-height:72px;resize:vertical;}
 .pt ul.steps{margin:0 0 4px;}
 .pt ul.steps li{padding:8px 0;font-size:15px;}
@@ -647,30 +655,48 @@
 
 
 
-.pt .dayset{display:flex;gap:5px;}
-.pt .dayb{flex:1;border:1px solid var(--line2);background:var(--field);border-radius:6px;
+/* A11Y-005 — i sette pulsanti dei giorni erano `flex:1` senza minimo, e
+   condividono la riga con un'etichetta e un menù: a 375px restavano larghi
+   9px l'uno, attaccati. Nove pixel non si centrano col dito, e non passano
+   né per dimensione né per spaziatura (WCAG 2.2 §2.5.8: i cerchi da 24px
+   dei bersagli adiacenti si sovrapponevano). Ora il minimo è 30px e
+   l'insieme va a capo invece di strizzarsi: meglio due righe di pulsanti
+   raggiungibili che una riga di pulsanti sbagliati. */
+.pt .dayset{display:flex;gap:5px;flex-wrap:wrap;flex:1 1 220px;}
+.pt .dayb{flex:1 0 30px;min-width:30px;min-height:30px;
+    border:1px solid var(--bordo-campo);background:var(--field);border-radius:6px;
     padding:8px 0;font-family:var(--mono);font-size:12px;color:var(--muted);cursor:pointer;}
-.pt .dayb[data-on="1"]{background:var(--pen);border-color:var(--pen);color:#fff;font-weight:700;}
+/* A11Y-006 — il testo era `#fff` fisso. In tema chiaro `--pen` è blu scuro
+   e va bene, ma in tema scuro `--pen` diventa azzurro chiaro (#4A9BC9) e il
+   bianco sopra dà 3,08:1, sotto il minimo per un testo di 12px. `--btnfg`
+   è il token che si ribalta col tema esattamente come `--pen`: quasi
+   bianco su chiaro, quasi nero su scuro. Qui dà 5,73:1. */
+.pt .dayb[data-on="1"]{background:var(--pen);border-color:var(--pen);color:var(--btnfg);font-weight:700;}
 .pt .row{display:flex;gap:9px;margin-top:13px;flex-wrap:wrap;}
-.pt input[type=text]{flex:1;min-width:140px;border:1px solid var(--line2);border-radius:8px;
+.pt input[type=text]{flex:1;min-width:140px;border:1px solid var(--bordo-campo);border-radius:8px;
     padding:9px 11px;font:inherit;font-size:14px;background:var(--field);color:var(--ink);}
 .pt input[type=text]::placeholder{color:var(--muted);}
-.pt input[type=date]{border:1px solid var(--line2);border-radius:8px;padding:8px 9px;
+.pt input[type=date]{border:1px solid var(--bordo-campo);border-radius:8px;padding:8px 9px;
     font:inherit;font-size:13px;background:var(--field);color:var(--ink);}
-.pt select{border:1px solid var(--line2);border-radius:8px;padding:9px 8px;font:inherit;
+.pt select{border:1px solid var(--bordo-campo);border-radius:8px;padding:9px 8px;font:inherit;
     font-size:13px;background:var(--field);color:var(--ink);}
 .pt button.add{border:none;border-radius:8px;background:var(--btnbg);color:var(--btnfg);
     padding:9px 16px;font:inherit;font-size:14px;cursor:pointer;
     box-shadow:0 1px 2px rgba(0,0,0,.2);transition:background .15s;}
 .pt button.add:hover{background:var(--btnbg2);}
-.pt button.ghost{background:none;border:1px solid var(--line2);color:var(--muted);box-shadow:none;}
+.pt button.ghost{background:none;border:1px solid var(--bordo-campo);color:var(--muted);box-shadow:none;}
 .pt button.ghost:hover{background:var(--track);color:var(--ink);}
-.pt button.tiny{border:1px solid var(--line2);background:var(--surface);border-radius:8px;
+.pt button.tiny{border:1px solid var(--bordo-campo);background:var(--surface);border-radius:8px;
     cursor:pointer;font-family:var(--sans);font-size:13px;font-variant-numeric:tabular-nums;
     color:var(--muted);padding:5px 11px;
     flex:none;transition:border-color .15s,color .15s;}
 .pt button.tiny:hover{border-color:var(--ink);color:var(--ink);}
-.pt button.tiny[data-on="1"]{border-color:var(--brass);color:var(--brass-testo);}
+/* A11Y-006 — il bordo che segna la scelta attiva era `--brass`, che è un
+   colore di superficie: 2,02:1 sul punto peggiore dello sfondo di pagina,
+   dove questi pulsanti stanno davvero. La 1.4.11 vale anche per gli STATI,
+   e qui lo stato è tutto in quel bordo. `--brass-testo` è la variante dello
+   stesso ottone tarata per il contrasto: 4,37:1 sullo stesso fondo. */
+.pt button.tiny[data-on="1"]{border-color:var(--brass-testo);color:var(--brass-testo);}
 /* i menù a tendina nativi avevano altezza, forma e freccia proprie:
    qui prendono la stessa veste dei pulsanti */
 .pt select{-webkit-appearance:none;-moz-appearance:none;appearance:none;
@@ -685,7 +711,7 @@
 .pt .edittesta{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .pt .edittesta .lbl{flex:1;margin:0;}
 .pt h2 .chiudi{order:3;margin-left:2px;}
-.pt .chiudi{flex:none;width:30px;height:30px;padding:0;border:1px solid var(--line2);
+.pt .chiudi{flex:none;width:30px;height:30px;padding:0;border:1px solid var(--bordo-campo);
     border-radius:8px;background-color:var(--muted);cursor:pointer;
     --ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M6%206l12%2012M18%206L6%2018%22%2F%3E%3C%2Fsvg%3E");
     -webkit-mask:var(--ico) center/14px 14px no-repeat;mask:var(--ico) center/14px 14px no-repeat;
@@ -693,7 +719,7 @@
 .pt .chiudi:hover{background-color:var(--rust);}
 .pt .empty{color:var(--muted);font-size:14px;padding:7px 0;}
 .pt .icsbox{width:100%;height:130px;margin-top:9px;font-family:var(--mono);font-size:12px;
-    line-height:1.4;border:1px solid var(--line2);border-radius:6px;padding:9px;
+    line-height:1.4;border:1px solid var(--bordo-campo);border-radius:6px;padding:9px;
     background:var(--field);color:var(--ink2);resize:vertical;}
 
 
@@ -722,7 +748,7 @@
 .pt .secondrow{gap:6px;margin-top:8px;}
 /* Il rosso come TESTO: `--rust` su fondo scuro dà 3,73:1, sotto la soglia.
    Serve la variante per le scritte, come per ottone e verde. */
-.pt button.tiny.danger{color:var(--rust-testo);border-color:rgba(162,68,56,.45);}
+.pt button.tiny.danger{color:var(--rust-testo);border-color:var(--rust);}
 .pt button.tiny.danger:hover{background:rgba(162,68,56,.1);border-color:var(--rust);color:var(--rust-testo);}
 .pt mark{background:rgba(190,140,54,.3);color:inherit;border-radius:3px;padding:0 2px;}
 .pt .digora.ora{color:var(--brass-testo);font-weight:700;}

@@ -178,7 +178,7 @@ function renderInner(){
   var cercando = (S.searchOpen && normTxt(S.query).length >= 1) || S.digest;
   if (S.searchOpen)
     h += '<div class="row searchrow"><input type="text" id="q" data-keep="q" '+
-         'data-chg="query" placeholder="Cerca fra task, note, luoghi, passi e archivio…" value="'+esc(S.query)+'">'+
+         'aria-label="Cerca nel pannello" data-chg="query" placeholder="Cerca fra task, note, luoghi, passi e archivio…" value="'+esc(S.query)+'">'+
          (S.query ? '<button class="tiny" data-act="qclear">pulisci</button>' : '')+
          '<button class="tiny" data-act="search">chiudi</button></div>';
   if (S.digest) {
@@ -251,7 +251,7 @@ function renderInner(){
          '<button class="add ghost" data-act="digest">Chiudi</button></div>';
     if (S.digTxt)
       h += '<p class="hint">Se la copia non funziona, seleziona il testo qui sotto.</p>'+
-           '<textarea class="icsbox" readonly>'+esc(S.digTxt)+'</textarea>';
+           '<textarea class="icsbox" readonly aria-label="Riepilogo della giornata, da copiare">'+esc(S.digTxt)+'</textarea>';
     h += '</div>';
   } else if (cercando) {
     var res = searchAll(S.query);
@@ -301,7 +301,7 @@ function renderInner(){
              '<span class="lgrip" title="Trascina per riordinare">⣿</span>'+
              '<span class="txt">'+esc(l.name)+'<span class="sub">'+esc(l.url)+'</span></span>'+
              '<span class="acts">'+
-             '<select data-chg="linkrowarea" data-id="'+l.id+'" title="Dove mostrarlo">'+
+             '<select data-chg="linkrowarea" data-id="'+l.id+'" aria-label="Dove mostrare questo collegamento">'+
              '<option value=""'+(!l.area?" selected":"")+'>sempre</option>'+
              '<option value="lavoro"'+(l.area==="lavoro"?" selected":"")+'>lavoro</option>'+
              '<option value="vita"'+(l.area==="vita"?" selected":"")+'>vita</option>'+
@@ -313,13 +313,13 @@ function renderInner(){
              '<button class="tiny danger" data-act="linkdel" data-id="'+l.id+'" title="Elimina">×</button>'+
              '</span></li>';
          }).join("")+'</ul>'+
-         '<label class="lbl" style="margin-top:14px;display:block">Aggiungine uno</label>'+
+         '<span class="lbl" style="margin-top:14px;display:block">Aggiungine uno</span>'+
          '<p class="hint" style="margin-top:0">L\'area decide dove compare: '+
          'i collegamenti di Lavoro spariscono quando guardi Vita, e viceversa.</p>'+
          '<div class="row">'+
-         '<input type="text" id="lname" data-keep="lname" placeholder="Nome (es. CRM)" style="min-width:110px">'+
-         '<input type="text" id="lurl" data-keep="lurl" placeholder="https://…">'+
-         '<select data-chg="linkarea"><option value="">In entrambe</option>'+
+         '<input type="text" id="lname" data-keep="lname" aria-label="Nome del collegamento" placeholder="Nome (es. CRM)" style="min-width:110px">'+
+         '<input type="text" id="lurl" data-keep="lurl" aria-label="Indirizzo del collegamento" placeholder="https://…">'+
+         '<select data-chg="linkarea" aria-label="In quale area mostrarlo"><option value="">In entrambe</option>'+
          '<option value="lavoro"'+(S.ui.linkArea==="lavoro"?" selected":"")+'>Solo Lavoro</option>'+
          '<option value="vita"'+(S.ui.linkArea==="vita"?" selected":"")+'>Solo Vita</option></select>'+
          '<button class="add" data-act="linkadd">Aggiungi</button></div>'+
@@ -390,15 +390,17 @@ function renderInner(){
   if (S.filtri) {
   h += '<div class="ctrls">';
   if (prj.length)
-    h += '<div class="ctrl"><label class="lbl">Mostra</label>'+
-         '<select data-chg="tagf">'+
+    h += '<div class="ctrl"><span class="lbl">Mostra</span>'+
+         '<select data-chg="tagf" aria-label="Mostra le etichette">'+
          '<option value="tutti"'+(S.tagF==="tutti"?" selected":"")+'>Tutte le etichette</option>'+
          '<option value="__senza"'+(S.tagF==="__senza"?" selected":"")+'>Senza etichetta</option>'+
          prj.map(function(p){
            return '<option value="'+esc(p)+'"'+(S.tagF===p?" selected":"")+'>'+esc(p)+'</option>';
          }).join("")+'</select></div>';
-  h += '<div class="ctrl"><label class="lbl">Raggruppa per</label>'+
-       '<div class="seg mini">'+
+  /* A11Y-005 - era un <label> davanti a un segmentato di pulsanti:
+     un'etichetta che non etichetta niente. Il nome sta sul gruppo. */
+  h += '<div class="ctrl"><span class="lbl" id="pt-raggruppa-et">Raggruppa per</span>'+
+       '<div class="seg mini" role="group" aria-labelledby="pt-raggruppa-et">'+
        [["area", S.filter === "tutto" ? "Lavoro e vita" : "Nessuno", false,
                  S.filter === "tutto" ? "Divide le liste in Lavoro e Vita"
                                       : "Nessuna suddivisione: stai già guardando solo "+AREAS[S.filter].label],
@@ -551,9 +553,9 @@ function renderInner(){
       '<p class="hint" style="margin-top:0">«'+esc(vb.label)+'» esce dalla giornata e torna quando '+
       'si sblocca. Scrivere la causa evita che questa sezione diventi un cimitero.</p>'+
       '<div class="row"><input type="text" id="causain" data-keep="causain" '+
-      'placeholder="Es. risposta di Rossi, preventivo del fornitore..."></div>'+
-      '<div class="row"><label class="lbl" style="align-self:center;margin:0">Ricontrolla il</label>'+
-      '<input type="date" id="causadata" data-keep="causadata">'+
+      'aria-label="Da chi o da che cosa dipende" placeholder="Es. risposta di Rossi, preventivo del fornitore..."></div>'+
+      '<div class="row"><span class="lbl" style="align-self:center;margin:0">Ricontrolla il</span>'+
+      '<input type="date" id="causadata" data-keep="causadata" aria-label="Ricontrolla il">'+
       '<span class="hint" style="margin:0;align-self:center">facoltativo</span></div>'+
       '<div class="row"><button class="add" data-act="causa-ok">Mettila fra i bloccati</button>'+
       '<button class="tiny" data-act="causa-annulla">annulla</button></div></div>';
@@ -710,9 +712,13 @@ function renderInner(){
        (isToday() ? '' : '<button class="tiny" data-act="gotoday">Oggi</button>')+'</div>';
   var yNow = new Date().getFullYear(), years = [];
   for (var y = yNow-2; y <= yNow+4; y++) years.push(y);
-  h += '<div class="row jump"><select data-chg="month">'+MONTHS.map(function(m,n){
+  /* A11Y-005 — un `select` senza etichetta non ha nome accessibile: il testo
+     delle opzioni NON lo è, e un lettore di schermo annuncia «casella
+     combinata, settembre» senza dire di che cosa. Qui non c'è un'etichetta
+     visibile a cui agganciarsi, quindi il nome sta in `aria-label`. */
+  h += '<div class="row jump"><select data-chg="month" aria-label="Mese">'+MONTHS.map(function(m,n){
         return '<option value="'+n+'"'+(cursor().getMonth()===n?" selected":"")+'>'+m+'</option>';
-      }).join("")+'</select><select data-chg="year">'+years.map(function(yy){
+      }).join("")+'</select><select data-chg="year" aria-label="Anno">'+years.map(function(yy){
         return '<option value="'+yy+'"'+(cursor().getFullYear()===yy?" selected":"")+'>'+yy+'</option>';
       }).join("")+'</select>'+
       '<button class="tiny" data-act="shift" data-n="-1" data-u="y">‹ anno</button>'+
@@ -858,7 +864,7 @@ function renderInner(){
           return sa - sb || a.label.localeCompare(b.label);
         }).slice(0, 40);
       h += '<li class="editrow"><div class="steppanel"><p class="lbl">Aggiungi «'+esc(c.text)+'» come passo di:</p>'+
-           '<div class="row" style="margin-top:6px"><select id="tostepsel">'+
+           '<div class="row" style="margin-top:6px"><select id="tostepsel" aria-label="Task a cui aggiungere il passo">'+
            cand.map(function(i){
              var n0 = (i.steps||[]).length;
              return '<option value="'+i.id+'">'+esc(i.label)+(n0 ? " ("+n0+" passi)" : "")+'</option>';
@@ -869,8 +875,8 @@ function renderInner(){
            '</div></li>';
     }
   });
-  h += '</ul><div class="row"><input type="text" id="capinput" data-keep="capinput" placeholder="Es. richiamare il commercialista">'+
-       '<select data-chg="cap-area">'+['lavoro','vita'].map(function(a2){
+  h += '</ul><div class="row"><input type="text" id="capinput" data-keep="capinput" aria-label="Che cosa ti viene in mente" placeholder="Es. richiamare il commercialista">'+
+       '<select data-chg="cap-area" aria-label="Area di questo appunto">'+['lavoro','vita'].map(function(a2){
          return '<option value="'+a2+'"'+(S.ui.capArea===a2?" selected":"")+'>'+AREAS[a2].label+'</option>';
        }).join("")+'</select><button class="add" data-act="capadd">Aggiungi</button></div></div>';
   }
@@ -896,75 +902,93 @@ function renderInner(){
   if (modoAvanzato()) {
   h += '<div class="card"><h2 data-ico="aggiungi">Aggiungi un task</h2>'+
        '<div class="row"><input type="text" id="newlabel" data-keep="newlabel" '+
-       'placeholder="Che cosa devi fare?">'+
+       'aria-label="Che cosa devi fare" placeholder="Che cosa devi fare?">'+
        '<button class="add" data-act="additem">Aggiungi</button></div>'+
        /* TSK-002 — il messaggio sta accanto al campo che lo riguarda */
        (S.erroriTask ? segnalaCampo(S.erroriTask, "label") : '')+
        '<p class="riassunto"><span role="button" tabindex="0" data-act="addmore">'+
        esc(riassuntoNuovo())+' <b>'+(S.addMore ? "chiudi" : "cambia")+'</b></span></p>';
   if (S.addMore) {
-  h += '<div class="row"><select data-chg="add-area">'+['lavoro','vita'].map(function(a){
+  h += '<div class="row"><select data-chg="add-area" aria-label="Area">'+['lavoro','vita'].map(function(a){
          return '<option value="'+a+'"'+(S.ui.area===a?" selected":"")+'>'+AREAS[a].label+'</option>';
-       }).join("")+'</select><select data-chg="add-freq">'+FREQS.map(function(f){
+       }).join("")+'</select><select data-chg="add-freq" aria-label="Ogni quanto si ripete">'+FREQS.map(function(f){
          return '<option value="'+f.id+'"'+(S.ui.freq===f.id?" selected":"")+'>'+f.every+'</option>';
        }).join("")+'</select>';
   if (S.ui.freq === "once")
-    h += '<input type="date" data-chg="add-date" value="'+esc(S.ui.date||S.cursorKey)+'">';
-  h += '<select data-chg="add-start"><option value="">Senza orario</option>'+
+    h += '<input type="date" data-chg="add-date" aria-label="Data" value="'+esc(S.ui.date||S.cursorKey)+'">';
+  h += '<select data-chg="add-start" aria-label="Ora di inizio"><option value="">Senza orario</option>'+
        SLOTS.map(function(s){
          return '<option value="'+s+'"'+(S.ui.start===String(s)?" selected":"")+'>'+fmt(s)+'</option>';
        }).join("")+'</select>';
   if (S.ui.start !== "")
-    h += '<select data-chg="add-dur">'+DURS.map(function(dd2){
+    h += '<select data-chg="add-dur" aria-label="Durata">'+DURS.map(function(dd2){
       return '<option value="'+dd2[0]+'"'+(S.ui.dur===String(dd2[0])?" selected":"")+'>'+dd2[1]+'</option>';
     }).join("")+'</select>';
   h += '</div>';
   if (S.ui.freq === "daily")
-    h += '<div class="row"><label class="lbl" style="align-self:center;margin:0">Frequenza</label>'+
-         '<select data-chg="add-everyd">'+
+    h += '<div class="row"><span class="lbl" style="align-self:center;margin:0">Frequenza</span>'+
+         '<select data-chg="add-everyd" aria-label="Frequenza">'+
          [[1,"tutti i giorni"],[2,"un giorno sì e uno no"],[3,"ogni 3 giorni"],
           [4,"ogni 4 giorni"],[7,"ogni 7 giorni"],[10,"ogni 10 giorni"]].map(function(o){
            return '<option value="'+o[0]+'"'+((S.ui.everyd||1)===o[0]?" selected":"")+'>'+o[1]+'</option>';
          }).join("")+'</select></div>';
   if (S.ui.freq === "yearly")
-    h += '<div class="row"><label class="lbl" style="align-self:center;margin:0">Ogni anno il</label>'+
-         '<select data-chg="add-dom">'+DOMS_Y.map(function(o){
+    h += '<div class="row"><span class="lbl" style="align-self:center;margin:0">Ogni anno il</span>'+
+         '<select data-chg="add-dom" aria-label="Ogni anno il giorno">'+DOMS_Y.map(function(o){
            return '<option value="'+o[0]+'"'+(S.ui.dom===o[0]?" selected":"")+'>'+o[1]+'</option>';
          }).join("")+'</select>'+
-         '<select data-chg="add-mon">'+MONTHS.map(function(mn,n4){
+         '<select data-chg="add-mon" aria-label="Mese">'+MONTHS.map(function(mn,n4){
            return '<option value="'+n4+'"'+((S.ui.mon||0)===n4?" selected":"")+'>'+mn+'</option>';
          }).join("")+'</select></div>';
   if (S.ui.freq === "weekly")
-    h += '<div class="row"><label class="lbl" style="align-self:center;margin:0">Giorni</label>'+
-         '<span class="dayset" style="flex:1">'+
-         [[1,"L"],[2,"M"],[3,"M"],[4,"G"],[5,"V"],[6,"S"],[0,"D"]].map(function(dd3){
-           return '<button class="dayb" data-act="add-dayt" data-n="'+dd3[0]+'" '+
-                  'data-on="'+(S.ui.days.indexOf(dd3[0])>=0?1:0)+'">'+dd3[1]+'</button>';
+    h += '<div class="row"><span class="lbl" id="pt-giorni-et" style="align-self:center;margin:0">Giorni</span>'+
+         /* `style="flex:1"` stava sullo `<span class="dayset">` e vinceva sul
+            foglio di stile: con `flex-basis:0` l'insieme dei giorni si
+            strizzava fino a 9px per pulsante. La larghezza la decide il CSS,
+            che sa anche cosa fare su schermo piccolo.
+
+            A11Y-005/006 — e tre correzioni di accessibilità:
+            1. «Giorni» era un `<label>` che non etichettava niente, perché
+               qui i comandi sono sette pulsanti e non un campo. Ora nomina
+               il gruppo;
+            2. il nome di ogni pulsante era la sola iniziale, e «M» compariva
+               due volte: chi ascolta sentiva «M, M» senza sapere quale dei
+               due fosse mercoledì. I nomi pieni sono già in `DAYNAMES`, che
+               è la stessa fonte usata altrove: non ne servono altri;
+            3. lo stato scelto/non scelto stava solo nel colore. Ora c'è
+               `aria-pressed`, che è anche il ruolo giusto per un pulsante
+               che resta premuto. */
+         '<span class="dayset" role="group" aria-labelledby="pt-giorni-et">'+
+         DAYNAMES.map(function(dd3){
+           var scelto = S.ui.days.indexOf(dd3[0])>=0;
+           return '<button class="dayb" type="button" data-act="add-dayt" data-n="'+dd3[0]+'" '+
+                  'aria-pressed="'+scelto+'" aria-label="'+esc(dd3[1])+'" '+
+                  'data-on="'+(scelto?1:0)+'">'+DOW[dd3[0]]+'</button>';
          }).join("")+'</span>'+
-         '<select data-chg="add-every">'+
+         '<select data-chg="add-every" aria-label="Ogni quante settimane">'+
          [[1,"ogni sett."],[2,"ogni 2 sett."],[3,"ogni 3 sett."],[4,"ogni 4 sett."]].map(function(o){
            return '<option value="'+o[0]+'"'+(S.ui.every===o[0]?" selected":"")+'>'+o[1]+'</option>';
          }).join("")+'</select></div>';
   if (S.ui.freq === "monthly")
-    h += '<div class="row"><label class="lbl" style="align-self:center;margin:0">Giorno del mese</label>'+
-         '<select data-chg="add-dom">'+DOMS.map(function(o){
+    h += '<div class="row"><span class="lbl" style="align-self:center;margin:0">Giorno del mese</span>'+
+         '<select data-chg="add-dom" aria-label="Giorno del mese">'+DOMS.map(function(o){
            return '<option value="'+o[0]+'"'+(S.ui.dom===o[0]?" selected":"")+'>'+o[1]+'</option>';
          }).join("")+'</select></div>';
   {
     h += '<div class="row"><input type="text" id="atag" data-keep="atag" list="taglist2" '+
-         'placeholder="Etichetta: progetto, ambito, cliente…"><datalist id="taglist2">'+
+         'aria-label="Etichetta" placeholder="Etichetta: progetto, ambito, cliente…"><datalist id="taglist2">'+
          etichette().map(function(p){ return '<option value="'+esc(p)+'"></option>'; }).join("")+'</datalist></div>'+
-         '<div class="row"><input type="text" id="aplace" data-keep="aplace" placeholder="Luogo: indirizzo o nome del posto"></div>'+
-         '<div class="row"><input type="text" id="alink" data-keep="alink" placeholder="Collegamento https://…">'+
+         '<div class="row"><input type="text" id="aplace" data-keep="aplace" aria-label="Luogo" placeholder="Luogo: indirizzo o nome del posto"></div>'+
+         '<div class="row"><input type="text" id="alink" data-keep="alink" aria-label="Collegamento" placeholder="Collegamento https://…">'+
          selettoreLink("a-linkpick", "", "")+'</div>'+
          '<div class="row"><textarea class="notebox" id="anote" data-keep="anote" '+
-         'placeholder="Nota: riferimenti, persone, cosa preparare…"></textarea></div>'+
-         '<div class="row"><textarea class="notebox" id="asteps" data-keep="asteps" '+
+         'aria-label="Nota" placeholder="Nota: riferimenti, persone, cosa preparare…"></textarea></div>'+
+         '<div class="row"><textarea class="notebox" id="asteps" data-keep="asteps" aria-label="Passi, uno per riga" '+
          'placeholder="Passi, uno per riga:&#10;raccogliere i dati&#10;scrivere la bozza&#10;rileggere"></textarea></div>';
   }
   if (S.ui.freq !== "once")
-    h += '<div class="row"><label class="lbl" style="align-self:center;margin:0">Scadenza</label>'+
-         '<input type="date" data-chg="add-due" value="'+esc(S.ui.due)+'">'+
+    h += '<div class="row"><span class="lbl" style="align-self:center;margin:0">Scadenza</span>'+
+         '<input type="date" data-chg="add-due" aria-label="Scadenza" value="'+esc(S.ui.due)+'">'+
          (S.ui.due ? '<button class="tiny" data-act="duenone">togli</button>' : '')+
          '<span class="hint" style="margin:0;align-self:center">facoltativa · resta segnalata finché non lo completi</span></div>';
   }

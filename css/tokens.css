@@ -6,12 +6,31 @@
   /* BUG — `--muted` stava a #78888F: 3,67:1 sul bianco, sotto il minimo di
      4,5:1. Non era un dettaglio di un angolo: è il colore dei suggerimenti,
      delle etichette secondarie, degli stati vuoti e di una ventina di
-     pulsanti, quindi il difetto era diffuso su tutto il pannello. #55646D
-     dà 6,12:1 sul bianco e 4,63:1 sul punto più scuro dello sfondo di
-     pagina (#DAE1E4), che è il caso peggiore. Resta un grigio di secondo
-     piano: la gerarchia non ha bisogno di scendere sotto la leggibilità. */
-  --ink:#0F1B24;--ink2:#33454F;--muted:#55646D;
+     pulsanti, quindi il difetto era diffuso su tutto il pannello.
+
+     CORREZIONE DELLA CORREZIONE — era passato a #55646D, dichiarando come
+     caso peggiore il punto più scuro dello sfondo di pagina (#DAE1E4,
+     4,63:1). Il caso peggiore non era quello: sopra quella tappa passa
+     anche la riga della griglia, e il composito scende a rgb(206,213,217),
+     dove #55646D dà 4,13:1. Tredici testi erano sotto soglia — l'occhiello
+     dell'intestazione, i suggerimenti, i titoli di sezione — e la misura
+     precedente non li vedeva perché non componeva i due livelli di sfondo.
+     #4B5861 dà 4,94:1 su quel composito e 7,19:1 sulle schede. Resta un
+     grigio di secondo piano: la gerarchia non ha bisogno di scendere sotto
+     la leggibilità. */
+  --ink:#0F1B24;--ink2:#33454F;--muted:#4B5861;
   --line:#E0E6E9;--line2:#C9D3D7;
+  /* BUG — i campi e i pulsanti col solo contorno usavano `--line2`, che sul
+     fondo delle schede dà 1,50:1. La WCAG 1.4.11 chiede 3:1 per ciò che
+     serve a IDENTIFICARE un comando, e per un campo di testo bianco su
+     scheda bianca l'unica cosa che lo identifica è il suo bordo: senza
+     contrasto, il campo non si vede che c'è. Non è un dettaglio di un
+     angolo — riguardava tutti i 31 campi e ogni pulsante contornato, in
+     entrambi i temi (in scuro erano 1,70:1).
+     `--line2` resta per ciò che è decorativo — righelli, separatori,
+     contorni di contenitori — dove la 1.4.11 non si applica e scurirlo
+     appesantirebbe la pagina senza alcun guadagno. */
+  --bordo-campo:#677983;
   --pen:#1F5673;--sage:#4C7C6C;--brass:#BE8C36;--rust:#9C4438;
   /* Ottone e verde sono nati come colori di superficie: su fondo chiaro, come
      testo, danno 3,00:1 e 4,45:1. Servono varianti scure per le scritte,
@@ -81,7 +100,9 @@
      e ci scrive il titolo «Priorità di oggi». Un titolo va letto. A .72 sta
      a 5,4:1 e resta più tenue del testo delle priorità, che è lo scopo. */
   --focusfg:#F1F5F7;--focusdim:rgba(240,246,248,.60);--focusmut:rgba(240,246,248,.72);
-  --focusline:rgba(240,246,248,.09);--focusfield:rgba(240,246,248,.22);
+  --focusline:rgba(240,246,248,.09);/* BUG - 1,86:1 sul fondo del riquadro: il contorno dei campi e del
+     quadratino non si distingueva. A .40 il composito da 3,08:1. */
+  --focusfield:rgba(240,246,248,.40);
 
     --amber:var(--brass);
     --sh:0 1px 2px rgba(0,0,0,.05),0 12px 32px -20px rgba(0,0,0,.5);
@@ -106,8 +127,12 @@
      1,07:1. Ora è dichiarato una volta sola. */
   --surface:#1B252C;--field:#141D24;--agbg:#151E25;--selbg:hsl(202 30% 19%); --track:rgba(216,232,240,.09);
   --editbg:linear-gradient(#202B33,#1A242B);
-  --ink:#E7EEF1;--ink2:#B6C4CB;--muted:#93A5B0;
+  --ink:#E7EEF1;--ink2:#B6C4CB;--muted:#9AABB5;
   --line:#28343C;--line2:#3A4A54;
+  /* Il fondo peggiore in tema scuro non e la scheda ma il pannello
+     di modifica, che e piu chiaro: rgb(49,60,68). #607888 la dava a
+     2,44:1. #728B9A da 3,16:1 la e 4,36:1 sulle schede. */
+  --bordo-campo:#728B9A;
   --pen:#4A9BC9;--sage:#5FB395;--brass:#D0A050;--rust:#C0604F;
   /* in tema scuro ottone e verde come testo danno 6,55:1 e 7,10:1 sul fondo
      delle schede: non serve scurirli, e scurirli li renderebbe illeggibili */
@@ -136,14 +161,20 @@
      fondo #1B2A34, cioè 1,07:1. Erano stati derivati invertendo il tema
      chiaro, dove però il fondo è già scuro e non va invertito. */
   --focusfg:#F1F5F7;--focusdim:rgba(240,246,248,.60);--focusmut:rgba(240,246,248,.72);
-  --focusline:rgba(240,246,248,.09);--focusfield:rgba(240,246,248,.22);
+  --focusline:rgba(240,246,248,.09);/* BUG - 1,86:1 sul fondo del riquadro: il contorno dei campi e del
+     quadratino non si distingueva. A .40 il composito da 3,08:1. */
+  --focusfield:rgba(240,246,248,.40);
 }
 @media (prefers-color-scheme:dark){.pt[data-theme="auto"]{
   --bg1:#151D23;--bg2:#0D141A;--grid:rgba(216,232,240,.035);
   --surface:#1B252C;--field:#141D24;--agbg:#151E25;--selbg:hsl(202 30% 19%); --track:rgba(216,232,240,.09);
   --editbg:linear-gradient(#202B33,#1A242B);
-  --ink:#E7EEF1;--ink2:#B6C4CB;--muted:#93A5B0;
+  --ink:#E7EEF1;--ink2:#B6C4CB;--muted:#9AABB5;
   --line:#28343C;--line2:#3A4A54;
+  /* Il fondo peggiore in tema scuro non e la scheda ma il pannello
+     di modifica, che e piu chiaro: rgb(49,60,68). #607888 la dava a
+     2,44:1. #728B9A da 3,16:1 la e 4,36:1 sulle schede. */
+  --bordo-campo:#728B9A;
   --pen:#4A9BC9;--sage:#5FB395;--brass:#D0A050;--rust:#C05A38;
   --brass-testo:#D0A050;
   --sage-testo:#5FB395;
@@ -163,7 +194,9 @@
   --focusbg:linear-gradient(158deg,#1B2A34,#16222B);--focusbd:#BE8C36;
   --invitobg:linear-gradient(#1F2A22,#161E25);--invitotx:#D9BE7E;
   --focusfg:#F1F5F7;--focusdim:rgba(240,246,248,.60);--focusmut:rgba(240,246,248,.72);
-  --focusline:rgba(240,246,248,.09);--focusfield:rgba(240,246,248,.22);
+  --focusline:rgba(240,246,248,.09);/* BUG - 1,86:1 sul fondo del riquadro: il contorno dei campi e del
+     quadratino non si distingueva. A .40 il composito da 3,08:1. */
+  --focusfield:rgba(240,246,248,.40);
 }}
 
 

@@ -15,9 +15,20 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
-# Strumenti di misura usati durante lo sviluppo, non parte della release
-_collaudo.js
+# Strumenti di misura usati durante lo sviluppo, non parte della release.
+#
+# `_pt_build.ps1` resta fuori: duplica la logica del build in un secondo
+# linguaggio, e la divergenza fra i due elenchi di esclusione è già costata
+# un difetto (BUILD.md §2). Versionarlo inviterebbe a mantenerlo.
+#
+# `_collaudo.js` invece ENTRA, e vale spiegare l'eccezione: contiene le
+# misure di accessibilità che hanno trovato i difetti di
+# ACCESSIBILITY-REPORT.md §2, e nei suoi commenti gli otto falsi allarmi da
+# cui sono nate. Quelle note sono la parte più difficile da ricostruire, e
+# fuori dal repository si perdono. Non può influire sulla release: è escluso
+# dall'impronta della build e `index.html` non lo carica.
 _pt-*.ps1
+_pt_build.ps1
 
 # Sistema operativo
 Thumbs.db

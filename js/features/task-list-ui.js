@@ -270,7 +270,7 @@ function stepsPanel(i){
          'data-id="'+i.id+'" data-n="'+n+'">'+esc(x.t)+'</span></li>';
   });
   h += '</ul><div class="row" style="margin-top:8px"><input type="text" id="qs'+i.id+'" '+
-       'data-keep="qs'+i.id+'" placeholder="Aggiungi un passo…">'+
+       'data-keep="qs'+i.id+'" aria-label="Aggiungi un passo" placeholder="Aggiungi un passo…">'+
        '<button class="add ghost" data-act="stepadd" data-id="'+i.id+'" data-q="1">Aggiungi</button>'+
        '<button class="tiny" data-act="open" data-id="'+i.id+'">modifica task</button></div></div></li>';
   return h;
@@ -294,7 +294,7 @@ function selettoreLink(idCampo, valore, idTask){
   if (!ls.length) return "";
   var scelto = ls.filter(function(l){ return l.url === valore; })[0];
   return '<select data-chg="'+idCampo+'"'+(idTask ? ' data-id="'+idTask+'"' : '')+' '+
-    'title="Riempi con un collegamento rapido">'+
+    'aria-label="Riempi con un collegamento rapido">'+
     '<option value="">Collegamento rapido…</option>'+
     ls.map(function(l){
       return '<option value="'+esc(l.url)+'"'+(scelto && scelto.url === l.url ? " selected" : "")+'>'+
@@ -308,18 +308,23 @@ function nuovoHtml(){
     '<span class="lbl">Nuovo task alle '+fmt(S.nuovo.start)+'</span>'+
     '<button class="chiudi" data-act="nuovoannulla" title="Annulla" aria-label="Annulla"></button>'+
     '</div>'+
+    /* A11Y-005 — le etichette qui sotto si vedono ma non sono associate a
+       nessun campo, e non possono esserlo con `for`: questo blocco compare
+       più volte nella pagina, e gli id si ripeterebbero. Il nome sta quindi
+       in `aria-label`, che contiene la parola visibile come chiede la
+       2.5.3 e non dipende dall'ordine del documento. */
     '<div class="row"><input type="text" id="nlabel" data-keep="n-label" '+
-    'placeholder="Che cosa devi fare?"></div>'+
+    'aria-label="Che cosa devi fare" placeholder="Che cosa devi fare?"></div>'+
     '<div class="fields">'+
-    '<div><label class="lbl">Inizio</label><select data-chg="n-start">'+
+    '<div><span class="lbl">Inizio</span><select data-chg="n-start" aria-label="Inizio del nuovo task">'+
       SLOTS.map(function(o){
         return '<option value="'+o+'"'+(Math.abs(S.nuovo.start-o)<1e-6?" selected":"")+'>'+fmt(o)+'</option>';
       }).join("")+'</select></div>'+
-    '<div><label class="lbl">Durata</label><select data-chg="n-dur">'+
+    '<div><span class="lbl">Durata</span><select data-chg="n-dur" aria-label="Durata del nuovo task">'+
       DURS.map(function(o){
         return '<option value="'+o[0]+'"'+(S.nuovo.dur===o[0]?" selected":"")+'>'+o[1]+'</option>';
       }).join("")+'</select></div>'+
-    '<div><label class="lbl">Area</label><select data-chg="n-area">'+
+    '<div><span class="lbl">Area</span><select data-chg="n-area" aria-label="Area del nuovo task">'+
       ['lavoro','vita'].map(function(a){
         return '<option value="'+a+'"'+(S.nuovo.area===a?" selected":"")+'>'+AREAS[a].label+'</option>';
       }).join("")+'</select></div>'+
@@ -337,43 +342,43 @@ function editorHtml(){
           '<span class="lbl">Modifica</span>'+
           '<button class="chiudi" data-act="editclose" title="Chiudi" aria-label="Chiudi"></button>'+
           '</div>';
-  h += '<input type="text" style="width:100%;margin-bottom:8px" data-keep="e-label" data-chg="e-label" data-id="'+it.id+'" value="'+esc(it.label)+'">';
+  h += '<input type="text" style="width:100%;margin-bottom:8px" data-keep="e-label" data-chg="e-label" data-id="'+it.id+'" aria-label="Che cosa devi fare" value="'+esc(it.label)+'">';
   h += '<div class="fields">';
-  h += '<div><label class="lbl">Inizio</label><select data-chg="e-start" data-id="'+it.id+'">'+
+  h += '<div><span class="lbl">Inizio</span><select data-chg="e-start" data-id="'+it.id+'" aria-label="Inizio">'+
        (typeof it.start === "number" ? "" : '<option value="" selected>Senza orario</option>')+
        SLOTS.map(function(s){
          return '<option value="'+s+'"'+(typeof it.start === "number" && Math.abs(it.start-s)<1e-6 ? " selected":"")+'>'+fmt(s)+'</option>';
        }).join("")+'</select></div>';
-  h += '<div><label class="lbl">Durata</label><select data-chg="e-dur" data-id="'+it.id+'">'+
+  h += '<div><span class="lbl">Durata</span><select data-chg="e-dur" data-id="'+it.id+'" aria-label="Durata">'+
        DURS.map(function(d){
          return '<option value="'+d[0]+'"'+((it.dur||0.5) === d[0] ? " selected":"")+'>'+d[1]+'</option>';
        }).join("")+'</select></div>';
-  h += '<div><label class="lbl">Area</label><select data-chg="e-area" data-id="'+it.id+'">'+
+  h += '<div><span class="lbl">Area</span><select data-chg="e-area" data-id="'+it.id+'" aria-label="Area">'+
        ['lavoro','vita'].map(function(a){
          return '<option value="'+a+'"'+(it.area === a ? " selected":"")+'>'+AREAS[a].label+'</option>';
        }).join("")+'</select></div>';
   if (it.freq === "once")
-    h += '<div><label class="lbl">Data</label><input type="date" data-chg="e-date" data-id="'+it.id+'" value="'+esc(it.date||S.cursorKey)+'"></div>';
+    h += '<div><span class="lbl">Data</span><input type="date" data-chg="e-date" data-id="'+it.id+'" aria-label="Data" value="'+esc(it.date||S.cursorKey)+'"></div>';
   else if (it.freq === "monthly")
-    h += '<div><label class="lbl">Giorno del mese</label><select data-chg="e-dom" data-id="'+it.id+'">'+
+    h += '<div><span class="lbl">Giorno del mese</span><select data-chg="e-dom" data-id="'+it.id+'" aria-label="Giorno del mese">'+
          DOMS.map(function(o){
            return '<option value="'+o[0]+'"'+(domOf(it) === o[0] ? " selected":"")+'>'+o[1]+'</option>';
          }).join("")+'</select></div>';
   h += '</div>';
   if (it.freq === "daily")
-    h += '<div style="margin-top:11px"><label class="lbl">Frequenza</label>'+
-         '<select data-chg="e-everyd" data-id="'+it.id+'">'+
+    h += '<div style="margin-top:11px"><span class="lbl">Frequenza</span>'+
+         '<select data-chg="e-everyd" data-id="'+it.id+'" aria-label="Frequenza">'+
          [[1,"Tutti i giorni"],[2,"Un giorno sì e uno no"],[3,"Ogni 3 giorni"],
           [4,"Ogni 4 giorni"],[7,"Ogni 7 giorni"],[10,"Ogni 10 giorni"]].map(function(o){
            return '<option value="'+o[0]+'"'+((it.every||1)===o[0]?" selected":"")+'>'+o[1]+'</option>';
          }).join("")+'</select></div>';
   if (it.freq === "yearly")
     h += '<div class="fields" style="margin-top:11px">'+
-         '<div><label class="lbl">Mese</label><select data-chg="e-mon" data-id="'+it.id+'">'+
+         '<div><span class="lbl">Mese</span><select data-chg="e-mon" data-id="'+it.id+'" aria-label="Mese">'+
          MONTHS.map(function(mn, n3){
            return '<option value="'+n3+'"'+(((it.mon===undefined)?0:it.mon)===n3?" selected":"")+'>'+mn+'</option>';
          }).join("")+'</select></div>'+
-         '<div><label class="lbl">Giorno</label><select data-chg="e-dom" data-id="'+it.id+'">'+
+         '<div><span class="lbl">Giorno</span><select data-chg="e-dom" data-id="'+it.id+'" aria-label="Giorno del mese">'+
          DOMS_Y.map(function(o){
            return '<option value="'+o[0]+'"'+(domOf(it)===o[0]?" selected":"")+'>'+o[1]+'</option>';
          }).join("")+'</select></div></div>';
@@ -386,30 +391,38 @@ function editorHtml(){
                         : "Senza giorno fisso: la fai quando vuoi nel periodo")+'</span></div>';
   if (it.freq === "weekly" && !it.flessibile) {
     var sel = daysOf(it);
-    h += '<div style="margin-top:11px"><label class="lbl">Giorni della settimana</label><div class="dayset">'+
-         [[1,"L"],[2,"M"],[3,"M"],[4,"G"],[5,"V"],[6,"S"],[0,"D"]].map(function(dd){
-           return '<button class="dayb" data-act="e-dayt" data-id="'+it.id+'" data-n="'+dd[0]+'" '+
-                  'data-on="'+(sel.indexOf(dd[0])>=0?1:0)+'">'+dd[1]+'</button>';
+    /* A11Y-005/006 — come nel modulo di aggiunta: il gruppo prende il nome,
+       ogni pulsante prende il nome pieno del giorno da `DAYNAMES` invece
+       della sola iniziale (dove «M» compariva due volte), e lo stato passa
+       da `aria-pressed` invece di stare solo nel colore. L'id del gruppo
+       porta l'id del task perché questo blocco può comparire più volte. */
+    h += '<div style="margin-top:11px"><span class="lbl" id="gset-'+esc(it.id)+'">Giorni della settimana</span>'+
+         '<div class="dayset" role="group" aria-labelledby="gset-'+esc(it.id)+'">'+
+         DAYNAMES.map(function(dd){
+           var scelto = sel.indexOf(dd[0])>=0;
+           return '<button class="dayb" type="button" data-act="e-dayt" data-id="'+it.id+'" data-n="'+dd[0]+'" '+
+                  'aria-pressed="'+scelto+'" aria-label="'+esc(dd[1])+'" '+
+                  'data-on="'+(scelto?1:0)+'">'+DOW[dd[0]]+'</button>';
          }).join("")+'</div></div>'+
-         '<div style="margin-top:11px"><label class="lbl">Frequenza</label>'+
-         '<select data-chg="e-every" data-id="'+it.id+'">'+
+         '<div style="margin-top:11px"><span class="lbl">Frequenza</span>'+
+         '<select data-chg="e-every" data-id="'+it.id+'" aria-label="Ogni quante settimane">'+
          [[1,"Ogni settimana"],[2,"Ogni due settimane"],[3,"Ogni tre settimane"],[4,"Ogni quattro settimane"]]
            .map(function(o){ return '<option value="'+o[0]+'"'+((it.every||1)===o[0]?" selected":"")+'>'+o[1]+'</option>'; })
            .join("")+'</select></div>';
   }
   if (it.freq !== "once")
-    h += '<div style="margin-top:11px"><label class="lbl">Si ripete fino al (facoltativo)</label>'+
-         '<input type="date" style="width:100%" data-chg="e-fine" data-id="'+it.id+'" value="'+esc(it.fine||"")+'">'+
+    h += '<div style="margin-top:11px"><span class="lbl">Si ripete fino al (facoltativo)</span>'+
+         '<input type="date" style="width:100%" data-chg="e-fine" data-id="'+it.id+'" aria-label="Si ripete fino al (facoltativo)" value="'+esc(it.fine||"")+'">'+
          '<p class="hint" style="margin-top:5px">Per corsi, terapie, rate: dopo questa data smette '+
          'di comparire senza doverlo eliminare.</p></div>';
   if (it.freq !== "once")
-    h += '<div style="margin-top:11px"><label class="lbl">Scadenza (facoltativa)</label>'+
-         '<input type="date" style="width:100%" data-chg="e-due" data-id="'+it.id+'" value="'+esc(it.due||"")+'">'+
+    h += '<div style="margin-top:11px"><span class="lbl">Scadenza (facoltativa)</span>'+
+         '<input type="date" style="width:100%" data-chg="e-due" data-id="'+it.id+'" aria-label="Scadenza (facoltativa)" value="'+esc(it.due||"")+'">'+
          '<p class="hint" style="margin-top:5px">Lascia vuoto per togliere la scadenza. '+
          'Vale oltre la giornata: resta segnalata finché non completi il task.</p></div>';
   if (typeof it.start === "number")
-    h += '<div style="margin-top:11px"><label class="lbl">Avviso nel calendario</label>'+
-         '<select data-chg="e-alarm" data-id="'+it.id+'">'+
+    h += '<div style="margin-top:11px"><span class="lbl">Avviso nel calendario</span>'+
+         '<select data-chg="e-alarm" data-id="'+it.id+'" aria-label="Promemoria">'+
          [["","Come impostazione generale"],["0","Nessun avviso"],["5","5 minuti prima"],
           ["10","10 minuti prima"],["15","15 minuti prima"],["30","30 minuti prima"],
           ["60","1 ora prima"],["120","2 ore prima"]].map(function(o){
@@ -422,23 +435,23 @@ function editorHtml(){
        'data-on="'+(S.editMore?1:0)+'">'+(S.editMore ? "− altri campi" : "+ altri campi")+'</button>'+
        '<span class="hint" style="margin:0;align-self:center">etichetta · luogo · collegamento · nota · passi · avviso · scadenza</span></div>';
   if (S.editMore) {
-  h += '<div style="margin-top:11px"><label class="lbl">Etichetta</label>'+
+  h += '<div style="margin-top:11px"><span class="lbl">Etichetta</span>'+
        '<input type="text" style="width:100%" list="taglist" placeholder="Es. Migrazione SAP · Casa · Cliente Rossi · Corso inglese" '+
-       'data-keep="e-tag" data-chg="e-tag" data-id="'+it.id+'" value="'+esc(it.tag||"")+'">'+
+       'data-keep="e-tag" data-chg="e-tag" data-id="'+it.id+'" aria-label="Etichetta" value="'+esc(it.tag||"")+'">'+
        '<datalist id="taglist">'+etichette().map(function(p){ return '<option value="'+esc(p)+'"></option>'; }).join("")+'</datalist>'+
        '</div>';
   h += '<div class="fields" style="margin-top:11px">'+
-       '<div><label class="lbl">Importo (facoltativo)</label>'+
+       '<div><span class="lbl">Importo (facoltativo)</span>'+
        '<input type="text" inputmode="decimal" placeholder="Es. 82,40" '+
-       'data-keep="e-importo" data-chg="e-importo" data-id="'+it.id+'" '+
+       'data-keep="e-importo" data-chg="e-importo" data-id="'+it.id+'" aria-label="Importo (facoltativo)" '+
        'value="'+(it.importo > 0 ? esc(String(it.importo).replace(".", ",")) : "")+'"></div>'+
-       '<div><label class="lbl">Verso</label><select data-chg="e-entrata" data-id="'+it.id+'">'+
+       '<div><span class="lbl">Verso</span><select data-chg="e-entrata" data-id="'+it.id+'" aria-label="Verso">'+
        '<option value="0"'+(it.entrata?"":" selected")+'>Uscita</option>'+
        '<option value="1"'+(it.entrata?" selected":"")+'>Entrata</option>'+
        '</select></div></div>';
-  h += '<div style="margin-top:11px"><label class="lbl">Luogo</label>'+
+  h += '<div style="margin-top:11px"><span class="lbl">Luogo</span>'+
        '<input type="text" style="width:100%" placeholder="Via Roma 12, Milano — oppure «Gommista Bianchi»" '+
-       'data-keep="e-place" data-chg="e-place" data-id="'+it.id+'" value="'+esc(it.place||"")+'">'+
+       'data-keep="e-place" data-chg="e-place" data-id="'+it.id+'" aria-label="Luogo" value="'+esc(it.place||"")+'">'+
        (it.place
          ? '<p class="hint" style="margin-top:6px">'+
            '<a class="lk" style="width:auto;padding:0 9px" href="'+esc(mapsUrl(it.place))+'" '+
@@ -449,17 +462,24 @@ function editorHtml(){
            (/\d/.test(it.place) ? '' : ' — per gli avvisi di partenza del calendario conviene l\'indirizzo completo')+
            '</p>' : '')+
        '</div>';
-  h += '<div style="margin-top:11px"><label class="lbl">Collegamento (documento, cartella, riunione)</label>'+
+  /* A11Y-005 - la didascalia vale per la coppia «menu dei collegamenti
+     rapidi + campo dell'indirizzo», non per uno dei due: chi ascolta la
+     riceve dal gruppo. Gli id portano quello del task perche questo
+     blocco puo comparire piu volte nella pagina. */
+  h += '<div style="margin-top:11px" role="group" aria-labelledby="elink-'+esc(it.id)+'">'+
+       '<span class="lbl" id="elink-'+esc(it.id)+'">Collegamento (documento, cartella, riunione)</span>'+
        (selettoreLink("e-linkpick", it.link || "", it.id)
          ? '<div class="row" style="margin:0 0 6px">'+selettoreLink("e-linkpick", it.link || "", it.id)+'</div>' : '')+
-       '<input type="text" style="width:100%" placeholder="https://…" data-keep="e-link" data-chg="e-link" data-id="'+it.id+'" value="'+esc(it.link||"")+'"></div>';
+       '<input type="text" style="width:100%" placeholder="https://…" aria-label="Collegamento" data-keep="e-link" data-chg="e-link" data-id="'+it.id+'" value="'+esc(it.link||"")+'"></div>';
   if (it.link && !safeUrl(it.link))
     h += '<p class="warn">L\'indirizzo deve iniziare con http:// o https://</p>';
-  h += '<div style="margin-top:11px"><label class="lbl">Nota</label>'+
+  h += '<div style="margin-top:11px"><span class="lbl">Nota</span>'+
        '<textarea class="notebox" style="width:100%" placeholder="Riferimenti, persone, cosa preparare…" '+
-         'data-keep="e-note" data-chg="e-note" data-id="'+it.id+'">'+esc(it.note||"")+'</textarea></div>';
+         'data-keep="e-note" data-chg="e-note" data-id="'+it.id+'" aria-label="Nota">'+esc(it.note||"")+'</textarea></div>';
   var sInfo = stepsInfo(it), st = sInfo.list;
-  h += '<div style="margin-top:11px"><label class="lbl">Passi ('+sInfo.done+' di '+sInfo.tot+')</label><ul class="steps">';
+  /* idem: «Passi (n di m)» nomina l'insieme elenco + campo di aggiunta */
+  h += '<div style="margin-top:11px" role="group" aria-labelledby="epassi-'+esc(it.id)+'">'+
+       '<span class="lbl" id="epassi-'+esc(it.id)+'">Passi ('+sInfo.done+' di '+sInfo.tot+')</span><ul class="steps">';
   st.forEach(function(x, n2){
     var d2 = stepOn(it, x);
     h += '<li><input type="checkbox" class="box" data-act="stept" data-id="'+it.id+'" data-n="'+n2+'"'+
@@ -470,7 +490,7 @@ function editorHtml(){
          (x.una ? "1 volta" : "fissa")+'</button>'+
          '<button class="del" data-act="stepdel" data-id="'+it.id+'" data-n="'+n2+'">×</button></li>';
   });
-  h += '</ul><div class="row"><input type="text" id="stepin" data-keep="stepin" placeholder="Aggiungi un passo…">'+
+  h += '</ul><div class="row"><input type="text" id="stepin" data-keep="stepin" aria-label="Aggiungi un passo" placeholder="Aggiungi un passo…">'+
        '<button class="add ghost" data-act="stepadd" data-id="'+it.id+'">Aggiungi</button></div></div>';
   }
   h += '<div class="row"><button class="add" data-act="editclose">Fatto</button>'+
@@ -534,8 +554,8 @@ function editorHtml(){
       '<span class="hint" style="margin:0;align-self:center">Lo storico già registrato '+
       'non viene toccato in nessun caso.</span></div>';
   if (it.waiting)
-    h += '<div class="row"><label class="lbl" style="align-self:center;margin:0">Ricontrolla il</label>'+
-         '<input type="date" data-chg="e-recheck" data-id="'+it.id+'" value="'+esc(it.recheck||"")+'"></div>';
+    h += '<div class="row"><span class="lbl" style="align-self:center;margin:0">Ricontrolla il</span>'+
+         '<input type="date" data-chg="e-recheck" data-id="'+it.id+'" aria-label="Ricontrolla il" value="'+esc(it.recheck||"")+'"></div>';
   h += '</div>';
   return h;
 }
