@@ -147,6 +147,39 @@ function sincronizzaAttributi(vecchio, nuovo){
   vn.forEach(function(a){
     if (nuovo.getAttribute(a) === null && vecchio.removeAttribute) vecchio.removeAttribute(a);
   });
+  sincronizzaProprieta(vecchio, nuovo);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   UI-006 — per una casella nativa lo stato vero è la PROPRIETÀ, non
+   l'attributo.
+
+   Appena l'utente clicca una `<input type="checkbox">`, il browser cambia la
+   proprietà `checked` e l'attributo resta dov'era. Da quel momento
+   `setAttribute("checked", …)` e `removeAttribute("checked")` non cambiano
+   più ciò che si vede: l'attributo descrive il valore iniziale, la proprietà
+   quello corrente.
+
+   Senza questa funzione il difetto si presenta appena lo stato cambia da
+   qualcosa che non è il clic su quella casella — una voce completata su un
+   altro dispositivo e arrivata con la sincronizzazione, un annullamento, un
+   ripristino da copia di sicurezza: i dati dicono «fatto» e la casella
+   resta vuota.
+
+   `value` NON viene toccato di proposito: i campi di testo sono già
+   preservati durante il ridisegno dal meccanismo `data-keep`, e
+   sovrascriverlo cancellerebbe ciò che l'utente sta scrivendo.
+   ───────────────────────────────────────────────────────────────────────── */
+function sincronizzaProprieta(vecchio, nuovo){
+  if (!vecchio || !nuovo || vecchio.nodeType !== 1) return;
+  var tag = vecchio.tagName;
+  if (tag !== "INPUT" && tag !== "OPTION" && tag !== "BUTTON" && tag !== "SELECT" &&
+      tag !== "TEXTAREA" && tag !== "FIELDSET") return;
+  var atteso = nuovo.getAttribute ? nuovo.getAttribute("checked") !== null : false;
+  if (tag === "INPUT" && "checked" in vecchio && vecchio.checked !== atteso)
+    vecchio.checked = atteso;
+  var dis = nuovo.getAttribute ? nuovo.getAttribute("disabled") !== null : false;
+  if ("disabled" in vecchio && vecchio.disabled !== dis) vecchio.disabled = dis;
 }
 function nomiAttributi(n){
   if (n.attributi) return Object.keys(n.attributi);          /* DOM di prova */

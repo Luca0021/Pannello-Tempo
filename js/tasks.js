@@ -2,6 +2,63 @@
    Parte di Pannello Tempo. Caricato in ordine da index.html.
    Nessun modulo ES: gli script condividono lo scope globale per funzionare
    anche da file:// senza server. */
+/* ─────────────────────────────────────────────────────────────────────────
+   UI-006 — L'INDICATORE DELL'AREA LAVORO/VITA
+
+   Un solo posto che decide come si scrive l'area, in tutte le liste. Prima
+   l'area era una barra colorata sul bordo sinistro della riga: attaccata
+   alla casella di completamento, ambigua nel significato, e portata dal
+   solo colore.
+
+   Tre regole che queste funzioni fanno rispettare:
+
+   1. il colore accompagna la parola, non la sostituisce: il punto ha sempre
+      accanto «Lavoro» o «Vita», e il punto è aria-hidden perché è decoro;
+   2. non si ripete ciò che il contesto già dice: se la lista è raggruppata
+      per area, il titolo del gruppo lo ha già detto e il badge sparisce;
+   3. un'area assente o non riconosciuta si dichiara, non si indovina: il
+      badge diventa «Area non indicata» invece di ricadere in silenzio su
+      «Lavoro».
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* L'area di una voce, normalizzata. `null` significa: non lo sappiamo. */
+function areaDi(i){
+  var a = i && i.area;
+  return (a === "lavoro" || a === "vita") ? a : null;
+}
+function nomeArea(i){
+  var a = areaDi(i);
+  return a ? AREAS[a].label : "Area non indicata";
+}
+
+/* Il badge va mostrato? No, se la lista è già raggruppata per area: in quel
+   caso ogni riga ripeterebbe l'intestazione sopra di sé. */
+function badgeAreaServe(ctx){
+  if (ctx === "gruppo-area") return false;
+  return true;
+}
+
+/* Il badge. `aria-hidden` sul punto: è decorazione, il significato è nel
+   testo accanto. Nessun `title`, perché non arriva al tocco. */
+function badgeArea(i, ctx){
+  if (!badgeAreaServe(ctx)) return "";
+  var a = areaDi(i);
+  return '<span class="areachip" data-area="'+(a || "ignota")+'">'+
+         '<span class="areapunto" aria-hidden="true"></span>'+
+         esc(nomeArea(i))+'</span>';
+}
+
+/* Il nome che sente chi usa uno screen reader, nell'ordine richiesto:
+   area, titolo, poi il resto. Esempio: «Lavoro, Finestra email, in ritardo
+   di 2 ore». L'area c'è SEMPRE nel nome accessibile, anche quando il badge
+   visivo è nascosto perché la lista è raggruppata: un lettore di schermo che
+   salta fra le righe non ha l'intestazione sotto gli occhi. */
+function nomeAccessibile(i, extra){
+  var parti = [nomeArea(i), (i && i.label) || ""];
+  if (extra) parti.push(extra);
+  return parti.filter(Boolean).join(", ");
+}
+
 /* ---------- viste derivate ---------- */
 function dk(){ return dayKey(S.now); }
 function stampFor(f){

@@ -93,16 +93,100 @@
     color:var(--brass-testo);border:1px solid var(--brass);border-radius:20px;padding:1px 7px;flex:none;}
 .pt .prossima:hover{color:var(--pen);}
 /* il colore dell'area accompagna ogni riga, non solo la casella */
-/* La distinzione lavoro/vita è la caratteristica del prodotto: deve vedersi
-   prima di leggere qualsiasi parola. Barra piena, non sbiadita. */
-.pt li[data-area]{border-left:4px solid transparent;padding-left:11px;margin-left:-13px;}
-.pt li[data-area="lavoro"]{border-left-color:var(--pen);}
-.pt li[data-area="vita"]{border-left-color:var(--sage);}
-/* la casella da spuntare prende il colore dell'area */
-.pt li[data-area="lavoro"] .box{border-color:var(--pen);}
-.pt li[data-area="vita"] .box{border-color:var(--sage);}
-.pt li[data-area="lavoro"] .box.on{background:var(--pen);border-color:var(--pen);}
-.pt li[data-area="vita"] .box.on{background:var(--sage);border-color:var(--sage);}
+/* ─────────────────────────────────────────────────────────────────────────
+   UI-006 — LA BARRA D'AREA È STATA RIMOSSA
+
+   Qui c'era:
+     .pt li[data-area]{border-left:4px solid transparent;padding-left:11px;
+                       margin-left:-13px;}
+     .pt li[data-area="lavoro"]{border-left-color:var(--pen);}
+     .pt li[data-area="vita"]{border-left-color:var(--sage);}
+     .pt li[data-area="lavoro"] .box{border-color:var(--pen);}   (e le .on)
+
+   Il commento diceva «deve vedersi prima di leggere qualsiasi parola». Il
+   problema è che si vedeva soltanto: una striscia di 4px incollata alla
+   casella, che poteva essere il bordo della scheda, un indicatore di
+   selezione o parte della casella stessa. E colorava anche la casella, così
+   il controllo cambiava aspetto in base a un dato che non lo riguarda.
+
+   L'area ora è un punto colorato PIÙ la parola, fra i metadati. Il colore
+   accompagna l'informazione, non la sostituisce: è ciò che serve a chi non
+   distingue il blu dal verde, che è una persona su dodici fra gli uomini.
+
+   La riga conserva un separatore, ma è neutro e indipendente dall'area. */
+.pt li[data-area]{padding-left:0;margin-left:0;}
+
+/* WCAG 2.2 (2.5.8) — nessuna casella sotto 24x24, comprese quelle delle
+   impostazioni: quattro erano rimaste alla dimensione predefinita del
+   browser, 13x13. Regola di base su TUTTE le caselle native del pannello,
+   così una casella aggiunta domani nasce già della misura giusta. */
+.pt input[type="checkbox"]{width:var(--task-checkbox-size);height:var(--task-checkbox-size);
+  accent-color:var(--ink);cursor:pointer;}
+
+/* La casella è un controllo autonomo: forma e colore non dipendono più
+   dall'area. Casella HTML nativa, non un pulsante travestito, così i lettori
+   di schermo la annunciano come casella di selezione e la tastiera la
+   comanda con la barra spaziatrice senza che dobbiamo reimplementare nulla. */
+.pt input.box{appearance:none;-webkit-appearance:none;flex:none;margin:2px 0 0;
+  width:var(--task-checkbox-size);height:var(--task-checkbox-size);
+  border:1.5px solid var(--line2);border-radius:7px;background:var(--field);
+  cursor:pointer;display:inline-block;position:relative;
+  transition:background .15s,border-color .15s;}
+.pt input.box:hover{border-color:var(--ink2);}
+.pt input.box:checked{background:var(--ink);border-color:var(--ink);}
+.pt input.box:checked::after{content:"";position:absolute;inset:0;
+  background-color:var(--btnfg);
+  -webkit-mask:var(--spunta) center/62% no-repeat;mask:var(--spunta) center/62% no-repeat;}
+.pt input.box:focus-visible{outline:2px solid var(--pen);outline-offset:2px;}
+/* una voce scaduta si segnala sul bordo della casella, non sull'area */
+.pt li.scaduta input.box{border-color:var(--rust);}
+.pt{--spunta:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpolyline points='2,6.5 4.7,9 10,3' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");}
+
+/* ---------- UI-006: la riga di un task, in tre colonne ----------
+   Casella | contenuto (titolo + metadati) | azioni.
+
+   Il contenuto è una colonna propria, non una sequenza di elementi in linea:
+   così il titolo e la riga dei metadati si allineano fra loro e restano
+   allineati alla casella, invece di dipendere dall'ordine in cui capitano.
+
+   Su schermo stretto le azioni vanno a capo su una riga intera, allineate
+   sotto il contenuto: restano tutte visibili e alla loro dimensione. Non
+   riduciamo i pulsanti per farli entrare, e non nascondiamo nulla dietro un
+   menù finché andare a capo basta. */
+.pt li.taskriga{align-items:flex-start;}
+.pt .taskcont{flex:1 1 55%;min-width:0;display:flex;flex-direction:column;}
+.pt .taskcont > .txt{flex:none;}
+.pt li.taskriga > .acts{flex:0 1 auto;margin-left:auto;align-self:flex-start;}
+/* La soglia è 900px, non 640: fra le due misure le azioni andavano comunque a
+   capo (sono cinque) ma `margin-left:auto` le spingeva contro il bordo
+   destro, lontane dal contenuto a cui si riferiscono. Sotto i 900px vanno a
+   capo e si allineano al contenuto; sopra, stanno sulla stessa riga. */
+@media (max-width:900px){
+  .pt li.taskriga > .acts{flex-basis:100%;
+    margin-left:calc(var(--task-checkbox-size) + var(--task-control-gap));
+    justify-content:flex-start;margin-top:var(--task-content-gap);}
+}
+/* La riga non deve mai produrre scorrimento orizzontale: se un titolo non ha
+   spazi va spezzato, non allargare la pagina. */
+.pt .taskcont > .txt{overflow-wrap:anywhere;word-break:break-word;}
+
+/* ---------- UI-006: l'indicatore d'area fra i metadati ---------- */
+.pt .areachip{display:inline-flex;align-items:center;gap:5px;flex:none;
+  font-family:var(--sans);font-size:11.5px;font-weight:600;letter-spacing:.02em;
+  padding:1px 8px 1px 6px;border-radius:20px;
+  border:1px solid var(--line2);background:var(--surface);color:var(--ink2);}
+.pt .areachip .areapunto{width:var(--area-indicator-size);height:var(--area-indicator-size);
+  border-radius:50%;flex:none;background:var(--muted);}
+.pt .areachip[data-area="lavoro"]{color:var(--area-lavoro-testo);border-color:var(--area-lavoro);}
+.pt .areachip[data-area="lavoro"] .areapunto{background:var(--area-lavoro);}
+.pt .areachip[data-area="vita"]{color:var(--area-vita-testo);border-color:var(--area-vita);}
+.pt .areachip[data-area="vita"] .areapunto{background:var(--area-vita);}
+/* Area assente o non riconosciuta: si dichiara, non si indovina. */
+.pt .areachip[data-area="ignota"]{color:var(--muted);border-style:dashed;}
+@media (forced-colors:active){
+  .pt .areachip{border:1px solid CanvasText;color:CanvasText;}
+  .pt .areachip .areapunto{background:CanvasText;}
+}
 .pt .count{font-family:var(--sans);font-size:13px;color:var(--muted);margin:0;letter-spacing:0;
     font-variant-numeric:tabular-nums;}
 .pt .ring{width:62px;height:62px;flex:none;}
@@ -259,7 +343,12 @@
 .pt .badge{animation:ptpulse 2.4s ease-out infinite;}
 @media (prefers-reduced-motion:reduce){.pt .badge{animation:none;}}
 
-.pt .acts{flex:none;display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+.pt .acts{flex:none;display:flex;gap:var(--task-action-gap);align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+/* UI-006 — la riga dei metadati: area, orario, etichetta, scadenza.
+   Sta sotto il titolo, con una distanza propria, e non si mescola con le
+   azioni: prima area e azioni finivano nella stessa fascia visiva. */
+.pt .metariga{display:flex;align-items:center;gap:var(--task-meta-gap);flex-wrap:wrap;
+  margin-top:var(--task-content-gap);}
 .pt li{flex-wrap:wrap;}
 .pt li > .txt{flex:1 1 55%;}
 .pt li > .acts{flex:0 1 auto;margin-left:auto;}
@@ -430,7 +519,11 @@
 .pt .grp:first-child{margin-top:2px;}
 .pt .dot{width:8px;height:8px;border-radius:50%;flex:none;}
 .pt ul{list-style:none;margin:0;padding:0;}
-.pt li{display:flex;align-items:flex-start;gap:10px;padding:11px 0;font-size:15px;line-height:1.45;
+/* UI-006 — le distanze arrivano dai token, così non divergono fra le viste.
+   `--task-control-gap` è lo spazio fra i controlli di sinistra (casella,
+   stella) e il contenuto: prima erano 10px scritti qui e 11px nell'agenda. */
+.pt li{display:flex;align-items:flex-start;gap:var(--task-control-gap);
+    padding:11px 0;font-size:15px;line-height:1.45;
     border-bottom:1px solid var(--line);}
 .pt li:last-child{border-bottom:none;}
 .pt .steppanel{border-left:2px solid var(--pen);padding:4px 0 4px 13px;margin:2px 0 8px 30px;}
@@ -627,8 +720,10 @@
 .pt .fab[data-on="1"]{transform:rotate(45deg);}
 .pt .fab:hover{background:var(--btnbg2);}
 .pt .secondrow{gap:6px;margin-top:8px;}
-.pt button.tiny.danger{color:var(--rust);border-color:rgba(162,68,56,.45);}
-.pt button.tiny.danger:hover{background:rgba(162,68,56,.1);border-color:var(--rust);color:var(--rust);}
+/* Il rosso come TESTO: `--rust` su fondo scuro dà 3,73:1, sotto la soglia.
+   Serve la variante per le scritte, come per ottone e verde. */
+.pt button.tiny.danger{color:var(--rust-testo);border-color:rgba(162,68,56,.45);}
+.pt button.tiny.danger:hover{background:rgba(162,68,56,.1);border-color:var(--rust);color:var(--rust-testo);}
 .pt mark{background:rgba(190,140,54,.3);color:inherit;border-radius:3px;padding:0 2px;}
 .pt .digora.ora{color:var(--brass-testo);font-weight:700;}
 .pt .dignow{font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
@@ -757,13 +852,11 @@
 /* ---------- agenda: griglia sul computer, elenco sul telefono ---------- */
 .pt .solostretto{display:none;}
 .pt ul.agelenco{margin:0;padding:0;list-style:none;}
-.pt ul.agelenco li{display:flex;align-items:flex-start;gap:11px;padding:11px 0;
-  border-bottom:1px solid var(--line);border-left:3px solid transparent;padding-left:9px;
-  margin-left:-12px;flex-wrap:wrap;}
+/* UI-006 — anche l'agenda in elenco aveva la barra d'area sul bordo sinistro.
+   Rimossa qui come nelle altre liste: l'area sta fra i metadati. */
+.pt ul.agelenco li{display:flex;align-items:flex-start;gap:var(--task-control-gap);
+  padding:11px 0;border-bottom:1px solid var(--line);flex-wrap:wrap;}
 .pt ul.agelenco li:last-child{border-bottom:none;}
-.pt ul.agelenco li{border-left-width:4px;padding-left:11px;}
-.pt ul.agelenco li[data-area="lavoro"]{border-left-color:var(--pen);}
-.pt ul.agelenco li[data-area="vita"]{border-left-color:var(--sage);}
 .pt ul.agelenco li[data-fatto="1"] .agtesto{text-decoration:line-through;color:var(--muted);}
 .pt .agora{flex:none;font-family:var(--mono);font-size:12.5px;color:var(--ink2);
   min-width:44px;padding-top:2px;}
@@ -781,11 +874,22 @@
 .pt .decidi li{flex-wrap:wrap;}
 .pt .decidi .acts{flex-basis:100%;justify-content:flex-start;margin-top:5px;}
 
-/* ---------- scelta del profilo ---------- */
+/* ---------- scelta del profilo ----------
+   BUG — `.profilo` è un <button> e non dichiarava alcun fondo: prendeva
+   quello predefinito del browser, `ButtonFace`, cioè #F0F0F0. In tema chiaro
+   passava inosservato perché è quasi bianco; in tema scuro diventava un
+   rettangolo grigio chiaro con testo quasi bianco sopra: 1,03:1 misurato, il
+   nome del profilo era illeggibile.
+
+   Un elemento con testo dentro deve dichiarare il proprio fondo, sempre:
+   affidarsi al valore predefinito dell'agente utente significa affidarsi a
+   un colore che non conosce il tema. */
 .pt .profilo{display:block;max-width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;
-  margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s;}
+  margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s;
+  background:var(--surface);color:var(--ink);text-align:left;font:inherit;}
 .pt .profilo:hover{border-color:var(--line2);background:var(--track);}
 .pt .profilo.scelto{border-color:var(--pen);background:var(--selbg);}
+.pt .profilo:focus-visible{outline:2px solid var(--pen);outline-offset:2px;}
 .pt .pnome{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600;color:var(--ink);}
 .pt .profilo .sub{margin-top:3px;}
 .pt ul.linklist.moduli li{align-items:flex-start;}

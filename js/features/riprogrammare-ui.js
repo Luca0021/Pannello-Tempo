@@ -20,12 +20,23 @@ function rigaRitardo(i, motivo, conScelta){
       'aria-pressed="'+selezionato(i.id)+'" data-on="'+(selezionato(i.id)?1:0)+'" '+
       'aria-label="Scegli '+esc(i.label)+' per un\'azione di gruppo"></button>'
     : '';
-  return '<li data-id="'+esc(i.id)+'" data-area="'+esc(i.area)+'">'+ scelta +
-    '<button class="box" data-act="toggle" data-id="'+i.id+'" role="checkbox" '+
-      'aria-checked="false" aria-label="Completa '+esc(i.label)+'"></button>'+
-    '<span class="txt" role="button" tabindex="0" data-act="open" data-id="'+i.id+'" '+
-      'data-ctx="ritardo">'+esc(i.label)+
-      '<span class="sub">'+esc(motivo)+'</span></span>'+
+  /* UI-006 — la casella è una casella HTML nativa, e il suo nome accessibile
+     comincia dall'area: «Lavoro, Presentare la relazione, appuntamento
+     scaduto il dom 30 ago». L'area c'è anche quando il badge visivo non
+     serve, perché un lettore di schermo non ha l'intestazione sotto gli
+     occhi mentre salta di riga in riga. */
+  return '<li data-id="'+esc(i.id)+'" data-area="'+esc(i.area)+'" class="taskriga">'+ scelta +
+    '<input type="checkbox" class="box" data-act="toggle" data-id="'+i.id+'" '+
+      'aria-label="'+esc(nomeAccessibile(i, motivo))+'">'+
+    '<div class="taskcont">'+
+      '<span class="txt" role="button" tabindex="0" data-act="open" data-id="'+i.id+'" '+
+        'data-ctx="ritardo">'+esc(i.label)+'</span>'+
+      /* i metadati su una riga propria: area accanto al motivo del ritardo,
+         come richiesto, e non mescolati con le azioni */
+      '<div class="metariga">'+ badgeArea(i, "ritardo") +
+        '<span class="sub late2">'+esc(motivo)+'</span>'+
+      '</div>'+
+    '</div>'+
     '<span class="acts">'+
       '<button class="tiny" data-act="ripianifica" data-id="'+i.id+'" '+
         'aria-expanded="'+apri+'">Ripianifica</button>'+

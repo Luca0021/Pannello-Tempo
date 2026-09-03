@@ -17,7 +17,10 @@ function causaBlocco(i){
 }
 
 function rowHtml(i, ctx){
-  var on = isOn(i), c = AREAS[i.area].color, timed = typeof i.start === "number";
+  var on = isOn(i), timed = typeof i.start === "number";
+  /* UI-006 — `c` conteneva il colore dell'area e serviva a tingere la casella
+     di completamento. La casella non porta più l'area: è un controllo, e il
+     suo aspetto dipende dal suo stato, non da un attributo della voce. */
   /* TSK-007 — in modalità selezione ogni riga porta la propria casella. Fuori
      da quella modalità non compare nulla: caselle sempre presenti sarebbero
      rumore per chi vuole solo spuntare una cosa. */
@@ -28,19 +31,27 @@ function rowHtml(i, ctx){
     : '';
   var past = i.freq === "once" && !on && i.date < dk();
   var p = prioIndex(i) >= 0;
-  var h = '<li class="'+(p?"prio ":"")+(isSkipped(i)?"skipped ":"")+
+  var h = '<li class="taskriga '+(p?"prio ":"")+(isSkipped(i)?"skipped ":"")+
+          (past?"scaduta ":"")+
           ((S.flash && S.flash.id === i.id)?"flash":"")+'" data-id="'+esc(i.id)+'" '+
           'data-area="'+esc(i.area)+'">'+scelta;
   h += '<button class="star" data-on="'+(p?1:0)+'" data-act="star" data-id="'+i.id+'" '+
        'title="'+(p?"Togli dalle tre cose":"Metti tra le priorità di oggi")+'"></button>';
-  /* A11Y-002: senza etichetta la casella viene annunciata come «pulsante» e
-     basta, e chi usa uno screen reader non sa che cosa sta completando. */
-  h += '<button class="box" data-act="toggle" data-id="'+i.id+'" aria-pressed="'+on+'" '+
-       'aria-label="'+(on ? "Togli il completamento di " : "Completa ")+esc(i.label)+'" '+
-       'style="border-color:'+(past?"var(--rust)":c)+';background:'+(on?c:"transparent")+'">'+
-       (on?'<svg viewBox="0 0 12 12"><polyline points="2,6.5 4.7,9 10,3"/></svg>':'')+'</button>';
-  h += '<span class="txt'+(on?" done":"")+'" role="button" tabindex="0" data-act="toggle" data-id="'+i.id+'">'+esc(i.label)+
+  /* A11Y-002 / UI-006 — casella HTML nativa, annunciata come casella di
+     selezione e comandata dalla barra spaziatrice senza codice nostro.
+     Il nome accessibile comincia dall'area, come richiede UI-006. */
+  h += '<input type="checkbox" class="box" data-act="toggle" data-id="'+i.id+'"'+
+       (on ? ' checked' : '')+
+       ' aria-label="'+esc(nomeAccessibile(i, on ? "completata" : ""))+'">';
+  h += '<div class="taskcont">'+
+       '<span class="txt'+(on?" done":"")+'" role="button" tabindex="0" data-act="toggle" data-id="'+i.id+'">'+esc(i.label)+
        (i.note ? '<span class="sub">'+esc(i.note)+'</span>' : '')+'</span>';
+  /* UI-006 — la riga dei metadati. Il badge d'area sparisce quando la lista è
+     già raggruppata per area: il titolo del gruppo lo ha appena detto. */
+  var ctxArea = (P.groupBy === "area") ? "gruppo-area" : (ctx || "lista");
+  var meta = badgeArea(i, ctxArea);
+  if (meta) h += '<div class="metariga">'+meta+'</div>';
+  h += '</div>';
   if (safeUrl(i.link))
     h += '<a class="lk" href="'+esc(i.link)+'" target="_blank" rel="noopener noreferrer" title="'+esc(i.link)+'">↗</a>';
   h += '<span class="acts">';
@@ -253,9 +264,8 @@ function stepsPanel(i){
   var h = '<li class="editrow"><div class="steppanel"><ul class="steps">';
   si.list.forEach(function(x, n){
     var d = stepOn(i, x);
-    h += '<li><button class="box" data-act="stept" data-id="'+i.id+'" data-n="'+n+'" '+
-         'style="border-color:var(--pen);background:'+(d?"var(--pen)":"transparent")+'">'+
-         (d?'<svg viewBox="0 0 12 12"><polyline points="2,6.5 4.7,9 10,3"/></svg>':'')+'</button>'+
+    h += '<li><input type="checkbox" class="box" data-act="stept" data-id="'+i.id+'" data-n="'+n+'"'+
+         (d?' checked':'')+' aria-label="Passo: '+esc(x.t)+'">'+
          '<span class="txt'+(d?" done":"")+'" role="button" tabindex="0" data-act="stept" '+
          'data-id="'+i.id+'" data-n="'+n+'">'+esc(x.t)+'</span></li>';
   });
@@ -452,9 +462,8 @@ function editorHtml(){
   h += '<div style="margin-top:11px"><label class="lbl">Passi ('+sInfo.done+' di '+sInfo.tot+')</label><ul class="steps">';
   st.forEach(function(x, n2){
     var d2 = stepOn(it, x);
-    h += '<li><button class="box" data-act="stept" data-id="'+it.id+'" data-n="'+n2+'" '+
-         'style="border-color:var(--pen);background:'+(d2?"var(--pen)":"transparent")+'">'+
-         (d2?'<svg viewBox="0 0 12 12"><polyline points="2,6.5 4.7,9 10,3"/></svg>':'')+'</button>'+
+    h += '<li><input type="checkbox" class="box" data-act="stept" data-id="'+it.id+'" data-n="'+n2+'"'+
+         (d2?' checked':'')+' aria-label="Passo: '+esc(x.t)+'">'+
          '<span class="txt'+(d2?" done":"")+'" role="button" tabindex="0" data-act="stept" data-id="'+it.id+'" data-n="'+n2+'">'+esc(x.t)+'</span>'+
          '<button class="slot" data-act="stepuna" data-id="'+it.id+'" data-n="'+n2+'" '+
          'title="'+(x.una?"Sparisce dopo essere stato fatto":"Voce fissa della lista")+'">'+

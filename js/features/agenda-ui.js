@@ -27,19 +27,30 @@ function agendaElencoHtml(){
     var sovr = lista.filter(function(x){
       return x.id !== i.id && x.start < fine && (x.start + (x.dur||0.5)) > i.start;
     }).length;
-    h += '<li data-area="'+esc(i.area)+'"'+(isOn(i)?' data-fatto="1"':'')+'>'+
+    /* UI-006 — l'agenda in elenco aveva la barra d'area sul bordo sinistro e
+       il nome dell'area dentro il sottotitolo come testo semplice. Ora è il
+       badge condiviso, e la casella nativa porta l'area nel nome accessibile
+       («Completa» da solo non diceva che cosa). */
+    var notaAg = dur2s(i.dur || 0.5) + (sovr ? ' · si sovrappone ad altre '+sovr : '');
+    /* UI-006 — la casella era in fondo alla riga, dentro il gruppo delle
+       azioni: in tutte le altre viste è il controllo autonomo a sinistra.
+       Due posizioni per lo stesso gesto in due liste della stessa schermata
+       è esattamente l'incoerenza che questa fase deve togliere. */
+    h += '<li data-area="'+esc(i.area)+'" class="taskriga"'+(isOn(i)?' data-fatto="1"':'')+'>'+
+      '<input type="checkbox" class="box" data-act="toggle" data-id="'+i.id+'"'+
+      (isOn(i)?' checked':'')+' aria-label="'+esc(nomeAccessibile(i, notaAg))+'">'+
       '<span class="agora">'+esc(fmt(i.start))+'</span>'+
+      '<div class="taskcont">'+
       '<span class="agtesto" role="button" tabindex="0" data-act="open" data-id="'+i.id+'" '+
-      'data-ctx="sez:today">'+esc(i.label)+
-      '<span class="sub">'+esc(AREAS[i.area].label)+' · '+esc(dur2s(i.dur || 0.5))+
-      (sovr ? ' · si sovrappone ad altre '+sovr : '')+'</span></span>'+
+      'data-ctx="sez:today">'+esc(i.label)+'</span>'+
+      '<div class="metariga">'+ badgeArea(i, "agenda") +
+      '<span class="sub">'+esc(notaAg)+'</span></div>'+
+      '</div>'+
       '<span class="acts">'+
       '<button class="tiny" data-act="nudge" data-id="'+i.id+'" data-d="-0.25" '+
       'title="Anticipa di 15 minuti" aria-label="Anticipa di 15 minuti">−15′</button>'+
       '<button class="tiny" data-act="nudge" data-id="'+i.id+'" data-d="0.25" '+
       'title="Posticipa di 15 minuti" aria-label="Posticipa di 15 minuti">+15′</button>'+
-      '<button class="box'+(isOn(i)?' on':'')+'" data-act="toggle" data-id="'+i.id+'" '+
-      'role="checkbox" aria-checked="'+isOn(i)+'" aria-label="Completa"></button>'+
       '</span></li>';
   });
   if (oggi && !messoAdesso)

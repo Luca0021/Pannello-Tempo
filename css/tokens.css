@@ -19,10 +19,39 @@
      soglia è 3:1 e la passano. */
   --brass-testo:#7A5819;
   --sage-testo:#3D6659;
+  --rust-testo:#8E3A2E;
   /* Il riquadro delle priorità è scuro nei DUE temi, quindi i suoi colori non
      seguono il tema: seguono il proprio fondo. L'ottone chiaro serve lì, dove
      quello scuro sparirebbe. */
   --focus-accento:#DEB25C;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     UI-006 — L'AREA LAVORO/VITA NELLE RIGHE DEI TASK
+
+     Prima l'area era una barra verticale di 4px sul bordo sinistro della
+     riga, subito a fianco della casella di completamento. Sembrava parte
+     della casella, o un indicatore di selezione, o il bordo della scheda:
+     tre letture possibili e nessuna corretta. E il colore era l'unico
+     portatore dell'informazione, quindi per chi non distingue blu e verde
+     l'area semplicemente non c'era.
+
+     Ora l'area sta fra i metadati, con un punto colorato E la parola. Il
+     colore accompagna, non informa da solo.
+
+     Queste misure valgono per TUTTE le liste: qui, e non ripetute a mano in
+     ogni vista. Se una riga ha spaziature diverse dalle altre, è perché non
+     usa questi token, e va corretta.
+     ───────────────────────────────────────────────────────────────────────── */
+  --area-lavoro:#1F5673;          /* = --pen, ma con un nome che dice cosa è */
+  --area-vita:#4C7C6C;            /* = --sage */
+  --area-lavoro-testo:#1B4A63;    /* la stessa tinta, leggibile come testo */
+  --area-vita-testo:#3D6659;
+  --area-indicator-size:9px;      /* diametro del punto */
+  --task-checkbox-size:24px;      /* WCAG 2.2 (2.5.8): mai sotto 24 */
+  --task-control-gap:12px;        /* fra i controlli di sinistra e il contenuto */
+  --task-content-gap:10px;        /* fra titolo e riga dei metadati */
+  --task-action-gap:6px;          /* fra le azioni */
+  --task-meta-gap:8px;            /* fra i metadati */
   /* HOM-002 — tre livelli, non un solo rosso per tutto:
        informativo  neutro, non chiede nulla
        attenzione   qualcosa richiede una decisione, ma niente è rotto
@@ -84,7 +113,13 @@
      delle schede: non serve scurirli, e scurirli li renderebbe illeggibili */
   --brass-testo:#D0A050;
   --sage-testo:#5FB395;
+  --rust-testo:#E08878;
   --focus-accento:#DEB25C;
+  /* UI-006 — in tema scuro le tinte d'area vanno schiarite: le stesse del
+     tema chiaro su fondo scuro non si distinguerebbero. Le misure NON
+     cambiano col tema, quindi non vanno ridichiarate. */
+  --area-lavoro:#4A9BC9; --area-vita:#5FB395;
+  --area-lavoro-testo:#7FBEE0; --area-vita-testo:#7FC9AE;
   --info-bordo:#33454F; --info-fondo:#1B2A34; --info-testo:#C6D4DA;
   --att-bordo:#B08B3A;  --att-fondo:#2A2417;  --att-testo:#E8CF95;
   --err-bordo:#B0574A;  --err-fondo:#2B1917;  --err-testo:#F0C3BC;
@@ -112,7 +147,10 @@
   --pen:#4A9BC9;--sage:#5FB395;--brass:#D0A050;--rust:#C05A38;
   --brass-testo:#D0A050;
   --sage-testo:#5FB395;
+  --rust-testo:#E08878;
   --focus-accento:#DEB25C;
+  --area-lavoro:#4A9BC9; --area-vita:#5FB395;
+  --area-lavoro-testo:#7FBEE0; --area-vita-testo:#7FC9AE;
   --info-bordo:#33454F; --info-fondo:#1B2A34; --info-testo:#C6D4DA;
   --att-bordo:#B08B3A;  --att-fondo:#2A2417;  --att-testo:#E8CF95;
   --err-bordo:#B0574A;  --err-fondo:#2B1917;  --err-testo:#F0C3BC;

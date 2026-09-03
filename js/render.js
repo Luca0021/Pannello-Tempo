@@ -210,22 +210,24 @@ function renderInner(){
     })[0];
     h += blocco("Agenda", r.conOra.map(function(i){
       var pross = prossima && prossima.id === i.id;
+      /* UI-006 — casella nativa, senza il colore dell'area addosso, e badge
+         d'area fra i metadati anche nel riepilogo. */
       return '<span class="digora'+(pross?" ora":"")+'">'+fmt(i.start)+'</span>'+
-             '<button class="box" data-act="toggle" data-id="'+i.id+'" '+
-             'style="border-color:'+AREAS[i.area].color+';background:'+(isOn(i)?AREAS[i.area].color:"transparent")+'">'+
-             (isOn(i)?'<svg viewBox="0 0 12 12"><polyline points="2,6.5 4.7,9 10,3"/></svg>':'')+'</button>'+
+             '<input type="checkbox" class="box" data-act="toggle" data-id="'+i.id+'"'+
+             (isOn(i)?' checked':'')+' aria-label="'+esc(nomeAccessibile(i, fmt(i.start)))+'">'+
              '<span class="'+(isOn(i)?"done":"")+'" role="button" tabindex="0" data-act="toggle" data-id="'+i.id+'">'+
              esc(i.label)+'</span>'+
+             ' '+badgeArea(i, "riepilogo")+
              (pross ? ' <span class="dignow">prossima</span>' : '')+
              (i.tag ? ' <span class="tagmini" style="--h:'+tagHue(i.tag)+'">'+esc(i.tag)+'</span>' : '')+
              (i.place ? ' <span class="sub">◎ '+esc(i.place)+'</span>' : '');
     }));
     h += blocco("Senza orario", r.senzaOra.map(function(i){
-      return '<button class="box" data-act="toggle" data-id="'+i.id+'" '+
-             'style="border-color:'+AREAS[i.area].color+';background:'+(isOn(i)?AREAS[i.area].color:"transparent")+'">'+
-             (isOn(i)?'<svg viewBox="0 0 12 12"><polyline points="2,6.5 4.7,9 10,3"/></svg>':'')+'</button>'+
+      return '<input type="checkbox" class="box" data-act="toggle" data-id="'+i.id+'"'+
+             (isOn(i)?' checked':'')+' aria-label="'+esc(nomeAccessibile(i, ""))+'">'+
              '<span class="'+(isOn(i)?"done":"")+'" role="button" tabindex="0" data-act="toggle" data-id="'+i.id+'">'+
              esc(i.label)+'</span>'+
+             ' '+badgeArea(i, "riepilogo")+
              (i.tag ? ' <span class="tagmini" style="--h:'+tagHue(i.tag)+'">'+esc(i.tag)+'</span>' : '');
     }));
     h += blocco("Scadenze entro sette giorni", r.scadenze.map(function(i){
@@ -615,11 +617,13 @@ function renderInner(){
          '<span class="cnt">'+tutteDue.length+'</span></h2><ul>';
     dues.forEach(function(x){
       var i = x.item;
-      h += '<li><button class="star" data-on="'+(prioIndex(i)>=0?1:0)+'" data-act="star" '+
+      h += '<li class="taskriga"><button class="star" data-on="'+(prioIndex(i)>=0?1:0)+'" data-act="star" '+
            'data-id="'+i.id+'" title="Metti tra le tre cose" aria-label="Priorità"></button>'+
-           '<button class="box" data-act="toggle" data-id="'+i.id+'" '+
-           'style="border-color:'+AREAS[i.area].color+'"></button>'+
+           '<input type="checkbox" class="box" data-act="toggle" data-id="'+i.id+'"'+
+           (isOn(i)?' checked':'')+' aria-label="'+esc(nomeAccessibile(i, x.d.label))+'">'+
+           '<div class="taskcont">'+
            '<span class="txt" role="button" tabindex="0" data-act="toggle" data-id="'+i.id+'">'+esc(i.label)+'</span>'+
+           '<div class="metariga">'+badgeArea(i, "scadenze")+'</div></div>'+
            '<span class="acts"><span class="slot due-'+x.d.level+'">'+esc(x.d.label)+'</span>'+
            '<button class="del" data-act="open" data-id="'+i.id+'" data-ctx="scad" title="Apri">⋯</button>'+
            '</span></li>'+
@@ -835,9 +839,9 @@ function renderInner(){
           ? "simile a un'altra nota: «"+m0.label+"»"
           : "già in elenco: «"+m0.label+"»";
     }
-    h += '<li><button class="box" data-act="captoggle" data-id="'+c.id+'" '+
-         'style="border-color:'+(old?"var(--rust)":AREAS[c.area].color)+';background:'+(c.done?AREAS[c.area].color:"transparent")+'">'+
-         (c.done?'<svg viewBox="0 0 12 12"><polyline points="2,6.5 4.7,9 10,3"/></svg>':'')+'</button>'+
+    h += '<li'+(old?' class="scaduta"':'')+'><input type="checkbox" class="box" data-act="captoggle" '+
+         'data-id="'+c.id+'"'+(c.done?' checked':'')+
+         ' aria-label="'+esc(nomeAccessibile({area:c.area,label:c.text}, ""))+'">'+
          '<span class="txt'+(c.done?" done":"")+'" role="button" tabindex="0" data-act="captoggle" data-id="'+c.id+'">'+esc(c.text)+
          (ageTxt ? '<span class="sub">'+ageTxt+'</span>' : '')+
          (nota ? '<span class="sub dupnote">'+esc(nota)+'</span>' : '')+'</span>'+
