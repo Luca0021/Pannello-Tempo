@@ -1,0 +1,25 @@
+# Variabili d'ambiente: mai nel repository.
+# Anche contenendo solo valori pubblici, `.env` è il posto dove qualcuno
+# prima o poi scrive un segreto. Il modello sta in .env.example.
+.env
+.env.*
+!.env.example
+
+# Dipendenze e risultati dei collaudi
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Strumenti di misura usati durante lo sviluppo, non parte della release
+_collaudo.js
+_pt-*.ps1
+
+# Sistema operativo
+Thumbs.db
+.DS_Store
+desktop.ini
