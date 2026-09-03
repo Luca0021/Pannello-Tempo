@@ -2,7 +2,7 @@
    Strategie distinte: lo scheletro dell'app va dalla cache (è statico e
    versionato), le chiamate ai servizi esterni vanno sempre in rete e non
    vengono mai messe in cache, perché conterrebbero dati personali. */
-var VERSIONE = 'pt-035c16ab';
+var VERSIONE = 'pt-3322a15e';
 var SCHELETRO = [
   './', './index.html', './offline.html', './landing.html',
   './manifest.webmanifest', './build.json',
@@ -13,6 +13,7 @@ var SCHELETRO = [
   './css/desktop.css',
   './css/accessibility.css',
   './js/config.js',
+  './js/config-firebase.js',
   './js/promessa.js',
   './js/versione.js',
   './js/platform.js',

@@ -21,26 +21,69 @@ function migratePrefs(){
 }
 
 var SKEY = "pannello-tempo:sync";
+
+/* SYN-006 / SEC-001 — il predefinito è «solo su questo dispositivo».
+   Prima era "gist": un'installazione appena aperta si dichiarava pronta a
+   parlare con GitHub, e il primo servizio proposto era quello che richiede
+   di incollare un token. Il predefinito di un prodotto consumer è non
+   mandare niente da nessuna parte. */
 var sync = {
-  provider:"gist", auto:true, rev:0, dirty:false,
+  provider:"locale", auto:true, rev:0, dirty:false,
   status:"", at:"", busy:false, conflict:null,
+  /* Gist: `token` vive SOLO in memoria e SOLO durante la migrazione.
+     `id` è un identificativo, non un segreto: resta per poter proporre il
+     trasferimento a chi arriva da una versione precedente. */
   gist:{ token:"", id:"", file:"pannello.json" },
-  err:null, prova:null, account:false, ricordami:false,
-  fb:{ apiKey:"", projectId:"", email:"", uid:"", refresh:"", idToken:"", expAt:0 }
+  err:null, prova:null, account:false,
+  /* fb: `idToken` vive SOLO in memoria. `refresh` non viene più richiesto
+     né conservato: vedi CAMPI_SEGRETI qui sotto. */
+  fb:{ email:"", uid:"", refresh:"", idToken:"", expAt:0, inizioSessione:0 }
 };
 var syncTimer = null;
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SEC-001 — CHE COSA NON FINISCE MAI SU DISCO
+
+   `saveSync()` serializzava `sync.fb` e `sync.gist` interi. Provato sulla
+   build 035c16ab8a8f: in `pannello-tempo:sync` finivano in chiaro
+   `fb.refresh`, `fb.idToken` e `gist.token`. Il rapporto di sicurezza
+   dichiarava «Token su disco: mai scritto»: era falso.
+
+   Ora la scrittura è a lista chiusa. Aggiungere un campo segreto al modello
+   non lo porta su disco per distrazione: perché ci arrivi bisogna toglierlo
+   da questo elenco, e questo elenco è il posto dove si guarda.
+   ───────────────────────────────────────────────────────────────────────── */
+var CAMPI_SEGRETI = ["idToken", "refresh", "token", "password", "pw", "pass",
+                     "secret", "apiKey", "accessToken", "refreshToken"];
+
+/* Toglie da un oggetto qualunque i campi segreti, a qualsiasi profondità.
+   Usata prima di scrivere su disco e prima di esportare. */
+function senzaSegreti(o){
+  if (!o || typeof o !== "object") return o;
+  if (Array.isArray(o)) return o.map(senzaSegreti);
+  var out = {};
+  Object.keys(o).forEach(function(k){
+    if (CAMPI_SEGRETI.indexOf(k) >= 0) return;
+    out[k] = (o[k] && typeof o[k] === "object") ? senzaSegreti(o[k]) : o[k];
+  });
+  return out;
+}
 
 function loadSync(){
   try {
     var r = localStorage.getItem(SKEY);
     if (r) {
       var o = JSON.parse(r);
-      sync.provider = o.provider || "gist";
+      /* un blocco senza provider ricade su «locale», non su un servizio */
+      sync.provider = o.provider || "locale";
       sync.auto = o.auto !== false;
       sync.rev = o.rev || 0;
       sync.dirty = !!o.dirty;
-      if (o.gist) Object.assign(sync.gist, o.gist);
-      if (o.fb) Object.assign(sync.fb, o.fb);
+      /* I segreti eventualmente presenti su disco (scritti dalle versioni
+         precedenti) NON vengono caricati in memoria: verrebbero riscritti al
+         primo salvataggio. Li rimuove `ripulisciTokenPersistenti()`. */
+      if (o.gist) { sync.gist.id = o.gist.id || ""; sync.gist.file = o.gist.file || "pannello.json"; }
+      if (o.fb)   { sync.fb.email = o.fb.email || ""; sync.fb.uid = o.fb.uid || ""; }
     }
   } catch (e) {}
   sync.busy = false; sync.conflict = null;
@@ -49,7 +92,9 @@ function saveSync(){
   try {
     localStorage.setItem(SKEY, JSON.stringify({
       provider:sync.provider, auto:sync.auto, rev:sync.rev, dirty:sync.dirty,
-      gist:sync.gist, fb:sync.fb
+      /* solo identificativi, nessuna credenziale */
+      gist:{ id:sync.gist.id, file:sync.gist.file },
+      fb:{ email:sync.fb.email, uid:sync.fb.uid }
     }));
   } catch (e) {}
 }
@@ -60,7 +105,20 @@ function syncReady(){
   var p = PROVIDER[sync.provider];
   return !!(p && p !== LocalOnlyProvider && p.isConfigured());
 }
-function providerName(){ return sync.provider === "gist" ? "GitHub Gist" : "Firebase"; }
+/* SYN-006 — all'utente non si dice il nome del fornitore.
+   «Firebase» e «GitHub Gist» sono dettagli di implementazione: comparivano
+   nella riga di stato delle impostazioni e non aiutavano nessuno a capire
+   dove fossero i propri dati. I nomi tecnici restano nei log tecnici. */
+function providerName(){
+  if (sync.provider === "firebase") return "Account Pannello Tempo";
+  if (sync.provider === "gist")     return "Servizio collegato (non più supportato)";
+  return "Solo su questo dispositivo";
+}
+/* Il nome tecnico, per i log e la schermata Informazioni. */
+function providerNameTecnico(){
+  return sync.provider === "gist" ? "github-gist"
+       : sync.provider === "firebase" ? "firebase" : "locale";
+}
 function setStatus(s){
   if (s && s !== "errore") sync.err = null;
   sync.status = s;
@@ -101,18 +159,22 @@ var ERRORI_FB = [
 ];
 /* Controlli fatti prima di chiamare il servizio: un campo incollato male
    produce altrimenti un errore oscuro del server. */
-function controllaCampiFb(ak, pid, email, pw){
-  if (!ak) return "Manca la chiave API del progetto.";
-  if (/\s/.test(ak)) return "La chiave API contiene spazi: probabilmente è stata incollata male.";
-  if (ak.length < 30) return "La chiave API sembra incompleta: di norma supera i trenta caratteri.";
-  if (!pid) return "Manca l'identificativo del progetto.";
-  if (!/^[a-z0-9-]+$/.test(pid))
-    return "L'identificativo del progetto ammette solo minuscole, cifre e trattini: hai forse incollato l'URL o il nome visualizzato?";
-  if (!email) return "Manca l'email dell'utente.";
+/* SYN-006 — l'utente non compila più chiave e progetto: arrivano dalla build.
+   Restano da validare solo i suoi due campi, e i messaggi parlano di email e
+   password, non di configurazione di un servizio. */
+function controllaCampiAccount(email, pw){
+  if (!firebaseConfigurato())
+    return "Questa copia del pannello non è collegata a nessun servizio di account.";
+  if (!email) return "Manca l'email.";
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return "L'email non ha un formato valido.";
   if (!pw) return "Manca la password.";
-  if (pw.length < 6) return "La password di Firebase è di almeno sei caratteri.";
+  if (pw.length < 6) return "La password deve avere almeno sei caratteri.";
   return "";
+}
+/* Compatibilità con i punti che passavano ancora chiave e progetto: vengono
+   ignorati, perché non è più l'utente a fornirli. */
+function controllaCampiFb(ak, pid, email, pw){
+  return controllaCampiAccount(email, pw);
 }
 function controllaCampiGist(tok, id){
   if (!tok) return "Manca il token di GitHub.";
@@ -189,44 +251,64 @@ function gistWrite(text){
     .then(function(r){ if (!r.ok) throw new Error("HTTP "+r.status); return true; });
 }
 
-/* --- Firebase --- */
+/* --- Firebase ---
+   Chiave e progetto arrivano dalla configurazione di build (FIREBASE_CONFIG),
+   non dall'utente. Gli endpoint passano da config-firebase.js perché
+   l'emulatore ne cambia l'indirizzo e la scelta deve stare in un punto solo. */
+
+function fbApiKey(){ return FIREBASE_CONFIG.apiKey; }
+function fbProjectId(){ return FIREBASE_CONFIG.projectId; }
+
 function fbSignIn(email, password){
-  return fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+
-               encodeURIComponent(sync.fb.apiKey),
+  vietaProduzioneNeiTest();
+  return fetch(endpointIdentity()+"/accounts:signInWithPassword?key="+
+               encodeURIComponent(fbApiKey()),
                { method:"POST", headers:{ "Content-Type":"application/json" },
                  body: JSON.stringify({ email:email, password:password, returnSecureToken:true }) })
     .then(jsonOrThrow)
     .then(function(d){
-      sync.fb.email = email;
-      sync.fb.uid = d.localId;
-      sync.fb.refresh = d.refreshToken;
-      sync.fb.idToken = d.idToken;
-      sync.fb.expAt = Date.now() + (parseInt(d.expiresIn,10) || 3600) * 1000 - 60000;
-      saveSync();
-      return d.idToken;
-    });
-}
-function fbToken(){
-  if (sync.fb.idToken && Date.now() < sync.fb.expAt) return Promise.resolve(sync.fb.idToken);
-  return fetch("https://securetoken.googleapis.com/v1/token?key="+encodeURIComponent(sync.fb.apiKey),
-               { method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" },
-                 body:"grant_type=refresh_token&refresh_token="+encodeURIComponent(sync.fb.refresh) })
-    .then(jsonOrThrow)
-    .then(function(d){
-      sync.fb.idToken = d.id_token;
-      sync.fb.refresh = d.refresh_token || sync.fb.refresh;
-      sync.fb.expAt = Date.now() + (parseInt(d.expires_in,10) || 3600) * 1000 - 60000;
-      saveSync();
+      applicaSessione(d, email);
       return sync.fb.idToken;
     });
 }
-function fbDocUrl(){
-  return "https://firestore.googleapis.com/v1/projects/"+encodeURIComponent(sync.fb.projectId)+
-         "/databases/(default)/documents/pannello/"+encodeURIComponent(sync.fb.uid);
+
+/* SEC-001 — senza token di rinnovo non si rinnova.
+   Prima questa funzione chiedeva un id_token nuovo usando `sync.fb.refresh`.
+   Il token di rinnovo non viene più conservato, quindi qui non c'è nulla da
+   usare: quando l'id_token scade la sessione è finita, e lo si dice.
+   È una perdita di comodità dichiarata, non un difetto nascosto: la
+   alternativa era tenere su disco una credenziale senza scadenza. */
+function fbToken(){
+  if (sync.fb.idToken && Date.now() < sync.fb.expAt)
+    return Promise.resolve(sync.fb.idToken);
+  sync.fb.idToken = ""; sync.fb.expAt = 0;
+  return Promise.reject(erroreSync(
+    "Sessione scaduta",
+    "La sessione dura finché il pannello resta aperto: non conserviamo sul dispositivo nulla che permetta di rientrare al posto tuo.",
+    "Entra di nuovo con la tua password per riprendere la sincronizzazione.",
+    "SESSION_EXPIRED"));
 }
-function fbRead(){
+
+/* Struttura: users/{uid}/datasets/current
+   Non una collezione globale filtrata dal client. L'UID è nel percorso,
+   quindi le regole possono confrontarlo con `request.auth.uid` invece di
+   fidarsi di un campo dentro il documento. */
+function fbBase(){
+  return endpointFirestore()+"/projects/"+encodeURIComponent(fbProjectId())+
+         "/databases/(default)/documents";
+}
+function fbDocUrl(){
+  return fbBase()+"/users/"+encodeURIComponent(sync.fb.uid)+"/datasets/current";
+}
+/* Percorso delle versioni precedenti: collezione piatta `pannello/{uid}`.
+   Serve solo a leggere e trasferire i dati di chi si collega dopo
+   l'aggiornamento. Non ci si scrive più. */
+function fbDocUrlLegacy(){
+  return fbBase()+"/pannello/"+encodeURIComponent(sync.fb.uid);
+}
+function fbLeggiDoc(url){
   return fbToken().then(function(tok){
-    return fetch(fbDocUrl(), { headers:{ "Authorization":"Bearer "+tok }, cache:"no-store" });
+    return fetch(url, { headers:{ "Authorization":"Bearer "+tok }, cache:"no-store" });
   }).then(function(r){
     if (r.status === 404) return "";
     return jsonOrThrow(r).then(function(d){
@@ -234,12 +316,27 @@ function fbRead(){
     });
   });
 }
+function fbRead(){
+  return fbLeggiDoc(fbDocUrl()).then(function(t){
+    if (t && t.trim()) return t;
+    /* niente nel percorso nuovo: guardo in quello vecchio, una volta sola.
+       Se c'è qualcosa lo restituisco e `pushNow` lo riscriverà nel percorso
+       nuovo: la migrazione avviene leggendo, senza cancellare nulla. */
+    return fbLeggiDoc(fbDocUrlLegacy()).then(function(v){
+      if (v && v.trim()) sync.migratoDaPercorsoVecchio = true;
+      return v;
+    }, function(){ return ""; });
+  });
+}
 function fbWrite(text){
   return fbToken().then(function(tok){
-    return fetch(fbDocUrl()+"?updateMask.fieldPaths=payload",
+    return fetch(fbDocUrl()+"?updateMask.fieldPaths=payload&updateMask.fieldPaths=aggiornatoIl",
       { method:"PATCH",
         headers:{ "Authorization":"Bearer "+tok, "Content-Type":"application/json" },
-        body: JSON.stringify({ fields:{ payload:{ stringValue: text } } }) });
+        body: JSON.stringify({ fields:{
+          payload:{ stringValue: text },
+          aggiornatoIl:{ timestampValue: new Date().toISOString() }
+        } }) });
   }).then(function(r){ if (!r.ok) throw new Error("HTTP "+r.status); return true; });
 }
 
@@ -250,11 +347,19 @@ function fbWrite(text){
    nell'uso: l'esito viene riportato all'utente operazione per operazione. */
 function fbDelete(){
   return fbToken().then(function(tok){
-    return fetch(fbDocUrl(), { method:"DELETE",
-      headers:{ "Authorization":"Bearer "+tok } });
-  }).then(function(r){
+    var h = { "Authorization":"Bearer "+tok };
+    /* Cancella il percorso nuovo E quello delle versioni precedenti: lasciare
+       indietro il documento vecchio significherebbe dire «cancellato» mentre
+       una copia resta leggibile. Entrambi devono riuscire, o l'esito è
+       parziale e viene dichiarato. */
+    return Promise.all([
+      fetch(fbDocUrl(),       { method:"DELETE", headers:h }),
+      fetch(fbDocUrlLegacy(), { method:"DELETE", headers:h })
+    ]);
+  }).then(function(rs){
     /* 404 significa che non c'era nulla: è comunque il risultato voluto */
-    if (!r.ok && r.status !== 404) throw new Error("HTTP "+r.status);
+    var falliti = rs.filter(function(r){ return !r.ok && r.status !== 404; });
+    if (falliti.length) throw new Error("HTTP "+falliti[0].status);
     return true;
   });
 }

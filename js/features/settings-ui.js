@@ -164,7 +164,12 @@ function zonaImpostazioni(){
   SEZ[sezCorrente] += '</div>';
 
   /* sincronizzazione */
-  if (modoAvanzato()) {
+  /* SYN-006 — la scheda dell'account NON sta più dietro la modalità avanzata.
+     Prima sì, e in modalità semplice — che è il predefinito — la
+     sincronizzazione era irraggiungibile: la funzione esisteva e nessuno
+     poteva trovarla. Ritrovare le proprie giornate su un altro dispositivo
+     non è una funzione per utenti esperti. */
+  {
   inSezione("account");
   SEZ[sezCorrente] += '<div class="card'+(folded("setsync") ? " chiusa" : "")+'"><h2 data-ico="sync" ><button class="foldbtn" type="button" data-act=\"fold\" data-v="setsync" aria-expanded="'+(!folded("setsync"))+'"><span>Sincronizzazione</span><span class="caret">'+(folded("setsync") ? '▸' : '▾')+'</span><span class="cnt">'+
        /* SET-003 — nel riepilogo compare il testo leggibile, non l'identificativo */
@@ -193,62 +198,82 @@ function zonaImpostazioni(){
                              : '<div class="row"><button class="tiny" data-act="syncprovachiudi">Chiudi</button></div>')+
            '</div>';
   if (!syncReady()) {
-    if (accountDisponibile() && !syncReady()) {
-      SEZ[sezCorrente] += '<p class="hint" style="margin-top:0">Entra con un account per ritrovare i tuoi dati '+
-        'su telefono e computer. Non devi configurare niente.</p>'+
-        '<div class="row"><input type="email" id="ac1" data-keep="ac1" placeholder="La tua email"></div>'+
-        '<div class="row"><input type="password" id="ac2" data-keep="ac2" placeholder="Password (almeno 6 caratteri)">'+
+    /* ───────────────────────────────────────────────────────────────────────
+       SYN-006 — l'esperienza consumer della sincronizzazione.
+
+       Prima qui c'erano: un selettore fra «GitHub Gist» e «Firebase», quattro
+       campi in cui incollare chiave API, identificativo di progetto, email e
+       password, una guida di otto passi nella console di Google e un riquadro
+       con le regole di sicurezza da pubblicare a mano.
+
+       Nessuna di quelle cose può essere chiesta a chi compra un prodotto. La
+       decisione, con le prove, è in SYNC-DECISION.md: un solo progetto
+       Firebase, di chi pubblica il pannello, configurato in fase di build.
+       Qui l'utente vede due sole possibilità: restare su questo dispositivo,
+       oppure un account con email e password.
+       ─────────────────────────────────────────────────────────────────────── */
+    SEZ[sezCorrente] += '<p class="statoarea" data-stato="locale"><b>Solo su questo dispositivo.</b> '+
+      'I tuoi dati non escono da qui: nessun account, nessun servizio, niente da configurare.</p>';
+
+    if (accountDisponibile()) {
+      SEZ[sezCorrente] += '<p class="hint">Con un <b>Account Pannello Tempo</b> ritrovi le stesse giornate '+
+        'su telefono e computer. Servono solo un\'email e una password.</p>'+
+        '<div class="row"><input type="email" id="ac1" data-keep="ac1" autocomplete="email" '+
+        'placeholder="La tua email" aria-label="La tua email"></div>'+
+        '<div class="row"><input type="password" id="ac2" data-keep="ac2" autocomplete="current-password" '+
+        'placeholder="Password (almeno 6 caratteri)" aria-label="Password">'+
         '<button class="add" data-act="account-entra">Entra</button>'+
         '<button class="add ghost" data-act="account-crea">Crea account</button></div>'+
-        /* SEC-001 — «Resta collegato» è stato rimosso nella Release 2B.
-           Conservare il token di rinnovo significa lasciarlo leggibile a
-           qualunque script della pagina, e senza un server non esiste un posto
-           più sicuro. Meglio dire che la sessione finisce, che offrire una
-           persistenza che non possiamo proteggere. */
-        '<p class="hint"><b>La sessione dura finché il pannello è aperto.</b> '+
-        'Chiudendolo dovrai rientrare con la password: sul dispositivo non resta '+
-        'nulla che permetta di rientrare al posto tuo. '+
-        'Una sessione che sopravvive alla chiusura richiede un cookie protetto, '+
-        'quindi un server, che questa installazione non ha.</p>'+
-        '<p class="grp">Oppure collega un tuo servizio</p>';
-    }
-    SEZ[sezCorrente] += '<p class="hint" style="margin-top:0">Collega un servizio per ritrovare gli stessi dati su '+
-         'telefono e computer. Le credenziali restano su questo dispositivo: non finiscono '+
-         'nel file HTML né nei backup.</p>'+
-         '<p class="hint"><b>Sulla chiave API:</b> quella di un progetto Firebase non è un '+
-         'segreto. Identifica il progetto, non autorizza nulla: sono le regole di sicurezza '+
-         'a decidere chi legge cosa, ed è per questo che la guida qui sotto ti fa pubblicare '+
-         'una regola che lega ogni documento al suo proprietario. Puoi comunque limitare la '+
-         'chiave al tuo dominio dalla console Google Cloud.</p>';
-    SEZ[sezCorrente] += '<p class="hint" style="margin-top:0"><span role="button" tabindex="0" class="linkish" '+
-         'data-act="fold" data-v="guidasync">'+(folded("guidasync") ? "▸" : "▾")+
-         ' Come si prepara Firebase, passo per passo</span></p>';
-    if (!folded("guidasync"))
-      SEZ[sezCorrente] += '<ol class="guida">'+[
-        "Vai su console.firebase.google.com e crea un progetto (nome libero).",
-        "Nel progetto apri <b>Build → Firestore Database</b> e premi <b>Crea database</b>, modalità produzione, area europea.",
-        "Apri <b>Build → Authentication → Sign-in method</b> e abilita <b>Email/Password</b>.",
-        "Vai in <b>Authentication → Users → Add user</b> e crea un utente con una tua email e una password di almeno sei caratteri. Questo utente sei tu: non serve registrarsi da nessuna parte.",
-        "Apri <b>⚙ Impostazioni progetto → Generali</b>. Copia l\'<b>ID progetto</b> (minuscole e trattini).",
-        "Nella stessa pagina, in basso, sezione <b>Le tue app</b>: premi l\'icona web <b>&lt;/&gt;</b>, dai un nome, registra. Copia il valore di <b>apiKey</b>.",
-        "In <b>Firestore → Rules</b> incolla la regola qui sotto e premi <b>Pubblica</b>.",
-        "Torna qui, incolla chiave, ID progetto, email e password, e premi <b>Collega</b>. Poi usa <b>Verifica collegamento</b>."
-      ].map(function(p){ return '<li>'+p+'</li>'; }).join("")+'</ol>'+
-      '<textarea class="icsbox" readonly rows="8">rules_version = \'2\';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /pannello/{uid} {\n      allow read, write: if request.auth != null && request.auth.uid == uid;\n    }\n  }\n}</textarea>';
-    SEZ[sezCorrente] += '<div class="seg mini">'+[["gist","GitHub Gist"],["firebase","Firebase"]].map(function(p){
-      return '<button data-act="provider" data-v="'+p[0]+'" aria-pressed="'+(sync.provider===p[0])+'" '+
-             'data-on="'+(sync.provider===p[0]?1:0)+'">'+p[1]+'</button>';
-    }).join("")+'</div>';
-    if (sync.provider === "gist") {
-      SEZ[sezCorrente] += '<div class="row"><input type="text" id="f1" data-keep="f1" placeholder="Identificativo del gist"></div>'+
-           '<div class="row"><input type="password" id="f2" data-keep="f2" placeholder="Token GitHub (permesso gist)">'+
-           '<button class="add" data-act="synclink">Collega</button></div>';
+        '<p class="hint"><span role="button" tabindex="0" class="linkish" data-act="fold" '+
+        'data-v="cosacambia">'+(folded("cosacambia") ? "▸" : "▾")+
+        ' Che cosa cambia se sincronizzo</span></p>';
+      if (!folded("cosacambia"))
+        SEZ[sezCorrente] += '<ul class="guida">'+[
+          "<b>Cosa viene sincronizzato:</b> attività, routine, note, priorità, collegamenti e modelli.",
+          "<b>Cosa resta su questo dispositivo:</b> tema, densità, sezioni chiuse e le copie di sicurezza locali.",
+          "<b>Dove finiscono:</b> su un servizio di Google, in Europa, in uno spazio che è solo tuo e a cui nessun altro utente può accedere.",
+          "<b>Come sono protetti:</b> cifrati mentre viaggiano e cifrati sul server. <b>Non sono cifrati end-to-end:</b> chi gestisce il servizio potrebbe tecnicamente leggerli. Lo diciamo invece di scrivere «i tuoi dati sono al sicuro».",
+          "<b>Puoi tornare indietro:</b> disconnetti quando vuoi, e i dati restano su questo dispositivo. Puoi anche eliminare account e dati.",
+          "<b>La sessione dura finché il pannello è aperto:</b> chiudendolo rientri con la password. Sul dispositivo non resta nulla che permetta di rientrare al posto tuo."
+        ].map(function(p){ return '<li>'+p+'</li>'; }).join("")+'</ul>';
     } else {
-      SEZ[sezCorrente] += '<div class="row"><input type="text" id="f1" data-keep="f1" placeholder="Chiave API del progetto (apiKey)"></div>'+
-           '<div class="row"><input type="text" id="f2" data-keep="f2" placeholder="Identificativo progetto (projectId)"></div>'+
-           '<div class="row"><input type="text" id="f3" data-keep="f3" placeholder="Email dell\'utente Firebase"></div>'+
-           '<div class="row"><input type="password" id="f4" data-keep="f4" placeholder="Password">'+
-           '<button class="add" data-act="synclink">Collega</button></div>';
+      /* Onestà sullo stato reale: senza configurazione l'account non esiste. */
+      SEZ[sezCorrente] += '<p class="hint"><b>L\'account non è disponibile in questa copia del pannello.</b> '+
+        'Chi l\'ha pubblicata non ha collegato un servizio di account, quindi i dati '+
+        'possono restare solo qui. Puoi comunque esportarli e reimportarli a mano '+
+        'dalla sezione «Backup e dati».</p>';
+    }
+
+    /* MIG-001 — c'è un vecchio collegamento a GitHub da cui recuperare i dati? */
+    if (sync.gist && sync.gist.id && !pref("gistMigrato")) {
+      SEZ[sezCorrente] += '<p class="grp">Dati da un collegamento precedente</p>'+
+        '<p class="hint" style="margin-top:0">Questo dispositivo ricorda un collegamento a un '+
+        'servizio che non è più supportato. Il motivo: richiedeva di conservare qui un token '+
+        'senza scadenza, e non permetteva di cancellare davvero i dati. '+
+        '<b>Il file remoto non è stato toccato</b> — è tuo e resta dov\'è.</p>'+
+        '<p class="hint">Puoi recuperare i dati una volta sola. Il token serve solo per la '+
+        'lettura e <b>non viene salvato</b>: appena finito lo dimentichiamo.</p>'+
+        '<div class="row"><input type="text" id="mg1" data-keep="mg1" value="'+esc(sync.gist.id)+'" '+
+        'placeholder="Identificativo" aria-label="Identificativo del file remoto"></div>'+
+        '<div class="row"><input type="password" id="mg2" data-keep="mg2" autocomplete="off" '+
+        'placeholder="Token di accesso" aria-label="Token di accesso">'+
+        '<button class="add" data-act="mig-leggi">Leggi i dati</button></div>'+
+        '<div class="row secondrow"><button class="tiny" data-act="mig-dimentica">Dimentica questo collegamento</button>'+
+        '<a class="tiny lk" href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">Revoca il token su GitHub ↗</a></div>';
+    }
+    /* Anteprima del trasferimento: si decide prima, non dopo. */
+    if (S.migrazione) {
+      SEZ[sezCorrente] += '<div class="card liv-attenzione" role="region" aria-label="Trasferimento dei dati">'+
+        '<p class="cnome">Trovati dati da trasferire<span class="sub">'+
+        S.migrazione.voci+' attività e '+S.migrazione.note+' note'+
+        (S.migrazione.salvatoIl ? ', salvati il '+esc(new Date(S.migrazione.salvatoIl).toLocaleString("it-IT")) : '')+
+        '</span></p>'+
+        '<p class="hint">Su questo dispositivo ci sono <b>'+S.migrazione.localiVoci+'</b> attività. '+
+        'Scegli come procedere: faccio una copia di sicurezza prima di toccare qualcosa, '+
+        'e potrai annullare.</p>'+
+        '<div class="row"><button class="add" data-act="mig-applica" data-v="unisci">Unisci le due</button>'+
+        '<button class="add ghost" data-act="mig-applica" data-v="sostituisci">Sostituisci con quelli recuperati</button>'+
+        '<button class="tiny" data-act="mig-annulla">Annulla</button></div></div>';
     }
   } else if (sync.conflict) {
     SEZ[sezCorrente] += '<p class="warn" style="margin-top:0">I dati remoti sono stati modificati altrove e anche qui ci sono '+
@@ -258,16 +283,30 @@ function zonaImpostazioni(){
          '<div class="row"><button class="add" data-act="keeplocal">Tieni questo dispositivo</button>'+
          '<button class="add ghost" data-act="keepremote">Prendi la versione remota</button></div>';
   } else {
-    SEZ[sezCorrente] += '<p class="hint" style="margin-top:0">'+providerName()+' · '+
-         (sync.auto ? "automatica: ogni modifica parte dopo qualche secondo."
-                    : "manuale: invii e scarichi quando vuoi tu.")+
-         (sync.dirty ? " Ci sono modifiche non ancora inviate." : "")+'</p>'+
+    /* SYN-006 — lo stato collegato parla di account, non di fornitori, e usa
+       le parole richieste: «Sincronizzato», «Modifiche da sincronizzare»,
+       «Non in linea», «Ultima sincronizzazione», «Disconnetti». */
+    var inLinea = (typeof navigator === "undefined") || navigator.onLine !== false;
+    var statoBreve = !inLinea ? "Non in linea"
+                   : sync.dirty ? "Modifiche da sincronizzare"
+                   : "Sincronizzato";
+    SEZ[sezCorrente] += '<p class="statoarea" data-stato="'+(!inLinea?"offline":sync.dirty?"attesa":"ok")+'">'+
+         '<b>'+statoBreve+'</b>'+
+         (sync.fb.email ? ' · '+esc(sync.fb.email) : '')+'</p>'+
+         '<p class="hint" style="margin-top:0">'+
+         (sync.at ? 'Ultima sincronizzazione: '+esc(sync.at)+'. ' : '')+
+         (sync.auto ? 'Le modifiche partono da sole dopo qualche secondo.'
+                    : 'Invio manuale: decidi tu quando.')+
+         '</p>'+
+         '<p class="hint">La sessione dura finché il pannello resta aperto. '+
+         'Chiudendolo rientri con la password: sul dispositivo non conserviamo nulla '+
+         'che permetta di rientrare al posto tuo.</p>'+
          '<div class="row"><button class="tiny" data-act="syncauto" data-on="'+(sync.auto?1:0)+'">'+
          (sync.auto ? "Automatica ✓" : "Automatica")+'</button>'+
          '<button class="tiny" data-act="syncpull">Scarica ora</button>'+
-         '<button class="tiny" data-act="syncprova">Verifica</button>'+
          '<button class="tiny" data-act="syncpush">Invia ora</button>'+
-         '<button class="tiny" data-act="syncoff">Scollega</button></div>';
+         '<button class="tiny" data-act="syncprova">Verifica</button>'+
+         '<button class="tiny" data-act="syncoff">Disconnetti</button></div>';
   }
   SEZ[sezCorrente] += '</div>';
   }
@@ -451,12 +490,17 @@ function zonaImpostazioni(){
     '<h2 data-ico="dati" ><button class="foldbtn" type="button" data-act=\"fold\" data-v="setpriv" '+
     'aria-expanded="'+(!folded("setpriv"))+'"><span>Privacy e dati</span>'+
     '<span class="caret">'+(folded("setpriv") ? "▸" : "▾")+'</span></button></h2>'+
+    /* PRV-001 — niente gergo e niente formule generiche: si dice dove sono i
+       dati, chi li protegge e che cosa NON è protetto. «I tuoi dati sono al
+       sicuro» non è un'informazione. */
     '<p class="hint" style="margin-top:0"><b>Dove stanno i tuoi dati.</b> Nella memoria di '+
     'questo browser, su questo dispositivo. '+
     (syncReady()
-      ? 'In più vengono inviati al servizio che hai collegato tu: '+
-        esc(sync.provider === "gist" ? "il tuo Gist su GitHub" : "il tuo progetto Firebase")+'.'
-      : 'Non esiste alcun server nostro che li riceva, perché non esiste alcun server nostro.')+
+      ? 'In più, con il tuo <b>Account Pannello Tempo</b>, in uno spazio che è solo tuo su un '+
+        'servizio di Google in Europa. Sono cifrati mentre viaggiano e cifrati sul server. '+
+        '<b>Non sono cifrati end-to-end:</b> chi gestisce il servizio potrebbe tecnicamente '+
+        'leggerli. Nessun altro utente può, perché ogni spazio è legato al suo proprietario.'
+      : 'Non escono da qui: senza account non c\'è nessun server che li riceva.')+
     '</p>'+
     '<p class="grp">Porta via i tuoi dati</p>'+
     '<p class="hint" style="margin-top:0">Sempre disponibile, in ogni piano. Le esportazioni '+

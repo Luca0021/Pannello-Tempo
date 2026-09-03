@@ -46,55 +46,104 @@ var LocalOnlyProvider = {
   resolveConflict: function(){ return Promise.resolve({ ok:true }); }
 };
 
-/* ---------- provider: Gist su GitHub ---------- */
+/* ---------- provider: Gist su GitHub — DEPRECATO, SOLA LETTURA ----------
+
+   MIG-001. Gist non è più un provider di sincronizzazione: è un percorso di
+   uscita. Due ragioni dimostrate dal codice, non preferenze:
+
+   1. Il token personale di GitHub non ha scadenza e non esiste un posto
+      sicuro dove tenerlo in un'applicazione senza server. Finiva in
+      `localStorage`, in chiaro. È lo stesso limite che ha portato a
+      rimuovere «Resta collegato»: mantenerlo per Gist sarebbe stato
+      incoerente e avrebbe dato un falso senso di sicurezza.
+   2. `deleteRemote()` non sa cancellare. Un prodotto che offre «Elimina i
+      miei dati» non può svuotare un file e lasciarlo dov'è.
+
+   Cosa resta possibile: leggere il gist esistente per trasferire i dati su
+   un account, una volta. Nessuna scrittura, nessun nuovo collegamento.
+   Il token viene chiesto al momento, tenuto in memoria e dimenticato.
+   Il contenuto remoto NON viene toccato: è dell'utente, e la revoca del
+   token è un gesto che deve fare lui su GitHub. Vedi GIST-MIGRATION.md. */
 var GistProvider = {
   id: "gist",
-  nome: "GitHub Gist",
-  isConfigured: function(){ return !!(sync.gist && sync.gist.id && sync.gist.token); },
-  login: function(cred){
-    if (cred) { sync.gist = { id: cred.id, token: cred.token }; saveSync(); }
-    var problema = controllaCampiGist(sync.gist.id, sync.gist.token);
-    if (problema) return Promise.reject(erroreSync("Dati incompleti", problema,
-      "Controlla identificativo e token nelle impostazioni."));
-    return GistProvider.pull().then(function(){ return { ok:true }; });
+  nome: "Servizio collegato (non più supportato)",
+  deprecato: true,
+  soloLettura: true,
+  /* Non si dichiara mai «configurato»: così `provider()` ricade su
+     LocalOnlyProvider e nessun percorso automatico prova a scrivere. */
+  isConfigured: function(){ return false; },
+  /* `puoMigrare` è la domanda che conta adesso: c'è un gist da cui leggere? */
+  puoMigrare: function(){ return !!(sync.gist && sync.gist.id); },
+  login: function(){
+    return Promise.reject(erroreSync(
+      "Servizio non più supportato",
+      "Il collegamento a GitHub è stato ritirato: richiedeva di conservare sul dispositivo un token senza scadenza, e non permetteva di cancellare davvero i dati.",
+      "Puoi trasferire i dati su un account Pannello Tempo dalle impostazioni, oppure esportarli in un file."));
   },
   logout: function(){
-    sync.gist = { id:"", token:"" };
+    sync.gist = { id:"", token:"", file:"pannello.json" };
     sync.rev = 0; sync.dirty = false; sync.conflict = null;
     saveSync();
     return Promise.resolve({ ok:true, residui: residuiCredenziali ? residuiCredenziali() : [] });
   },
-  pull: function(){ return gistRead().then(normalizzaLettura, normalizzaErrore); },
-  push: function(testo){ return gistWrite(testo).then(function(r){
-    return { ok:true, rev:(r && r.rev) || sync.rev + 1 }; }, normalizzaErrore); },
+  /* Lettura consentita solo con un token fornito in questo momento. */
+  pull: function(){
+    if (!sync.gist.token) return Promise.reject(erroreSync(
+      "Serve di nuovo il token",
+      "Il token di GitHub non viene più conservato sul dispositivo.",
+      "Incollalo di nuovo per leggere i dati da trasferire: verrà dimenticato appena finito."));
+    return gistRead().then(normalizzaLettura, normalizzaErrore);
+  },
+  push: function(){
+    return Promise.reject(erroreSync(
+      "Scrittura disattivata",
+      "Questo servizio è in sola lettura: serve solo a recuperare i dati salvati in precedenza.",
+      "Attiva un account Pannello Tempo per tornare a sincronizzare."));
+  },
   deleteRemote: function(){
-    /* PRV-002: su Gist non esiste una cancellazione del contenuto via token
-       senza cancellare il gist stesso, che potrebbe contenere altro. */
     return Promise.resolve({ ok:false, parziale:true,
-      motivo:"Il contenuto viene svuotato, non eliminato: cancellare il gist "+
-             "richiede un permesso che il pannello non chiede." });
+      motivo:"I dati su GitHub restano dove sono: cancellarli richiede un permesso "+
+             "che il pannello non chiede, e non vogliamo toccare un file che è tuo. "+
+             "Puoi eliminare il gist e revocare il token dal tuo account GitHub." });
   },
   getStatus: function(){ return statoSync(); },
   resolveConflict: function(scelta){ resolveConflict(scelta); return Promise.resolve({ ok:true }); }
 };
 
+/* Lettura una tantum per la migrazione. Il token non viene mai salvato:
+   entra, serve, esce. L'ordine degli argomenti di `controllaCampiGist` è
+   (token, id): passarli invertiti — come faceva la versione precedente —
+   rifiutava una coppia valida con un messaggio sul campo sbagliato. */
+function leggiGistPerMigrazione(id, token){
+  var problema = controllaCampiGist(token, id);
+  if (problema) return Promise.reject(erroreSync("Dati incompleti", problema,
+    "Controlla identificativo del gist e token, poi riprova."));
+  var precedente = sync.gist.token;
+  sync.gist.id = id; sync.gist.token = token;
+  return gistRead().then(function(t){
+    sync.gist.token = precedente;      /* dimenticato subito */
+    return t;
+  }, function(e){
+    sync.gist.token = precedente;
+    return normalizzaErrore(e);
+  });
+}
+
 /* ---------- provider: Firestore ---------- */
 var FirebaseProvider = {
   id: "firebase",
-  nome: "Firebase",
+  nome: "Account Pannello Tempo",
   isConfigured: function(){
-    /* serve anche una sessione utilizzabile: chiave e progetto da soli non
-       bastano a leggere o scrivere */
-    return !!(sync.fb && sync.fb.apiKey && sync.fb.projectId && sync.fb.uid &&
-              (sync.fb.refresh || sync.fb.idToken));
+    /* La configurazione del progetto arriva dalla build; da parte dell'utente
+       serve una sessione viva. `idToken` vive solo in memoria: alla chiusura
+       della scheda questo torna falso, ed è il comportamento dichiarato. */
+    return !!(firebaseConfigurato() && sync.fb && sync.fb.uid &&
+              sync.fb.idToken && Date.now() < sync.fb.expAt);
   },
   login: function(cred){
     if (!cred) return Promise.reject(erroreSync("Credenziali mancanti",
-      "Servono email e password.", "Compila i campi nelle impostazioni."));
-    /* chiave e progetto vengono depositati prima: fbSignIn li legge da sync.fb */
-    if (cred.apiKey) sync.fb.apiKey = cred.apiKey;
-    if (cred.projectId) sync.fb.projectId = cred.projectId;
-    var problema = controllaCampiFb(sync.fb.apiKey, sync.fb.projectId, cred.email, cred.password);
+      "Servono email e password.", "Compila i campi e riprova."));
+    var problema = controllaCampiAccount(cred.email, cred.password);
     if (problema) return Promise.reject(erroreSync("Dati incompleti", problema,
       "Correggi il campo e riprova."));
     return fbSignIn(cred.email, cred.password)

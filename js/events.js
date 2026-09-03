@@ -821,35 +821,69 @@ document.addEventListener("click", function(ev){
     svuota("lname", "lurl");
     commit();
   }
-  else if (act === "provider") { sync.provider = v; saveSync(); render(); }
-  else if (act === "synclink") {
-    var g = function(id){ var e = document.getElementById(id); return e ? e.value.trim() : ""; };
-    if (sync.provider === "gist") {
-      var gid = g("f1").replace(/^.*\//, ""), tok = g("f2");
-      if (!gid || !tok) { S.err = "Servono sia l'identificativo del gist sia il token."; render(); return; }
-      var problema = controllaCampiGist(tok, gid);
-      if (problema) { sync.err = { titolo:"Dati incompleti", causa:problema,
-        cosa:"Correggi il campo e riprova.", tecnico:"" }; setStatus("errore"); render(); return; }
-      sync.gist.id = gid; sync.gist.token = tok; sync.rev = 0; sync.dirty = false;
-      svuota("f1", "f2");
-      saveSync(); pullNow();
+  /* SYN-006 — la scelta del servizio non esiste più: c'è «solo su questo
+     dispositivo» oppure un account. Il comando resta accettato e ignorato,
+     perché una vecchia scheda aperta potrebbe ancora inviarlo. */
+  else if (act === "provider") { render(); }
+  /* MIG-001 — lettura una tantum del gist per trasferire i dati.
+     Il token viene chiesto adesso, usato e dimenticato: non lo salviamo. */
+  else if (act === "mig-leggi") {
+    var gm = function(id){ var e = document.getElementById(id); return e ? e.value.trim() : ""; };
+    var gid2 = gm("mg1").replace(/^.*\//, ""), tok2 = gm("mg2");
+    if (!gid2 || !tok2) { toast("Servono identificativo e token", "info"); return; }
+    setStatus("lettura…"); render();
+    leggiGistPerMigrazione(gid2, tok2).then(function(testo){
+      svuota("mg2");                     /* il token sparisce dal campo */
+      var r = remoteRevOf(testo);
+      if (!r.payload || !r.payload.data) {
+        sync.err = erroreSync("Nessun dato da trasferire",
+          "Il file non contiene dati di Pannello Tempo.",
+          "Controlla di aver indicato il gist giusto.");
+        setStatus("errore"); render(); return;
+      }
+      /* non applico niente: mostro l'anteprima e decide l'utente */
+      S.migrazione = {
+        da: "gist",
+        voci: (r.payload.data.items || []).length,
+        note: (r.payload.data.capture || []).length,
+        salvatoIl: r.payload.savedAt || "",
+        dati: r.payload.data,
+        localiVoci: (S.data.items || []).length
+      };
+      setStatus(""); render();
+    }).catch(function(e){
+      sync.err = (e && e.titolo) ? e : dettaglioErrore(e);
+      setStatus("errore"); render();
+    });
+  }
+  /* Il trasferimento vero, dopo la conferma. Backup prima di toccare i dati. */
+  else if (act === "mig-applica") {
+    if (!S.migrazione) return;
+    var modo = v || "unisci";
+    salvaBackupAutomatico("prima del trasferimento dei dati");
+    snapshot("Hai trasferito i dati dal servizio precedente.", "Vuoi tornare indietro?");
+    if (modo === "sostituisci") {
+      S.data = Object.assign(seed(), S.migrazione.dati);
     } else {
-      var ak = g("f1"), pid = g("f2"), em = g("f3"), pw = g("f4");
-      if (!ak || !pid || !em || !pw) { S.err = "Compila tutti e quattro i campi."; render(); return; }
-      var problemaFb = controllaCampiFb(ak, pid, em, pw);
-      if (problemaFb) { sync.err = { titolo:"Dati incompleti", causa:problemaFb,
-        cosa:"Correggi il campo e riprova.", tecnico:"" }; setStatus("errore"); render(); return; }
-      sync.fb.apiKey = ak; sync.fb.projectId = pid; sync.rev = 0; sync.dirty = false;
-      svuota("f1", "f2", "f3", "f4");
-      setStatus("accesso…"); render();
-      /* SYN-001: il collegamento passa dal contratto, non dal servizio */
-      PROVIDER.firebase.login({ apiKey:ak, projectId:pid, email:em, password:pw })
-        .then(function(){ pullNow(); })
-        .catch(function(e){
-          sync.err = (e && e.titolo) ? e : dettaglioErrore(e);
-          setStatus("errore"); render();
-        });
+      var esito = fondiPerRecord(S.data, S.migrazione.dati);
+      S.data = Object.assign(seed(), esito.uniti);
+      if (esito.conflitti && esito.conflitti.length) S.conflitti = esito.conflitti;
     }
+    normalizeData();
+    S.migrazione = null;
+    setImp("gistMigrato", true);
+    registraOperazione("migrazione", "dati trasferiti dal servizio precedente");
+    toast("Dati trasferiti. Nessun token è stato conservato.", "ok");
+    commit();
+  }
+  else if (act === "mig-annulla") { S.migrazione = null; render(); }
+  /* Dimentica l'identificativo del gist: l'unica cosa che restava su disco. */
+  else if (act === "mig-dimentica") {
+    sync.gist = { id:"", token:"", file:"pannello.json" };
+    setImp("gistMigrato", true);
+    saveSync();
+    toast("Riferimento rimosso da questo dispositivo", "ok");
+    render();
   }
   else if (act === "syncauto") { sync.auto = !sync.auto; saveSync(); render(); }
   else if (act === "syncpull") { pullNow(); }
@@ -867,7 +901,7 @@ document.addEventListener("click", function(ev){
       setStatus("collegata"); toast("Sei dentro", "ok"); pushNow(true); render();
     };
     if (act === "account-crea") registraAccount(em2, pw2, poi);
-    else entraAccount(em2, pw2, false /* SEC-001: mai ricordare */, poi);
+    else entraAccount(em2, pw2, poi);   /* SEC-001: nessun «ricordami» da passare */
   }
   else if (act === "account-esci") { esciAccount(); toast("Uscito dall\'account", "info"); render(); }
   /* SEC-001: «Resta collegato» rimosso nella Release 2B insieme alla
@@ -983,10 +1017,15 @@ document.addEventListener("click", function(ev){
   else if (act === "errchiudi") { sync.err = null; setStatus(sync.status === "errore" ? "" : sync.status); render(); }
   else if (act === "syncprovachiudi") { sync.prova = null; render(); }
   else if (act === "syncoff") {
-    if (!confirm("Scollegare la sincronizzazione? I dati restano su questo dispositivo.")) return;
-    sync.gist = { token:"", id:"", file:"pannello.json" };
-    sync.fb = { apiKey:"", projectId:"", email:"", uid:"", refresh:"", idToken:"", expAt:0 };
-    sync.rev = 0; sync.dirty = false; sync.status = ""; saveSync(); render();
+    if (!confirm("Disconnettere l'account? I dati restano su questo dispositivo.")) return;
+    /* una sola via d'uscita, quella che verifica di non lasciare residui */
+    var u = esciAccount();
+    if ((u.residui || []).length)
+      sync.err = erroreSync("Disconnessione incompleta",
+        "Sul dispositivo è rimasto qualcosa: "+u.residui.join(", ")+".",
+        "Usa «Elimina i dati di questo dispositivo» dal Centro privacy.");
+    else toast("Disconnesso. Sul dispositivo non resta nulla per rientrare.", "ok");
+    render();
   }
   else if (act === "keeplocal") { resolveConflict(true); }
   else if (act === "keepremote") { resolveConflict(false); }

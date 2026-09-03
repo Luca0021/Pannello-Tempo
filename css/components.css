@@ -829,6 +829,21 @@
 .pt .focus button.link{color:var(--focusmut);}
 .pt .focus button.link:hover{color:var(--focusfg);}
 
+/* ---------- SYN-006: stato della sincronizzazione, a colpo d'occhio ----------
+   Lo stato non è comunicato dal solo colore: la parola c'è sempre («Solo su
+   questo dispositivo», «Sincronizzato», «Modifiche da sincronizzare», «Non in
+   linea»), e il colore la accompagna. */
+.pt p.statoarea{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  margin:0 0 10px;padding:9px 12px;border-radius:9px;font-size:13.5px;
+  background:var(--info-fondo);border:1px solid var(--info-bordo);color:var(--info-testo);}
+.pt p.statoarea[data-stato="ok"]{background:hsl(160 40% 96%);border-color:hsl(160 25% 60%);color:var(--sage-testo);}
+.pt p.statoarea[data-stato="attesa"]{background:var(--att-fondo);border-color:var(--att-bordo);color:var(--att-testo);}
+.pt p.statoarea[data-stato="offline"]{background:var(--err-fondo);border-color:var(--err-bordo);color:var(--err-testo);}
+.pt[data-theme="scuro"] p.statoarea[data-stato="ok"]{background:hsl(160 25% 18%);border-color:hsl(160 22% 34%);color:var(--sage-testo);}
+@media (prefers-color-scheme:dark){
+  .pt[data-theme="auto"] p.statoarea[data-stato="ok"]{background:hsl(160 25% 18%);border-color:hsl(160 22% 34%);color:var(--sage-testo);}
+}
+
 /* ---------- SET-001: sezioni delle impostazioni ---------- */
 .pt p.sezione{display:block;margin:22px 0 8px;font-family:var(--sans);font-size:11px;
   letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--muted);}

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-build="035c16ab8a8f" data-cache="pt-035c16ab" data-schema="5">
+<html lang="it" data-build="3322a15e59a2" data-cache="pt-3322a15e" data-schema="5">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -32,7 +32,7 @@
      La correzione giusta a lungo termine è togliere i 141 stili inline e
      passare le misure con variabili CSS; è un lavoro a parte, e lasciare
      l'agenda rotta nel frattempo non è un'opzione. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.github.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; form-action 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.github.com https://identitytoolkit.googleapis.com https://firestore.googleapis.com; form-action 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests">
 <!-- Nota, non un difetto da correggere qui: come `frame-ancestors`, anche
      questo non ha effetto in un `<meta>`. L'elenco degli `http-equiv` che il
      browser interpreta è chiuso, e `X-Content-Type-Options` non ne fa parte:
@@ -40,9 +40,13 @@
      `x-content-type-options: nosniff` da sé, quindi la protezione c'è dove il
      pannello è pubblicato — ma non è questa riga a darla, e valeva la pena
      scriverlo invece di lasciar credere il contrario. -->
+<!-- `securetoken.googleapis.com` è stato TOLTO da connect-src: serviva a
+     rinnovare la sessione con il token di rinnovo, che non conserviamo più
+     (SEC-001). Un permesso di rete che nessuna riga di codice usa è un
+     permesso da togliere, non da lasciare «per sicurezza». -->
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="referrer" content="same-origin">
-<meta name="build" content="1.0.0 035c16ab8a8f 2026-09-03T09:46:02Z">
+<meta name="build" content="1.0.0 3322a15e59a2 2026-09-03T10:48:17Z">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icona-180.png">
 <!--CSS-->
@@ -60,6 +64,7 @@
 <!--JS-->
   <!--SCRIPTS-->
 <script src="js/config.js"></script>
+<script src="js/config-firebase.js"></script>
 <script src="js/promessa.js"></script>
 <script src="js/versione.js"></script>
 <script src="js/platform.js"></script>
