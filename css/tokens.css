@@ -3,9 +3,26 @@
   --bg1:#E9EDEF;--bg2:#DAE1E4;--grid:rgba(15,27,36,.032);
   --surface:#FCFDFD;--field:#FFFFFF;--agbg:#F1F4F5;--selbg:hsl(202 55% 96%); --track:rgba(15,27,36,.07);
   --editbg:linear-gradient(#FFFFFF,#F8FAFB);
-  --ink:#0F1B24;--ink2:#33454F;--muted:#78888F;
+  /* BUG — `--muted` stava a #78888F: 3,67:1 sul bianco, sotto il minimo di
+     4,5:1. Non era un dettaglio di un angolo: è il colore dei suggerimenti,
+     delle etichette secondarie, degli stati vuoti e di una ventina di
+     pulsanti, quindi il difetto era diffuso su tutto il pannello. #55646D
+     dà 6,12:1 sul bianco e 4,63:1 sul punto più scuro dello sfondo di
+     pagina (#DAE1E4), che è il caso peggiore. Resta un grigio di secondo
+     piano: la gerarchia non ha bisogno di scendere sotto la leggibilità. */
+  --ink:#0F1B24;--ink2:#33454F;--muted:#55646D;
   --line:#E0E6E9;--line2:#C9D3D7;
   --pen:#1F5673;--sage:#4C7C6C;--brass:#BE8C36;--rust:#9C4438;
+  /* Ottone e verde sono nati come colori di superficie: su fondo chiaro, come
+     testo, danno 3,00:1 e 4,45:1. Servono varianti scure per le scritte,
+     tenendo `--brass` e `--sage` per bordi, icone e riempimenti, dove la
+     soglia è 3:1 e la passano. */
+  --brass-testo:#7A5819;
+  --sage-testo:#3D6659;
+  /* Il riquadro delle priorità è scuro nei DUE temi, quindi i suoi colori non
+     seguono il tema: seguono il proprio fondo. L'ottone chiaro serve lì, dove
+     quello scuro sparirebbe. */
+  --focus-accento:#DEB25C;
   /* HOM-002 — tre livelli, non un solo rosso per tutto:
        informativo  neutro, non chiede nulla
        attenzione   qualcosa richiede una decisione, ma niente è rotto
@@ -15,11 +32,26 @@
   --info-bordo:#7C8D96; --info-fondo:#F4F7F8; --info-testo:#33454F;
   --att-bordo:#A67C1F;  --att-fondo:#FBF4E4;  --att-testo:#6B4E14;
   --err-bordo:#A24A3D;  --err-fondo:#FBEEEC;  --err-testo:#7A2F26;
+  /* BUG — dentro le schede di livello restavano i colori di quando il fondo
+     era rosso pieno: testo quasi bianco (#FDF2F0) su un fondo che adesso è
+     crema. Misurato 1,00:1 per i titoli e 1,08:1 per i pulsanti, contro il
+     minimo di 4,5:1: la sezione «Da riprogrammare» era illeggibile in tema
+     chiaro. Questi token sostituiscono i valori scritti a mano, così il
+     livello si tinge da sé nei due temi invece di presupporne uno. */
+  --att-debole:#7A5A18;   /* testo secondario dentro una scheda di attenzione */
+  --att-riga:rgba(107,78,20,.20);  /* separatore fra le righe */
+  --att-pieno:#6B4E14;    /* fondo del contatore */
+  --att-pieno-testo:#FBF4E4;
+  --info-debole:#4A5C66; --info-riga:rgba(51,69,79,.18);
+  --err-debole:#8B3A2F;  --err-riga:rgba(122,47,38,.20);
   --btnbg:#0F1B24;--btnfg:#FCFDFD;--btnbg2:#1E3140;
   --ringbg:rgba(31,86,115,.14);
   --focusbg:linear-gradient(158deg,#1D4150,#123039);--focusbd:#0C242C;
   --invitobg:linear-gradient(#FFFDF8,#FBFCFC);--invitotx:#5C4415;
-  --focusfg:#F1F5F7;--focusdim:rgba(240,246,248,.34);--focusmut:rgba(240,246,248,.42);
+  /* BUG — `--focusmut` stava a .42 di opacità: 3,13:1 sul fondo del riquadro,
+     e ci scrive il titolo «Priorità di oggi». Un titolo va letto. A .72 sta
+     a 5,4:1 e resta più tenue del testo delle priorità, che è lo scopo. */
+  --focusfg:#F1F5F7;--focusdim:rgba(240,246,248,.60);--focusmut:rgba(240,246,248,.72);
   --focusline:rgba(240,246,248,.09);--focusfield:rgba(240,246,248,.22);
 
     --amber:var(--brass);
@@ -37,39 +69,63 @@
     color:var(--ink);padding:22px 14px 44px;min-height:100%;
     font-family:var(--sans);
     font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
-.pt[data-theme="scuro"]{--selbg:hsl(202 30% 19%);
+.pt[data-theme="scuro"]{
   --bg1:#151D23;--bg2:#0D141A;--grid:rgba(216,232,240,.035);
-  --surface:#1B252C;--field:#141D24;--agbg:#151E25;--selbg:hsl(202 55% 96%); --track:rgba(216,232,240,.09);
+  /* BUG — `--selbg` era dichiarato due volte: prima col valore scuro, poi di
+     nuovo col valore chiaro copiato dal tema chiaro. Vinceva il secondo, e la
+     riga selezionata diventava un rettangolo bianco con testo bianco sopra:
+     1,07:1. Ora è dichiarato una volta sola. */
+  --surface:#1B252C;--field:#141D24;--agbg:#151E25;--selbg:hsl(202 30% 19%); --track:rgba(216,232,240,.09);
   --editbg:linear-gradient(#202B33,#1A242B);
-  --ink:#E7EEF1;--ink2:#B6C4CB;--muted:#8395A0;
+  --ink:#E7EEF1;--ink2:#B6C4CB;--muted:#93A5B0;
   --line:#28343C;--line2:#3A4A54;
   --pen:#4A9BC9;--sage:#5FB395;--brass:#D0A050;--rust:#C0604F;
+  /* in tema scuro ottone e verde come testo danno 6,55:1 e 7,10:1 sul fondo
+     delle schede: non serve scurirli, e scurirli li renderebbe illeggibili */
+  --brass-testo:#D0A050;
+  --sage-testo:#5FB395;
+  --focus-accento:#DEB25C;
   --info-bordo:#33454F; --info-fondo:#1B2A34; --info-testo:#C6D4DA;
-  --att-bordo:#8A6C2A;  --att-fondo:#2A2417;  --att-testo:#E8CF95;
-  --err-bordo:#8A3F35;  --err-fondo:#2B1917;  --err-testo:#F0C3BC;
+  --att-bordo:#B08B3A;  --att-fondo:#2A2417;  --att-testo:#E8CF95;
+  --err-bordo:#B0574A;  --err-fondo:#2B1917;  --err-testo:#F0C3BC;
+  --att-debole:#CFB47C; --att-riga:rgba(232,207,149,.22);
+  --att-pieno:#E8CF95;  --att-pieno-testo:#2A2417;
+  --info-debole:#A9B9C1; --info-riga:rgba(198,212,218,.20);
+  --err-debole:#DBA79F;  --err-riga:rgba(240,195,188,.20);
   --btnbg:#E7EEF1;--btnfg:#101A21;--btnbg2:#CFDBE0;
   --ringbg:rgba(231,238,241,.13);
   --focusbg:linear-gradient(158deg,#1B2A34,#16222B);--focusbd:#BE8C36;
   --invitobg:linear-gradient(#1F2A22,#161E25);--invitotx:#D9BE7E;
-  --focusfg:#101C24;--focusdim:rgba(16,28,36,.38);--focusmut:rgba(16,28,36,.5);
-  --focusline:rgba(16,28,36,.11);--focusfield:rgba(16,28,36,.22);
+  /* BUG — questi cinque token erano scuri anche in tema scuro, ma il riquadro
+     delle priorità è scuro nei due temi: il risultato era testo #101C24 su
+     fondo #1B2A34, cioè 1,07:1. Erano stati derivati invertendo il tema
+     chiaro, dove però il fondo è già scuro e non va invertito. */
+  --focusfg:#F1F5F7;--focusdim:rgba(240,246,248,.60);--focusmut:rgba(240,246,248,.72);
+  --focusline:rgba(240,246,248,.09);--focusfield:rgba(240,246,248,.22);
 }
 @media (prefers-color-scheme:dark){.pt[data-theme="auto"]{
   --bg1:#151D23;--bg2:#0D141A;--grid:rgba(216,232,240,.035);
-  --surface:#1B252C;--field:#141D24;--agbg:#151E25;--selbg:hsl(202 55% 96%); --track:rgba(216,232,240,.09);
+  --surface:#1B252C;--field:#141D24;--agbg:#151E25;--selbg:hsl(202 30% 19%); --track:rgba(216,232,240,.09);
   --editbg:linear-gradient(#202B33,#1A242B);
-  --ink:#E7EEF1;--ink2:#B6C4CB;--muted:#8395A0;
+  --ink:#E7EEF1;--ink2:#B6C4CB;--muted:#93A5B0;
   --line:#28343C;--line2:#3A4A54;
   --pen:#4A9BC9;--sage:#5FB395;--brass:#D0A050;--rust:#C05A38;
+  --brass-testo:#D0A050;
+  --sage-testo:#5FB395;
+  --focus-accento:#DEB25C;
   --info-bordo:#33454F; --info-fondo:#1B2A34; --info-testo:#C6D4DA;
-  --att-bordo:#8A6C2A;  --att-fondo:#2A2417;  --att-testo:#E8CF95;
-  --err-bordo:#8A3F35;  --err-fondo:#2B1917;  --err-testo:#F0C3BC;
+  --att-bordo:#B08B3A;  --att-fondo:#2A2417;  --att-testo:#E8CF95;
+  --err-bordo:#B0574A;  --err-fondo:#2B1917;  --err-testo:#F0C3BC;
+  --att-debole:#CFB47C; --att-riga:rgba(232,207,149,.22);
+  --att-pieno:#E8CF95;  --att-pieno-testo:#2A2417;
+  --info-debole:#A9B9C1; --info-riga:rgba(198,212,218,.20);
+  --err-debole:#DBA79F;  --err-riga:rgba(240,195,188,.20);
   --btnbg:#E7EEF1;--btnfg:#101A21;--btnbg2:#CFDBE0;
   --ringbg:rgba(231,238,241,.13);
   --focusbg:linear-gradient(158deg,#1B2A34,#16222B);--focusbd:#BE8C36;
   --invitobg:linear-gradient(#1F2A22,#161E25);--invitotx:#D9BE7E;
-  --focusfg:#101C24;--focusdim:rgba(16,28,36,.38);--focusmut:rgba(16,28,36,.5);
-  --focusline:rgba(16,28,36,.11);--focusfield:rgba(16,28,36,.22);
+  --focusfg:#F1F5F7;--focusdim:rgba(240,246,248,.60);--focusmut:rgba(240,246,248,.72);
+  --focusline:rgba(240,246,248,.09);--focusfield:rgba(240,246,248,.22);
 }}
 
 

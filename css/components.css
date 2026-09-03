@@ -48,7 +48,7 @@
 .pt .hero{display:flex;align-items:center;gap:18px;margin:0 0 20px;}
 .pt .hero > div{flex:1;min-width:0;}
 .pt .eyebrow{font-family:var(--sans);font-size:11px;letter-spacing:.18em;font-weight:600;
-    text-transform:uppercase;color:var(--muted);opacity:.75;margin:0;}
+    text-transform:uppercase;color:var(--muted);margin:0;}
 /* DIFETTO CORRETTO — `text-transform:capitalize` su tutti gli h1.
 
    Serviva a una cosa sola: la data, che `toLocaleDateString("it-IT")`
@@ -76,7 +76,10 @@
     cursor:pointer;font-variant-numeric:tabular-nums;}
 .pt .metrica:hover{border-color:var(--line2);color:var(--ink);}
 .pt .metrica b{font-weight:700;}
-.pt .metrica.tardi{color:var(--rust);border-color:hsl(8 40% 76%);background:hsl(8 55% 96%);}
+/* BUG — fondo e bordo erano `hsl()` scritti a mano, chiari in entrambi i temi:
+   in tema scuro il rosso del testo finiva su un rosa chiaro, 3,76:1. I token
+   del livello «errore» cambiano col tema e stanno sopra il 7:1 in tutti e due. */
+.pt .metrica.tardi{color:var(--err-testo);border-color:var(--err-bordo);background:var(--err-fondo);}
 .pt .pallino{width:10px;height:10px;border-radius:50%;flex:none;}
 .pt .pallino.vuota{background:var(--line2);}
 .pt .pallino.leggera{background:var(--sage);}
@@ -87,7 +90,7 @@
     color:var(--ink);cursor:pointer;}
 .pt .prossima b{font-family:var(--mono);font-size:12.5px;color:var(--pen);}
 .pt .prosslab{font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
-    color:var(--brass);border:1px solid var(--brass);border-radius:20px;padding:1px 7px;flex:none;}
+    color:var(--brass-testo);border:1px solid var(--brass);border-radius:20px;padding:1px 7px;flex:none;}
 .pt .prossima:hover{color:var(--pen);}
 /* il colore dell'area accompagna ogni riga, non solo la casella */
 /* La distinzione lavoro/vita è la caratteristica del prodotto: deve vedersi
@@ -138,7 +141,6 @@
 .pt [data-ico="pausa"]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%228.7%22%2F%3E%3Cpath%20d%3D%22M10%209v6M14%209v6%22%2F%3E%3C%2Fsvg%3E");}
 .pt [data-ico="dati"]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cellipse%20cx%3D%2212%22%20cy%3D%226.5%22%20rx%3D%227.5%22%20ry%3D%223%22%2F%3E%3Cpath%20d%3D%22M4.5%206.5v11c0%201.7%203.4%203%207.5%203s7.5-1.3%207.5-3v-11%22%2F%3E%3Cpath%20d%3D%22M4.5%2012c0%201.7%203.4%203%207.5%203s7.5-1.3%207.5-3%22%2F%3E%3C%2Fsvg%3E");}
 .pt [data-ico="impostazioni"]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%207h9M17%207h3M4%2017h3M11%2017h9%22%2F%3E%3Ccircle%20cx%3D%2215%22%20cy%3D%227%22%20r%3D%222.2%22%2F%3E%3Ccircle%20cx%3D%228%22%20cy%3D%2217%22%20r%3D%222.2%22%2F%3E%3C%2Fsvg%3E");}
-.pt .alert h2::before{background-color:#F3C9C3;}
 .pt .focus h2::before{background-color:var(--brass);}
 .pt h2 > span:first-of-type{flex:none;}
 .pt h2::after{content:"";flex:1;height:1px;order:1;margin:0 6px;
@@ -153,7 +155,7 @@
     padding:19px var(--cardpad);margin-bottom:15px;box-shadow:var(--sh);}
 
 .pt .card.dup{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass) inset,var(--sh);}
-.pt .card.dup h2{color:var(--brass);}
+.pt .card.dup h2{color:var(--brass-testo);}
 .pt .card.dup h2::before{background:var(--brass);}
 .pt .seg{display:flex;margin:0 0 17px;padding:3px;border-radius:8px;background:var(--track);}
 .pt .seg button{flex:1;border:none;background:none;padding:9px 4px;cursor:pointer;
@@ -165,7 +167,7 @@
 .pt .seg.mini{margin:0 0 13px;}
 .pt .oradesso{flex:none;order:2;display:inline-flex;align-items:center;gap:6px;
     font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;font-weight:600;
-    color:var(--brass);background:hsl(44 70% 95%);border:1px solid hsl(42 45% 74%);
+    color:var(--brass-testo);background:hsl(44 70% 95%);border:1px solid hsl(42 45% 74%);
     border-radius:20px;padding:3px 11px 3px 8px;cursor:pointer;
     transition:background .15s,border-color .15s;}
 .pt .oradesso::before{content:"";width:14px;height:14px;flex:none;background-color:var(--brass);
@@ -198,14 +200,17 @@
 .pt .alert h2::before{background:var(--att-testo);}
 .pt .alert .txt{color:var(--ink);}
 .pt .alert .sub{color:var(--att-testo);}
-.pt .alert .badge{background:var(--brass);color:#fff;}
+/* bianco su ottone dava 2,6:1: il contatore porta un numero, e un numero va
+   letto. La coppia piena del livello sta sopra il 7:1 nei due temi. */
+.pt .alert .badge{background:var(--att-pieno);color:var(--att-pieno-testo);}
 /* BUG: il bordo dei pulsanti stava a 1,73:1 sul proprio fondo — sotto il
    minimo WCAG di 3:1 per un elemento d'interfaccia. Su schermo grande
    risultavano quasi invisibili. Serve anche uno stato di fuoco: prima si
    distingueva solo il passaggio del mouse, inutile da tastiera. */
 .pt .alert .tiny{border-color:var(--att-bordo);color:var(--att-testo);
   background:var(--surface);font-weight:600;}
-.pt .alert .tiny:hover{background:var(--brass);color:#fff;border-color:var(--brass);}
+.pt .alert .tiny:hover{background:var(--att-pieno);color:var(--att-pieno-testo);
+  border-color:var(--att-pieno);}
 .pt .alert .tiny:focus-visible{outline:2px solid var(--pen);outline-offset:2px;}
 .pt .alert .tiny[disabled],.pt .alert .tiny[aria-disabled="true"]{
   opacity:.55;cursor:not-allowed;background:var(--track);}
@@ -215,23 +220,44 @@
 .pt .liv-attenzione{background:var(--att-fondo);border-color:var(--att-bordo);}
 .pt .liv-errore{background:var(--err-fondo);border-color:var(--err-bordo);}
 .pt .liv-errore h2{color:var(--err-testo);}
-.pt .alert h2 .cnt{color:#FDEFEC;background:rgba(255,255,255,.16);}
+/* BUG CORRETTO — «Da riprogrammare» illeggibile in tema chiaro.
+
+   Qui sotto c'era una seconda serie di regole, sopravvissuta a quando la
+   scheda aveva un fondo rosso pieno: testo `#FDF2F0`, pulsanti
+   `rgba(255,255,255,.12)`, separatori `rgba(255,255,255,.15)`. Arrivando
+   dopo le regole di HOM-002 con la stessa specificità le vincevano, e su
+   `--att-fondo` — che in tema chiaro è crema `#FBF4E4` — davano 1,00:1 sui
+   titoli e 1,08:1 sui pulsanti. Il minimo è 4,5:1: erano invisibili.
+
+   In tema scuro il difetto non si vedeva, perché lì il fondo è quasi nero e
+   il bianco per caso funzionava. È la ragione per cui era passato.
+
+   Ora ogni colore viene dai token del livello, quindi la scheda si tinge da
+   sé nei due temi e non presuppone più quale sia il fondo. Le stesse regole
+   valgono per i tre livelli, non solo per l'attenzione. */
+.pt .alert h2 .cnt,.pt .liv-attenzione h2 .cnt{
+    color:var(--att-testo);background:var(--att-riga);}
+.pt .liv-info h2 .cnt{color:var(--info-testo);background:var(--info-riga);}
+.pt .liv-errore h2 .cnt{color:var(--err-testo);background:var(--err-riga);}
 .pt .alert h2 > span.badge,.pt .alert h2 span.badge{display:inline-flex;align-items:center;justify-content:center;
-    min-width:23px;height:23px;padding:0 7px;border-radius:12px;background:#FDEFEC;
-    color:#853730;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:0;}
+    min-width:23px;height:23px;padding:0 7px;border-radius:12px;background:var(--att-pieno);
+    color:var(--att-pieno-testo);font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:0;}
+.pt .liv-errore h2 span.badge{background:var(--err-testo);color:var(--err-fondo);}
 .pt .alert ul{margin:0;padding:0;}
-.pt .alert li{border-bottom:1px solid rgba(255,255,255,.15);padding:10px 0;}
+.pt .alert li{border-bottom:1px solid var(--att-riga);padding:10px 0;}
+.pt .liv-info li{border-bottom-color:var(--info-riga);}
+.pt .liv-errore li{border-bottom-color:var(--err-riga);}
 .pt .alert li:last-child{border-bottom:none;}
-.pt .alert .txt{color:#FDF2F0;}
-.pt .alert .box{border-color:rgba(255,255,255,.55)!important;background:transparent!important;}
-.pt .alert .late{font-family:var(--mono);font-size:11px;color:#F3C9C3;flex:none;padding-top:2px;}
-.pt .alert .tiny{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.32);
-    color:#FBE9E5;}
-.pt .alert .tiny:hover{background:rgba(255,255,255,.22);border-color:#FDEFEC;color:#FFF;}
-.pt .alert .foot2{font-size:12px;color:#F0C4BD;margin:11px 0 0;}
-@keyframes ptpulse{0%,100%{box-shadow:0 0 0 0 rgba(253,239,236,.55);}
-                   70%{box-shadow:0 0 0 8px rgba(253,239,236,0);}}
+.pt .alert .box{border-color:var(--att-bordo)!important;background:var(--field)!important;}
+.pt .alert .late{font-family:var(--mono);font-size:11px;color:var(--att-debole);flex:none;padding-top:2px;}
+.pt .liv-info .late{color:var(--info-debole);}
+.pt .liv-errore .late{color:var(--err-debole);}
+.pt .alert .foot2{font-size:12px;color:var(--att-debole);margin:11px 0 0;}
+/* la pulsazione del contatore seguiva il rosso: ora è la tinta del livello */
+@keyframes ptpulse{0%,100%{box-shadow:0 0 0 0 rgba(166,124,31,.45);}
+                   70%{box-shadow:0 0 0 8px rgba(166,124,31,0);}}
 .pt .badge{animation:ptpulse 2.4s ease-out infinite;}
+@media (prefers-reduced-motion:reduce){.pt .badge{animation:none;}}
 
 .pt .acts{flex:none;display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
 .pt li{flex-wrap:wrap;}
@@ -249,7 +275,7 @@
 .pt .gap{position:absolute;left:0;right:0;border-top:1px dashed var(--line2);
     border-bottom:1px dashed var(--line2);display:flex;align-items:center;
     justify-content:center;font-family:var(--mono);font-size:11px;letter-spacing:.12em;
-    color:var(--muted);opacity:.65;background:repeating-linear-gradient(135deg,
+    color:var(--muted);background:repeating-linear-gradient(135deg,
     transparent 0 6px,var(--track) 6px 7px);}
 .pt .tot .tiny{padding:3px 9px;font-size:11px;}
 .pt .agarea{position:absolute;left:46px;right:7px;top:0;bottom:0;}
@@ -259,12 +285,26 @@
     box-shadow:0 1px 3px rgba(0,0,0,.24);
     background-image:linear-gradient(rgba(255,255,255,.11),rgba(0,0,0,.06));}
 .pt .agblk[data-done="1"]{opacity:.32;text-decoration:line-through;box-shadow:none;}
+/* BUG — il blocco si riempie col colore dell'area (`--pen`, `--sage`, messo
+   come stile in linea da agenda-ui.js) e ci scrive sopra in bianco. In tema
+   chiaro le due tinte sono scure e il bianco regge: 4,8:1 e 5,4:1. In tema
+   scuro le stesse tinte diventano CHIARE, perché lì servono come testo su
+   fondo scuro — e il bianco sopra scendeva a 3,08:1 e 2,51:1.
+
+   Non tocco il riempimento: `--pen` e `--sage` chiari sono giusti in tema
+   scuro, e un blocco scuro su interfaccia scura sparirebbe. Cambio il testo,
+   che è la parte che deve essere leggibile: nero sul chiaro, 6,0:1 e 7,4:1. */
+.pt[data-theme="scuro"] .agblk{color:#0D141A;}
+@media (prefers-color-scheme:dark){ .pt[data-theme="auto"] .agblk{color:#0D141A;} }
 .pt .agblk[data-sel="1"]{outline:2px solid var(--brass);outline-offset:2px;z-index:2;}
 .pt .agblk[data-prio="1"]{box-shadow:inset 4px 0 0 var(--brass),inset 0 0 0 2px var(--brass),
     0 2px 8px rgba(0,0,0,.35);}
 .pt .agblk[data-late="1"]{box-shadow:inset 4px 0 0 var(--rust),0 2px 6px rgba(0,0,0,.28);}
 .pt .agblk b{font-weight:600;letter-spacing:-.005em;font-size:13px;}
-.pt .agblk em{font-style:normal;font-family:var(--mono);font-size:11px;opacity:.85;
+/* l'orario dentro il blocco: `opacity:.85` sul bianco lo portava a 3,95:1
+   sul verde dell'area, appena sotto la soglia. È l'informazione più densa
+   del blocco e va letta a colpo d'occhio. */
+.pt .agblk em{font-style:normal;font-family:var(--mono);font-size:11px;
     font-variant-numeric:tabular-nums;letter-spacing:.01em;}
 .pt .grip{position:absolute;left:0;right:0;bottom:0;height:13px;cursor:ns-resize;
     touch-action:none;background:linear-gradient(transparent,rgba(0,0,0,.24));
@@ -334,10 +374,13 @@
 .pt .fline{display:flex;align-items:center;gap:12px;padding:11px 0;
     border-bottom:1px solid var(--focusline);}
 .pt .fline:last-of-type{border-bottom:none;}
+/* BUG — dentro il riquadro scuro l'ottone normale dà 3,21:1. Qui serve la
+   variante chiara: il fondo non cambia col tema, quindi non cambia nemmeno
+   l'accento. Valeva anche per il numero della priorità, che è un dato. */
 .pt .fnum{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
-    font-size:16px;color:var(--brass);width:14px;
+    font-size:16px;color:var(--focus-accento);width:14px;
     flex:none;line-height:1;text-align:center;opacity:.9;}
-.pt .fbox{width:21px;height:21px;flex:none;border:1.5px solid var(--focusfield);
+.pt .fbox{width:24px;height:24px;flex:none;border:1.5px solid var(--focusfield);
     border-radius:6px;background:none;cursor:pointer;display:flex;align-items:center;
     justify-content:center;padding:0;transition:background .15s,border-color .15s;}
 .pt .fbox[data-on="1"]{background:var(--brass);border-color:var(--brass);}
@@ -357,7 +400,7 @@
    mentre qui è .02em, che è la spaziatura di un testo normale. */
 .pt .ftxt small{display:block;font-family:var(--sans);font-size:12px;letter-spacing:.02em;
     font-variant-numeric:tabular-nums;text-transform:none;
-    color:var(--brass);margin-top:3px;}
+    color:var(--focus-accento);margin-top:3px;}
 .pt .finput{flex:1;min-width:0;background:none;border:none;color:var(--focusfg);font:inherit;
     font-size:16px;padding:3px 0;border-bottom:1px dotted var(--focusfield);}
 .pt .finput::placeholder{color:var(--focusdim);}
@@ -395,12 +438,15 @@
 .pt li.editrow{display:block;padding:0 0 4px;border-bottom:none;}
 .pt li.editrow .edit{margin-bottom:8px;}
 .pt li.editrow::before{display:none;}
-.pt .box{flex:none;width:21px;height:21px;margin-top:2px;border-width:1.5px;border-style:solid;
+/* WCAG 2.2 (2.5.8) chiede almeno 24x24 CSS px per un bersaglio: la casella
+   stava a 21. Su telefono mobile.css la portava già a 24, sul desktop no —
+   e con il mouse la soglia vale allo stesso modo. */
+.pt .box{flex:none;width:24px;height:24px;margin-top:2px;border-width:1.5px;border-style:solid;
     border-radius:8px;cursor:pointer;padding:0;display:flex;align-items:center;
     justify-content:center;transition:background .15s,border-color .15s;}
 .pt .box svg{width:11px;height:11px;stroke:#fff;stroke-width:2.6;fill:none;}
 .pt .txt{flex:1;min-width:0;cursor:pointer;letter-spacing:-.003em;overflow-wrap:anywhere;}
-.pt .dupnote{color:var(--brass);}
+.pt .dupnote{color:var(--brass-testo);}
 .pt .sub{display:block;font-size:13px;color:var(--muted);line-height:1.4;margin-top:2px;
     font-variant-numeric:tabular-nums;}
 .pt .lk{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;
@@ -416,7 +462,7 @@
 .pt .slot:hover{border-color:var(--ink);color:var(--ink);}
 .pt .slot[data-set="1"]{color:var(--ink2);border-color:var(--muted);}
 .pt .slot.due-none{color:var(--ink2);border-color:var(--muted);}
-.pt .slot.due-soon{color:var(--brass);border-color:var(--brass);}
+.pt .slot.due-soon{color:var(--brass-testo);border-color:var(--brass);}
 .pt .slot.due-urgent{color:#7A5A16;background:hsl(44 72% 92%);border-color:hsl(42 50% 66%);font-weight:600;}
 .pt[data-theme="scuro"] .slot.due-urgent{color:hsl(44 65% 76%);background:hsl(42 30% 20%);border-color:hsl(42 28% 38%);}
 @media (prefers-color-scheme:dark){.pt[data-theme="auto"] .slot.due-urgent{
@@ -443,7 +489,9 @@
       color:hsl(var(--h) 55% 74%);background:hsl(var(--h) 30% 20%);border-color:hsl(var(--h) 30% 34%);}
   .pt[data-theme="auto"] .dot.tagdot{background:hsl(var(--h) 50% 62%);}
 }
-.pt .star{flex:none;width:22px;height:22px;margin-top:2px;padding:0;border:none;background:none;
+/* 24x24 come la casella: era il secondo bersaglio sotto la soglia di WCAG 2.2.
+   Il disegno della stella resta di 17px, cresce solo l'area toccabile. */
+.pt .star{flex:none;width:24px;height:24px;margin-top:2px;padding:0;border:none;background:none;
     cursor:pointer;--st:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.7%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%203.6l2.6%205.4%205.9.8-4.3%204.2%201%205.9-5.2-2.8-5.2%202.8%201-5.9L3.5%209.8l5.9-.8z%22%2F%3E%3C%2Fsvg%3E");
     background-color:var(--line2);
     -webkit-mask:var(--st) center/17px 17px no-repeat;mask:var(--st) center/17px 17px no-repeat;
@@ -463,12 +511,16 @@
 /* cifre allineate ovunque compaiano orari o conteggi */
 .pt .hr span,.pt .agblk em,.pt .digora,.pt .mnum,.pt .wkhead div,.pt .tot,.pt .count,
 .pt .late,.pt .late2{font-variant-numeric:tabular-nums;}
+/* BUG — `opacity:.35` su un grigio già di secondo piano dava 1,47:1: i comandi
+   «⋯» e «×» erano praticamente invisibili, e sono quattordici sulla pagina.
+   L'opacità come segnale di gerarchia funziona sulle superfici, non sui
+   comandi: qui la gerarchia la fa già il colore. */
 .pt .del{flex:none;background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;
-    line-height:1;padding:0 2px;opacity:.35;}
-.pt .del:hover{opacity:1;color:var(--rust);}
+    line-height:1;padding:0 2px;}
+.pt .del:hover,.pt .del:focus-visible{color:var(--rust);}
 
 .pt .edit.nuovo{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass) inset,var(--sh);}
-.pt .edit.nuovo .lbl{color:var(--brass);}
+.pt .edit.nuovo .lbl{color:var(--brass-testo);}
 .pt .edit{border:1px solid var(--line2);border-radius:8px;padding:14px;margin-bottom:13px;
     background:var(--editbg);box-shadow:var(--sh);}
 .pt .edit .lbl{font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.08em;
@@ -484,7 +536,7 @@
 
 .pt li.suggrow{align-items:flex-start;gap:9px;padding:9px 0 11px;border-left-color:transparent;
     background:hsl(44 60% 97%);border-radius:9px;margin:2px 0 6px;padding-left:11px;padding-right:11px;}
-.pt .suggico{flex:none;color:var(--brass);font-size:11px;margin-top:3px;}
+.pt .suggico{flex:none;color:var(--brass-testo);font-size:11px;margin-top:3px;}
 .pt .suggtx{flex:1;min-width:0;font-size:13.5px;line-height:1.45;color:var(--ink2);}
 .pt[data-theme="scuro"] li.suggrow{background:hsl(42 26% 17%);}
 @media (prefers-color-scheme:dark){.pt[data-theme="auto"] li.suggrow{background:hsl(42 26% 17%);}}
@@ -525,7 +577,7 @@
     color:var(--muted);padding:5px 11px;
     flex:none;transition:border-color .15s,color .15s;}
 .pt button.tiny:hover{border-color:var(--ink);color:var(--ink);}
-.pt button.tiny[data-on="1"]{border-color:var(--brass);color:var(--brass);}
+.pt button.tiny[data-on="1"]{border-color:var(--brass);color:var(--brass-testo);}
 /* i menù a tendina nativi avevano altezza, forma e freccia proprie:
    qui prendono la stessa veste dei pulsanti */
 .pt select{-webkit-appearance:none;-moz-appearance:none;appearance:none;
@@ -578,9 +630,9 @@
 .pt button.tiny.danger{color:var(--rust);border-color:rgba(162,68,56,.45);}
 .pt button.tiny.danger:hover{background:rgba(162,68,56,.1);border-color:var(--rust);color:var(--rust);}
 .pt mark{background:rgba(190,140,54,.3);color:inherit;border-radius:3px;padding:0 2px;}
-.pt .digora.ora{color:var(--brass);font-weight:700;}
+.pt .digora.ora{color:var(--brass-testo);font-weight:700;}
 .pt .dignow{font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
-    color:var(--brass);border:1px solid var(--brass);border-radius:6px;padding:1px 6px;}
+    color:var(--brass-testo);border:1px solid var(--brass);border-radius:6px;padding:1px 6px;}
 
 /* ============ due livelli soli: tablet stretto e telefono ============ */
 
@@ -719,7 +771,7 @@
 .pt ul.agelenco .acts{display:flex;gap:6px;align-items:center;}
 .pt li.agora-ora{display:flex;align-items:center;gap:9px;padding:3px 0;border:none;
   border-left-color:transparent;}
-.pt .agora-lab{flex:none;font-family:var(--mono);font-size:11px;color:var(--brass);
+.pt .agora-lab{flex:none;font-family:var(--mono);font-size:11px;color:var(--brass-testo);
   min-width:44px;}
 /* HOM-002: «adesso» è una posizione nel tempo, non un errore */
 .pt .agora-linea{flex:1;height:1px;background:var(--brass);opacity:.65;}
@@ -766,8 +818,16 @@
 /* ---------- TOP-002: priorità progressive ---------- */
 .pt .fsub{margin:-2px 0 12px;font-size:13px;color:var(--muted);}
 .pt .facts{display:flex;gap:5px;align-items:center;margin-left:auto;}
-.pt .collegata{color:var(--brass);}
+.pt .collegata{color:var(--focus-accento);}
 .pt .add.ghost.piu{margin-top:4px;font-size:13.5px;padding:9px 14px;}
+/* BUG — i pulsanti e i suggerimenti dentro il riquadro delle priorità
+   prendevano `--muted`, che è un grigio calcolato per fondo chiaro: sul fondo
+   scuro del riquadro dava 2,03:1. Dentro il riquadro i colori sono i suoi. */
+.pt .focus button.ghost{color:var(--focusmut);border-color:var(--focusfield);}
+.pt .focus button.ghost:hover{color:var(--focusfg);border-color:var(--focusfg);background:none;}
+.pt .focus .hint{color:var(--focusmut);}
+.pt .focus button.link{color:var(--focusmut);}
+.pt .focus button.link:hover{color:var(--focusfg);}
 
 /* ---------- SET-001: sezioni delle impostazioni ---------- */
 .pt p.sezione{display:block;margin:22px 0 8px;font-family:var(--sans);font-size:11px;
@@ -891,7 +951,9 @@
 .pt ul.traguardi li[data-fatto="1"]{color:var(--muted);text-decoration:line-through;
   text-decoration-color:var(--line2);}
 .pt ul.traguardi .segno{flex:none;width:15px;text-align:center;color:var(--sage);font-weight:700;}
-.pt ul.traguardi li[data-fatto="0"] .segno{color:var(--line2);}
+/* il segno di un traguardo non raggiunto usava il colore delle linee: 1,50:1.
+   Un carattere è testo, non un bordo. */
+.pt ul.traguardi li[data-fatto="0"] .segno{color:var(--muted);}
 
 /* ---------- la guida dentro il pannello ---------- */
 .pt .sch.guida .card{margin-bottom:10px;}
@@ -930,3 +992,17 @@
 .pt .proposta{display:flex;gap:9px;align-items:center;padding:6px 0;flex-wrap:wrap;}
 .pt .proposta .ptxt{flex:1;min-width:0;font-size:14px;color:var(--ink);}
 .pt .proposta .ptxt .sub{display:block;margin-top:2px;font-size:12.5px;color:var(--muted);}
+/* BUG — le proposte «Se non sai da dove cominciare» vivono DENTRO il riquadro
+   scuro delle priorità, ma prendevano i colori del testo su fondo chiaro:
+   `--ink` dava 1,25:1 e `--muted` 1,78:1. Erano illeggibili, e sono la parte
+   che dovrebbe aiutare chi non sa da dove cominciare.
+
+   Il riquadro è scuro nei due temi: dentro, i colori sono i suoi. */
+.pt .focus .proposta .ptxt{color:var(--focusfg);}
+.pt .focus .proposta .ptxt .sub,
+.pt .focus .sub{color:var(--focusmut);}
+.pt .focus .fsub{color:var(--focusmut);}
+.pt .focus p.proptit{color:var(--focusmut);}
+.pt .focus .subhead{color:var(--focusfg);}
+.pt .focus .subhead::before{background:var(--focusfield);}
+.pt .focus .subhead::after{background:var(--focusline);}

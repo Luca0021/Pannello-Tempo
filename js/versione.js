@@ -18,10 +18,10 @@
    qualcosa è stato modificato senza rifare l'impronta. */
 var BUILD = {
   "app": "1.0.0",
-  "sorgenti": "a8ddcc9f88fb",
+  "sorgenti": "035c16ab8a8f",
   "base": "29868d4bf9df",
   "commit": "",
   "schema": 5,
-  "cache": "pt-a8ddcc9f",
-  "costruito": "2026-09-02T14:26:10Z"
+  "cache": "pt-035c16ab",
+  "costruito": "2026-09-03T09:46:02Z"
 };

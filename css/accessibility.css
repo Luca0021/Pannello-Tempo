@@ -41,7 +41,7 @@
 .pt .noteact .chiudi:hover{background-color:var(--ink);}
 .pt .noteact .tiny{text-transform:uppercase;letter-spacing:.1em;font-size:11px;
     font-weight:700;padding:7px 13px;}
-.pt .tiny.pos{color:var(--sage);border-color:hsl(160 25% 60%);background:hsl(160 40% 96%);}
+.pt .tiny.pos{color:var(--sage-testo);border-color:hsl(160 25% 60%);background:hsl(160 40% 96%);}
 .pt .tiny.pos:hover{background:var(--sage);border-color:var(--sage);color:#fff;}
 .pt .tiny.warn2{color:#8A6A16;border-color:hsl(42 45% 62%);background:hsl(44 70% 95%);}
 .pt .tiny.warn2:hover{background:var(--brass);border-color:var(--brass);color:#fff;}
