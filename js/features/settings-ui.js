@@ -292,18 +292,36 @@ function zonaImpostazioni(){
         '<div class="row secondrow"><button class="tiny" data-act="mig-dimentica">Dimentica questo collegamento</button>'+
         '<a class="tiny lk" href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">Revoca il token su GitHub ↗</a></div>';
     }
-    /* Anteprima del trasferimento: si decide prima, non dopo. */
+    /* Anteprima del trasferimento: si decide prima, non dopo.
+       Conteggi, non titoli: un riepilogo che elenca le attività finisce
+       negli screenshot di assistenza. */
     if (S.migrazione) {
+      var m = S.migrazione;
       SEZ[sezCorrente] += '<div class="card liv-attenzione" role="region" aria-label="Trasferimento dei dati">'+
-        '<p class="cnome">Trovati dati da trasferire<span class="sub">'+
-        S.migrazione.voci+' attività e '+S.migrazione.note+' note'+
-        (S.migrazione.salvatoIl ? ', salvati il '+esc(new Date(S.migrazione.salvatoIl).toLocaleString("it-IT")) : '')+
+        '<p class="cnome">Trovati dati da recuperare<span class="sub">'+
+        m.voci+(m.voci===1?' attività':' attività')+' e '+m.note+(m.note===1?' nota':' note')+
+        (m.salvatoIl ? ', salvati il '+esc(new Date(m.salvatoIl).toLocaleString("it-IT")) : '')+
         '</span></p>'+
-        '<p class="hint">Su questo dispositivo ci sono <b>'+S.migrazione.localiVoci+'</b> attività. '+
-        'Scegli come procedere: faccio una copia di sicurezza prima di toccare qualcosa, '+
-        'e potrai annullare.</p>'+
-        '<div class="row"><button class="add" data-act="mig-applica" data-v="unisci">Unisci le due</button>'+
-        '<button class="add ghost" data-act="mig-applica" data-v="sostituisci">Sostituisci con quelli recuperati</button>'+
+        (m.avvisi && m.avvisi.length
+          ? '<ul class="guida">'+m.avvisi.map(function(a){ return '<li>'+esc(a)+'</li>'; }).join("")+'</ul>'
+          : '')+
+        '<table class="cdiff"><thead><tr><th>Dove</th><th>Attività</th><th>Note</th></tr></thead>'+
+        '<tbody><tr><td>Su questo dispositivo</td><td>'+m.localiVoci+'</td><td>'+m.localeNote+'</td></tr>'+
+        '<tr><td>Nel file recuperato</td><td>'+m.voci+'</td><td>'+m.note+'</td></tr></tbody></table>'+
+        (m.idInComune
+          ? '<p class="hint"><b>'+m.idInComune+(m.idInComune===1?' voce risulta':' voci risultano')+
+            ' presente sia qui sia nel file.</b> Con «Unisci» vince la versione modificata più '+
+            'di recente, voce per voce; con «Sostituisci» vince il file.</p>'
+          : '<p class="hint">Nessuna voce risulta presente in entrambi: unire non produrrà conflitti.</p>')+
+        (m.conAccountAttivo
+          ? '<p class="hint"><b>Sei collegato a un account.</b> Quello che scegli qui verrà '+
+            'sincronizzato anche là alla prossima occasione.</p>'
+          : '')+
+        '<p class="hint">Faccio una copia di sicurezza prima di toccare qualcosa, e potrai annullare. '+
+        'Il file remoto non viene modificato né cancellato.</p>'+
+        '<div class="row"><button class="add" data-act="mig-applica" data-v="unisci">Unisci</button>'+
+        '<button class="add ghost" data-act="mig-applica" data-v="sostituisci">Usa i dati recuperati</button>'+
+        '<button class="add ghost" data-act="mig-esporta">Scarica come file</button>'+
         '<button class="tiny" data-act="mig-annulla">Annulla</button></div></div>';
     }
   } else if (sync.conflict) {

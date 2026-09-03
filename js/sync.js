@@ -224,31 +224,87 @@ function jsonOrThrow(r){
   return r.json();
 }
 
-/* --- Gist --- */
+/* --- Gist: SOLA LETTURA, e solo per la migrazione (MIG-001) --------------
+   Vedi GIST-MIGRATION.md. Qui non si scrive e non si cancella: le funzioni
+   di scrittura sono state rimosse, non disattivate con un `if`, perché una
+   funzione che esiste può essere richiamata per sbaglio. */
+
+/* Interruttore di rimozione futura. Quando il lettore non servirà più —
+   perché chi doveva migrare ha migrato — si porta a `false` e il percorso
+   legacy sparisce dall'interfaccia. Non è una data commerciale inventata:
+   è una leva che il proprietario del prodotto tira quando decide, dopo aver
+   guardato quanti utenti hanno ancora un identificativo salvato.
+
+   Portarlo a `false` NON riattiva la scrittura: la scrittura non esiste. */
+var LETTORE_GIST_ATTIVO = true;
+
 function ghHeaders(){
   return { "Authorization":"Bearer "+sync.gist.token,
            "Accept":"application/vnd.github+json",
-           "X-GitHub-Api-Version":"2022-11-28",
-           "Content-Type":"application/json" };
+           "X-GitHub-Api-Version":"2022-11-28" };
 }
-function gistRead(){
-  return fetch("https://api.github.com/gists/"+sync.gist.id,
+
+/* Legge il gist e restituisce ANCHE le diagnosi che servono a spiegare
+   all'utente cosa è andato storto, invece di un «HTTP 404» secco.
+   Non registra mai il token, né in memoria oltre la chiamata né nei log. */
+function gistLeggiConDiagnosi(){
+  if (!LETTORE_GIST_ATTIVO)
+    return Promise.reject(erroreSync("Recupero non più disponibile",
+      "La lettura dei dati dal servizio precedente è stata rimossa da questa versione.",
+      "Se hai ancora dati là, esportali dall'interfaccia di GitHub e importali qui come file."));
+  return fetch("https://api.github.com/gists/"+encodeURIComponent(sync.gist.id),
                { headers: ghHeaders(), cache:"no-store" })
-    .then(jsonOrThrow)
+    .then(function(r){
+      if (r.status === 401)
+        throw erroreSync("Token rifiutato",
+          "GitHub non riconosce il token, oppure è scaduto o è stato revocato.",
+          "Controlla di averlo incollato per intero. Se l'hai revocato, creane uno nuovo con il solo permesso «gist».");
+      if (r.status === 403)
+        throw erroreSync("Permesso mancante o limite raggiunto",
+          "Il token è valido ma non ha il permesso «gist», oppure GitHub ha temporaneamente limitato le richieste.",
+          "Verifica i permessi del token; se il problema resta, riprova fra qualche minuto.");
+      if (r.status === 404)
+        throw erroreSync("Non trovato",
+          "Non esiste nessun file con questo identificativo, oppure il token appartiene a un altro account.",
+          "Controlla l'identificativo: è la parte finale dell'indirizzo, fatta di lettere e cifre.");
+      if (!r.ok) throw new Error("HTTP "+r.status);
+      return r.json();
+    })
     .then(function(g){
+      var diag = { pubblico: g.public === true, troncato: false, nomeFile: sync.gist.file };
       var f = g.files && g.files[sync.gist.file];
-      if (!f) return "";
-      if (f.truncated && f.raw_url)
-        return fetch(f.raw_url).then(function(r){ return r.text(); });
-      return f.content || "";
+      /* il file atteso non c'è: forse è stato rinominato. Guardo se ce n'è
+         uno solo e lo propongo, invece di dire «vuoto». */
+      if (!f) {
+        var nomi = Object.keys(g.files || {});
+        if (nomi.length === 1) { f = g.files[nomi[0]]; diag.nomeFile = nomi[0]; diag.nomeDiverso = true; }
+        else if (!nomi.length)
+          throw erroreSync("Nessun file dentro",
+            "Il file remoto esiste ma non contiene nulla.",
+            "Non c'è niente da recuperare: puoi rimuovere il riferimento da questo dispositivo.");
+        else
+          throw erroreSync("Più file, nessuno riconosciuto",
+            "Dentro ci sono "+nomi.length+" file e nessuno si chiama «"+sync.gist.file+"».",
+            "Scarica il file giusto dall'interfaccia di GitHub e importalo qui come backup.");
+      }
+      /* GitHub tronca i file grandi e mette il resto a un indirizzo a parte:
+         senza questo passaggio si migrerebbe metà dataset in silenzio. */
+      if (f.truncated && f.raw_url) {
+        diag.troncato = true;
+        return fetch(f.raw_url).then(function(r){
+          if (!r.ok) throw erroreSync("Contenuto troppo grande",
+            "Il file è stato troncato da GitHub e la parte restante non è raggiungibile.",
+            "Scaricalo dall'interfaccia di GitHub e importalo qui come backup.");
+          return r.text();
+        }).then(function(t){ return { testo:t, diag:diag }; });
+      }
+      return { testo: f.content || "", diag: diag };
     });
 }
-function gistWrite(text){
-  var files = {}; files[sync.gist.file] = { content: text };
-  return fetch("https://api.github.com/gists/"+sync.gist.id,
-               { method:"PATCH", headers: ghHeaders(),
-                 body: JSON.stringify({ files: files }) })
-    .then(function(r){ if (!r.ok) throw new Error("HTTP "+r.status); return true; });
+
+/* Compatibilità: il vecchio nome restituiva solo il testo. */
+function gistRead(){
+  return gistLeggiConDiagnosi().then(function(r){ return r.testo; });
 }
 
 /* --- Firebase ---

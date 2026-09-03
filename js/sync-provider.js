@@ -110,22 +110,77 @@ var GistProvider = {
   resolveConflict: function(scelta){ resolveConflict(scelta); return Promise.resolve({ ok:true }); }
 };
 
-/* Lettura una tantum per la migrazione. Il token non viene mai salvato:
-   entra, serve, esce. L'ordine degli argomenti di `controllaCampiGist` è
-   (token, id): passarli invertiti — come faceva la versione precedente —
-   rifiutava una coppia valida con un messaggio sul campo sbagliato. */
+/* ─────────────────────────────────────────────────────────────────────────
+   MIG-001 — LETTURA UNA TANTUM PER LA MIGRAZIONE
+
+   Il token entra, serve, esce. `finally` garantisce che venga dimenticato
+   anche se la lettura fallisce a metà o l'utente annulla: senza, un errore
+   di rete lo lascerebbe in memoria fino al ricaricamento della pagina.
+
+   L'ordine degli argomenti di `controllaCampiGist` è (token, id): passarli
+   invertiti — come faceva la versione precedente — rifiutava una coppia
+   valida con un messaggio sul campo sbagliato.
+   ───────────────────────────────────────────────────────────────────────── */
 function leggiGistPerMigrazione(id, token){
   var problema = controllaCampiGist(token, id);
   if (problema) return Promise.reject(erroreSync("Dati incompleti", problema,
-    "Controlla identificativo del gist e token, poi riprova."));
-  var precedente = sync.gist.token;
-  sync.gist.id = id; sync.gist.token = token;
-  return gistRead().then(function(t){
-    sync.gist.token = precedente;      /* dimenticato subito */
-    return t;
-  }, function(e){
-    sync.gist.token = precedente;
-    return normalizzaErrore(e);
+    "Controlla identificativo e token, poi riprova."));
+  sync.gist.id = id;
+  sync.gist.token = token;
+  var dimentica = function(){
+    sync.gist.token = "";
+    /* nessun `saveSync()` qui: `saveSync` non scrive i segreti per
+       costruzione (CAMPI_SEGRETI), ma non c'è ragione di toccare il disco */
+  };
+  return gistLeggiConDiagnosi()
+    .then(function(r){
+      dimentica();
+      return interpretaContenutoGist(r.testo, r.diag);
+    }, function(e){
+      dimentica();
+      return normalizzaErrore(e);
+    });
+}
+
+/* Interpreta il contenuto letto. Tutti i casi che possono presentarsi hanno
+   un messaggio proprio: «non è un JSON valido» e «è un JSON ma non è un
+   backup di Pannello Tempo» sono due problemi diversi e portano a due
+   azioni diverse. */
+function interpretaContenutoGist(testo, diag){
+  if (!testo || !testo.trim())
+    return Promise.reject(erroreSync("File vuoto",
+      "Il file remoto esiste ma non contiene dati.",
+      "Non c'è niente da recuperare: puoi rimuovere il riferimento da questo dispositivo."));
+  var p;
+  try { p = JSON.parse(testo); }
+  catch (e) {
+    return Promise.reject(erroreSync("Contenuto illeggibile",
+      "Il file non è un JSON valido: potrebbe essere stato modificato a mano o troncato.",
+      "Scaricalo dall'interfaccia di GitHub e prova a importarlo qui come backup."));
+  }
+  /* la busta che il pannello scriveva: { app, rev, savedAt, data } */
+  var dati = (p && p.data) ? p.data : (p && p.items ? p : null);
+  if (!dati || !Array.isArray(dati.items))
+    return Promise.reject(erroreSync("Non è un backup di Pannello Tempo",
+      "Il file è leggibile ma non contiene un elenco di attività.",
+      "Controlla di aver indicato il file giusto."));
+  var v = (typeof versioneDati === "function") ? versioneDati(dati) : (dati.v || 1);
+  if (v > SCHEMA_ATTUALE)
+    return Promise.reject(erroreSync("Dati di una versione più recente",
+      "Il file è stato scritto da una versione più nuova del pannello (schema "+v+"): non so leggerlo senza rischiare di rovinarlo.",
+      "Aggiorna il pannello e riprova."));
+  return Promise.resolve({
+    dati: dati,
+    rev: p.rev || 0,
+    salvatoIl: p.savedAt || "",
+    schema: v,
+    /* diagnosi da mostrare: sono avvisi, non errori */
+    avvisi: [].concat(
+      diag.pubblico ? ["Il file su GitHub è PUBBLICO: chiunque ne conosca l'indirizzo ha potuto leggere i tuoi dati. Dopo il recupero conviene eliminarlo."] : [],
+      diag.troncato ? ["Il file era troppo grande e GitHub l'ha troncato: il contenuto è stato recuperato per intero da un indirizzo a parte."] : [],
+      diag.nomeDiverso ? ["Il file dentro si chiama «"+diag.nomeFile+"» e non «pannello.json»: ho usato quello, essendo l'unico."] : [],
+      v < SCHEMA_ATTUALE ? ["I dati sono di uno schema precedente (v"+v+"): verranno aggiornati durante l'importazione, con una copia di sicurezza prima."] : []
+    )
   });
 }
 

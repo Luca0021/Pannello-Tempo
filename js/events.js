@@ -838,23 +838,30 @@ document.addEventListener("click", function(ev){
     var gid2 = gm("mg1").replace(/^.*\//, ""), tok2 = gm("mg2");
     if (!gid2 || !tok2) { toast("Servono identificativo e token", "info"); return; }
     setStatus("lettura…"); render();
-    leggiGistPerMigrazione(gid2, tok2).then(function(testo){
+    leggiGistPerMigrazione(gid2, tok2).then(function(r){
       svuota("mg2");                     /* il token sparisce dal campo */
-      var r = remoteRevOf(testo);
-      if (!r.payload || !r.payload.data) {
-        sync.err = erroreSync("Nessun dato da trasferire",
-          "Il file non contiene dati di Pannello Tempo.",
-          "Controlla di aver indicato il gist giusto.");
-        setStatus("errore"); render(); return;
-      }
-      /* non applico niente: mostro l'anteprima e decide l'utente */
+      /* Non applico niente: mostro l'anteprima e decide l'utente.
+         Nel riepilogo NON compaiono i titoli delle attività: sono conteggi.
+         Un riepilogo tecnico che elenca «Visita dal cardiologo» finisce negli
+         screenshot di assistenza e nei log di chi lo legge. */
       S.migrazione = {
-        da: "gist",
-        voci: (r.payload.data.items || []).length,
-        note: (r.payload.data.capture || []).length,
-        salvatoIl: r.payload.savedAt || "",
-        dati: r.payload.data,
-        localiVoci: (S.data.items || []).length
+        da: "legacy",
+        voci: (r.dati.items || []).length,
+        note: (r.dati.capture || []).length,
+        salvatoIl: r.salvatoIl,
+        schema: r.schema,
+        avvisi: r.avvisi || [],
+        dati: r.dati,
+        localiVoci: (S.data.items || []).length,
+        localeNote: (S.data.capture || []).length,
+        /* conflitto: le stesse voci esistono già qui? confronto per id */
+        idInComune: (function(){
+          var qui = {}; (S.data.items||[]).forEach(function(i){ qui[i.id] = 1; });
+          return (r.dati.items||[]).filter(function(i){ return qui[i.id]; }).length;
+        })(),
+        /* conflitto con l'account: se c'è una sessione, il trasferimento
+           finirebbe anche nel cloud alla prossima sincronizzazione */
+        conAccountAttivo: syncReady()
       };
       setStatus(""); render();
     }).catch(function(e){
@@ -866,23 +873,64 @@ document.addEventListener("click", function(ev){
   else if (act === "mig-applica") {
     if (!S.migrazione) return;
     var modo = v || "unisci";
-    salvaBackupAutomatico("prima del trasferimento dei dati");
-    snapshot("Hai trasferito i dati dal servizio precedente.", "Vuoi tornare indietro?");
+    salvaBackupAutomatico("prima del recupero dei dati dal servizio precedente");
+    snapshot("Hai recuperato i dati dal servizio precedente.", "Vuoi tornare indietro?");
+    /* I dati arrivano da uno schema che può essere più vecchio: passano
+       dalla migrazione come qualunque dato letto da fuori, invece di essere
+       innestati così come sono. */
+    var inArrivo = S.migrazione.dati;
+    var mig = migra(JSON.parse(JSON.stringify(inArrivo)),
+                    function(t){ REGISTRO_MIGR.push(new Date().toISOString()+" — recupero: "+t); });
+    if (mig.esito === "errore") {
+      sync.err = erroreSync("Recupero non riuscito",
+        "I dati non sono stati aggiornati allo schema corrente e non li applico a metà.",
+        "I tuoi dati su questo dispositivo non sono stati toccati. Scarica il file e riprova.");
+      S.migrazione = null; setStatus("errore"); render(); return;
+    }
+    inArrivo = mig.dati;
     if (modo === "sostituisci") {
-      S.data = Object.assign(seed(), S.migrazione.dati);
+      S.data = Object.assign(seed(), inArrivo);
     } else {
-      var esito = fondiPerRecord(S.data, S.migrazione.dati);
+      var esito = fondiPerRecord(S.data, inArrivo);
       S.data = Object.assign(seed(), esito.uniti);
       if (esito.conflitti && esito.conflitti.length) S.conflitti = esito.conflitti;
     }
     normalizeData();
     S.migrazione = null;
+    sync.gist.token = "";
     setImp("gistMigrato", true);
-    registraOperazione("migrazione", "dati trasferiti dal servizio precedente");
-    toast("Dati trasferiti. Nessun token è stato conservato.", "ok");
+    /* nel registro tecnico: quanti, non quali */
+    registraOperazione("migrazione",
+      "recupero dal servizio precedente, modo "+modo+", "+
+      ((inArrivo.items||[]).length)+" voci in arrivo");
+    toast("Dati recuperati. Nessun token è stato conservato.", "ok");
     commit();
   }
-  else if (act === "mig-annulla") { S.migrazione = null; render(); }
+  /* Terza via: portarsi via i dati senza importarli, e restare in modalità
+     solo dispositivo. Serve a chi vuole solo mettere al sicuro il file
+     prima di eliminarlo su GitHub. */
+  else if (act === "mig-esporta") {
+    if (!S.migrazione) return;
+    var busta = JSON.stringify({
+      formato: "pannello-tempo", schemaVersion: S.migrazione.schema,
+      recuperatoIl: new Date().toISOString(),
+      /* nessuna credenziale nella busta: `dati` viene dal file remoto e i
+         token non ci sono mai entrati */
+      dati: senzaSegreti(S.migrazione.dati)
+    }, null, 2);
+    if (download(busta, "pannello-tempo-recuperato-"+dk()+".json", "application/json"))
+      toast("File scaricato. Nessun token è stato salvato.", "ok");
+    else toast("Scaricamento non riuscito", "warn");
+    render();
+  }
+  else if (act === "mig-annulla") {
+    /* annullare deve dimenticare tutto, dati compresi: restare in memoria
+       significherebbe tenere il dataset di un altro contesto a portata di
+       un errore di battitura */
+    S.migrazione = null;
+    sync.gist.token = "";
+    render();
+  }
   /* Dimentica l'identificativo del gist: l'unica cosa che restava su disco. */
   else if (act === "mig-dimentica") {
     sync.gist = { id:"", token:"", file:"pannello.json" };
