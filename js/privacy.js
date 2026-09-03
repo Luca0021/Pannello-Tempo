@@ -80,15 +80,90 @@ function minutiDaAutenticazione(){
 
 function PASSI_CANCELLAZIONE(){
   return [
-    { id:"cloud",       nome:"Dati sul servizio collegato" },
+    { id:"cloud",       nome:"Dati nel tuo account" },
+    { id:"verifica",    nome:"Verifica che non siano più leggibili" },
+    { id:"account",     nome:"Account di accesso" },
+    { id:"coda",        nome:"Modifiche in attesa e conflitti" },
     { id:"credenziali", nome:"Credenziali e sessione" },
     { id:"locali",      nome:"Dati su questo dispositivo" },
     { id:"backup",      nome:"Copie di sicurezza locali" }
   ];
 }
 
-function cancellaTutto(ancheCloud, poi){
-  var esito = { passi: {}, completo: false, parziale: false };
+/* ─────────────────────────────────────────────────────────────────────────
+   PRV-002 — ELIMINAZIONE DELL'ACCOUNT DI ACCESSO
+
+   Separata dalla cancellazione dei dati, perché sono due cose diverse e
+   possono fallire indipendentemente: si può riuscire a cancellare i dati e
+   non l'account, e dire «fatto» sarebbe falso.
+
+   Firebase richiede un'autenticazione recente per eliminare un account. Se
+   la sessione è vecchia, l'API risponde `CREDENTIAL_TOO_OLD_LOGIN_AGAIN` e
+   NON si finge che sia andata: si chiede la password e si riprova.
+   ───────────────────────────────────────────────────────────────────────── */
+function eliminaAccountAuth(){
+  if (!sync.fb.idToken)
+    return Promise.resolve({ ok:false, riautenticare:false,
+      motivo:"Nessuna sessione attiva: l'account di accesso non è stato toccato." });
+  vietaProduzioneNeiTest();
+  return fetch(endpointIdentity()+"/accounts:delete?key="+
+               encodeURIComponent(FIREBASE_CONFIG.apiKey), {
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ idToken: sync.fb.idToken })
+  }).then(function(r){
+    return r.json().then(function(d){ return { ok:r.ok, d:d }; });
+  }).then(function(x){
+    if (x.ok) return { ok:true };
+    var msg = (x.d && x.d.error && x.d.error.message) || "";
+    if (/CREDENTIAL_TOO_OLD_LOGIN_AGAIN|TOKEN_EXPIRED|INVALID_ID_TOKEN/.test(msg))
+      return { ok:false, riautenticare:true,
+        motivo:"Per eliminare l'account serve la password: è un'operazione irreversibile "+
+               "e non deve poterla fare chi trova il dispositivo aperto." };
+    if (/USER_NOT_FOUND/.test(msg))
+      return { ok:true, motivo:"L'account non esisteva più." };
+    return { ok:false, riautenticare:false,
+      motivo: dettaglioErrore(new Error(msg)).causa };
+  }).catch(function(e){
+    return { ok:false, riautenticare:false, motivo: dettaglioErrore(e).causa };
+  });
+}
+
+/* Verifica che i dati remoti non siano più leggibili.
+   Non è pignoleria: `DELETE` può restituire 200 e lasciare il documento
+   raggiungibile per un istante, o cancellare un percorso e non l'altro.
+   Dire «cancellato» senza aver riletto è dire una cosa che non si sa. */
+function verificaCancellazioneRemota(){
+  if (typeof fbLeggiDoc !== "function" || !sync.fb.uid)
+    return Promise.resolve({ ok:false, motivo:"Non verificabile: nessuna sessione." });
+  return fbLeggiDoc(fbDocUrl()).then(function(t){
+    if (t && t.trim())
+      return { ok:false, motivo:"Il documento è ancora leggibile: la cancellazione non è completa." };
+    return fbLeggiDoc(fbDocUrlLegacy()).then(function(v){
+      if (v && v.trim())
+        return { ok:false, motivo:"Il documento del percorso precedente è ancora leggibile." };
+      return { ok:true };
+    }, function(){ return { ok:true }; });
+  }, function(e){
+    /* Un errore di lettura DOPO la cancellazione è il risultato atteso:
+       il documento non c'è più. Ma lo distinguiamo da un successo pieno,
+       perché potrebbe anche essere un problema di rete. */
+    var m = String((e && (e.tecnico || e.message)) || e || "");
+    if (/404|NOT_FOUND/.test(m)) return { ok:true };
+    return { ok:false, motivo:"Non è stato possibile verificare: "+
+             ((e && e.causa) || "la rilettura non ha risposto")+"." };
+  });
+}
+
+/* `opzioni`: { cloud, account, locali }
+   Tre scelte indipendenti, perché sono tre decisioni diverse: eliminare i
+   dati cloud tenendo l'account, eliminare tutto, o pulire solo questo
+   dispositivo. Un unico interruttore costringerebbe a scegliere fra
+   troppo e troppo poco. */
+function cancellaTutto(opzioni, poi){
+  /* compatibilità: la firma precedente era (ancheCloud, poi) */
+  if (typeof opzioni === "boolean") opzioni = { cloud: opzioni, account: false, locali: true };
+  var o = Object.assign({ cloud:false, account:false, locali:true }, opzioni || {});
+  var esito = { passi: {}, completo: false, parziale: false, riautenticare: false };
   function segna(id, ok, nota){
     esito.passi[id] = { ok: !!ok, nota: nota || "" };
   }
@@ -101,47 +176,90 @@ function cancellaTutto(ancheCloud, poi){
   }
 
   function locali(){
+    /* la coda e i conflitti prima delle credenziali: se restassero, una
+       riconnessione futura tenterebbe di reinviare ciò che stiamo togliendo */
+    try {
+      if (typeof svuotaCoda === "function") svuotaCoda();
+      S.conflitti = null; S.datiFusi = null; S.attivazioneSync = null; S.migrazione = null;
+      if (typeof azzeraIstantanea === "function") azzeraIstantanea();
+      segna("coda", true, "");
+    } catch (e) { segna("coda", false, String(e && e.message || e)); }
+
     /* credenziali prima dei dati: se qualcosa va storto a metà, non deve
        restare una sessione capace di risincronizzare ciò che stiamo togliendo */
     try {
-      var r = (typeof esciAccount === "function") ? esciAccount() : { residui: [] };
-      segna("credenziali", (r.residui || []).length === 0,
-            (r.residui || []).length ? "restano: " + r.residui.join(", ") : "");
+      var r = (typeof esciAccount === "function") ? esciAccount(true) : { residui: [] };
+      var resti = (r.residui || []).concat(r.sentinelle || []);
+      segna("credenziali", resti.length === 0,
+            resti.length ? "restano: " + resti.join(", ") : "");
     } catch (e) { segna("credenziali", false, String(e && e.message || e)); }
 
-    try {
-      var okDati = eliminaSicuro(KEY);
-      segna("locali", okDati, okDati ? "" : "la chiave dei dati non è stata rimossa");
-    } catch (e) { segna("locali", false, String(e && e.message || e)); }
+    if (o.locali) {
+      try {
+        var okDati = eliminaSicuro(KEY);
+        segna("locali", okDati, okDati ? "" : "la chiave dei dati non è stata rimossa");
+      } catch (e) { segna("locali", false, String(e && e.message || e)); }
+      try {
+        var b1 = eliminaSicuro(CHIAVE_BACKUP_AUTO);
+        var b2 = eliminaSicuro(CHIAVE_BACKUP);
+        /* una copia che non c'era non è un fallimento */
+        segna("backup", true, (b1 || b2) ? "" : "non c'erano copie da rimuovere");
+      } catch (e) { segna("backup", false, String(e && e.message || e)); }
+    } else {
+      segna("locali", true, "conservati su tua richiesta");
+      segna("backup", true, "conservate su tua richiesta");
+    }
 
-    try {
-      var b1 = eliminaSicuro(CHIAVE_BACKUP_AUTO);
-      var b2 = eliminaSicuro(CHIAVE_BACKUP);
-      /* una copia che non c'era non è un fallimento */
-      segna("backup", true, (b1 || b2) ? "" : "non c'erano copie da rimuovere");
-    } catch (e) { segna("backup", false, String(e && e.message || e)); }
-
-    registraOperazione("cancellazione", "cancellazione completa");
+    /* nel diario: che cosa, non che cosa conteneva */
+    registraOperazione("cancellazione",
+      "cloud:"+(o.cloud?"sì":"no")+" account:"+(o.account?"sì":"no")+" locali:"+(o.locali?"sì":"no"));
     conclusione();
   }
 
-  if (ancheCloud && syncReady()) {
+  /* passo 3: l'account di accesso, dopo i dati.
+     L'ordine conta: eliminando prima l'account si perde il token con cui
+     cancellare i dati, e restano orfani nel database. */
+  function passoAccount(){
+    if (!o.account) { locali(); return; }
+    eliminaAccountAuth().then(function(r){
+      segna("account", r.ok, r.motivo || "");
+      if (r.riautenticare) esito.riautenticare = true;
+      locali();
+    });
+  }
+
+  /* passo 2: la verifica. Dire «cancellato» senza aver riletto è dire una
+     cosa che non si sa. */
+  function passoVerifica(){
+    if (!o.cloud || !esito.passi.cloud || !esito.passi.cloud.ok) {
+      segna("verifica", true, "non applicabile");
+      passoAccount(); return;
+    }
+    verificaCancellazioneRemota().then(function(v){
+      segna("verifica", v.ok, v.motivo || "");
+      passoAccount();
+    });
+  }
+
+  if (o.cloud && syncReady()) {
     provider().deleteRemote()
       .then(function(r){
         if (r.ok) segna("cloud", true, "");
         else segna("cloud", false, r.motivo ||
           "il servizio collegato non permette la cancellazione dal dispositivo");
-        locali();
+        passoVerifica();
       })
       .catch(function(e){
         segna("cloud", false, (e && e.causa) || "non riuscita");
-        locali();          /* un fallimento remoto non deve impedire quello locale */
+        /* un fallimento remoto non deve impedire quello locale, ma non deve
+           nemmeno essere nascosto: resta segnato come fallito */
+        passoVerifica();
       });
   } else {
-    segna("cloud", true, ancheCloud
-      ? "nessuna sessione attiva: sul servizio non c'era nulla di tuo"
-      : "nessun servizio collegato");
-    locali();
+    segna("cloud", true, o.cloud
+      ? "nessuna sessione attiva: nel tuo account non c'era nulla da cancellare da qui"
+      : "non richiesto");
+    passoVerifica();
   }
 }
 

@@ -1131,11 +1131,15 @@ document.addEventListener("click", function(ev){
         toast("Scrivi CANCELLA per confermare", "info"); return;
       }
       S.conferma = null;
-      cancellaTutto(syncReady(), function(es){
+      /* PRV-002 — l'azzeramento di sync.fb e sync.gist era ripetuto qui a
+         mano, con la forma vecchia dell'oggetto (apiKey, projectId): due
+         punti che azzerano le stesse credenziali divergono al primo
+         cambiamento del modello, ed era già successo. Lo fa esciAccount(),
+         chiamato da cancellaTutto, che verifica anche di non lasciare
+         residui. */
+      cancellaTutto({ cloud: syncReady(), account: false, locali: true }, function(es){
         S.esitoCancellazione = es;
         S.data = datiVuoti(); normalizeData();
-        sync.fb = { apiKey:"", projectId:"", email:"", uid:"", refresh:"", idToken:"", expAt:0 };
-        sync.gist = { id:"", token:"" }; sync.account = false;
         render();
       });
       return;

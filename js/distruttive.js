@@ -73,19 +73,33 @@ var AZIONI_DISTRUTTIVE = [
     } },
 
   { id: "locali",
-    nome: "Elimina i dati su questo dispositivo",
+    nome: "Elimina i dati di questo dispositivo",
     elimina: "Attività, routine, note, cronologia, copie di sicurezza e credenziali locali.",
-    conserva: "I dati sul servizio collegato, se ne hai uno: da lì puoi riscaricarli.",
+    conserva: "I dati nel tuo account, se ne hai uno: rientrando li ritrovi.",
     conferma: 3, annullabile: false, backup: false, parola: "CANCELLA",
-    esegui: null },      /* passa da cancellaTutto(false): esito per passaggio */
+    opzioni: { cloud:false, account:false, locali:true },
+    esegui: null },
+
+  /* PRV-002 — tre azioni distinte invece di due. «Elimina i dati cloud»
+     mancava, e chi voleva togliere i propri dati dal servizio senza
+     rinunciare all'account non aveva modo di farlo: doveva eliminare tutto.
+     Sono decisioni diverse e ora sono comandi diversi. */
+  { id: "cloud",
+    nome: "Elimina i dati dal tuo account",
+    elimina: "Il contenuto del tuo spazio sul servizio, compreso quello scritto dalle versioni precedenti.",
+    conserva: "I dati su questo dispositivo, e l'account di accesso: potrai risincronizzare.",
+    conferma: 3, annullabile: false, backup: false, parola: "CANCELLA",
+    opzioni: { cloud:true, account:false, locali:false },
+    esegui: null },
 
   { id: "account",
-    nome: "Elimina l'account e tutti i dati",
-    elimina: "Tutto: dati locali, dati sul servizio collegato, credenziali e copie.",
+    nome: "Elimina account e dati",
+    elimina: "Tutto: dati di questo dispositivo, dati nel tuo account, l'account di accesso, credenziali e copie.",
     conserva: "Niente. Restano solo i file che hai esportato tu.",
     conferma: 3, annullabile: false, backup: false, parola: "CANCELLA",
     richiedeAutenticazione: true,
-    esegui: null }       /* passa da cancellaTutto(true) */
+    opzioni: { cloud:true, account:true, locali:true },
+    esegui: null }
 ];
 
 function azioneDistruttiva(id){
@@ -104,12 +118,23 @@ function eseguiDistruttiva(id, poi){
   registraOperazione("azione distruttiva", a.nome);
 
   if (a.esegui) { var r = a.esegui(); save(); if (poi) poi(r); return; }
-  /* le due più gravi passano dalla cancellazione a passaggi */
-  cancellaTutto(a.id === "account", function(esito){
+  /* le tre più gravi passano dalla cancellazione a passaggi, ognuna con le
+     proprie opzioni: `cloud` non tocca i dati locali, `locali` non tocca il
+     cloud, `account` tocca tutto */
+  cancellaTutto(a.opzioni || { cloud:false, account:false, locali:true }, function(esito){
     S.esitoCancellazione = esito;
-    S.data = datiVuoti(); normalizeData();
-    S.disegnoCompleto = "dataset-sostituito"; forzaProssimoCompleto();
-    if (poi) poi({ ok: esito.completo, nota: esito.completo ? "Fatto."
-                   : "Una parte non è riuscita: vedi il dettaglio.", esito: esito });
+    /* i dati in memoria si azzerano SOLO se sono stati cancellati davvero:
+       prima venivano svuotati sempre, quindi «Elimina i dati cloud»
+       cancellava anche quelli del dispositivo dallo schermo, e l'utente
+       vedeva sparire tutto senza averlo chiesto */
+    if (a.opzioni && a.opzioni.locali) {
+      S.data = datiVuoti(); normalizeData();
+      S.disegnoCompleto = "dataset-sostituito"; forzaProssimoCompleto();
+    }
+    if (poi) poi({ ok: esito.completo,
+                   nota: esito.completo ? "Fatto."
+                       : esito.riautenticare ? "Serve la password per eliminare l'account: vedi il dettaglio."
+                       : "Una parte non è riuscita: vedi il dettaglio.",
+                   esito: esito });
   });
 }
