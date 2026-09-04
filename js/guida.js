@@ -164,7 +164,7 @@ var GUIDA_SEZIONI = [
            "automatico, nessun account, niente che si aggiorni da solo.",
            "Nessun calendario è collegato, e l'integrazione automatica non è "+
            "attiva: un collegamento vero nei due sensi con Google Calendar o "+
-           "Outlook richiede un'autorizzazione OAuth e un servizio che la "+
+           "Outlook richiede un'autorizzazione permanente al posto tuo, e un servizio che la "+
            "custodisca, che questa versione non ha."],
     elenco: function(){
       return [

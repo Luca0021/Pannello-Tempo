@@ -39,24 +39,48 @@ const MODELLI = [
   { nome: 'stringa di connessione', re: /(mongodb|postgres|mysql):\/\/[^\s"']*:[^\s"'@]+@/ }
 ];
 
-/* Eccezioni dichiarate, con il motivo.
-   Un'eccezione senza motivo diventa un buco permanente. */
+/* Eccezioni dichiarate, con il motivo e con il modello a cui si applicano.
+   Un'eccezione senza motivo diventa un buco permanente; un'eccezione senza
+   modello vale per TUTTI i modelli, che è quasi sempre più di quanto serve.
+
+   DIFETTO CORRETTO — un'eccezione non deve contenere il valore che ammette.
+   La prima riga qui sotto diceva `/AIzaSyXXXX…/` con trentacinque X in
+   chiaro, e trentacinque X soddisfano `AIza[0-9A-Za-z_\-]{30,}`: **questo
+   file segnalava sé stesso**, il primo passo della pipeline falliva, e ogni
+   passo successivo restava bloccato con una diagnosi incomprensibile —
+   «chiave API Google in controlla-segreti.mjs». Ora l'eccezione descrive la
+   FORMA del segnaposto (`AIzaSy` seguito da sole X) invece di riprodurlo, e
+   la descrizione è troppo corta per far scattare il modello che descrive.
+
+   Le altre eccezioni erano già al sicuro per costruzione: `ghp_S{20,}` e
+   `AIzaS{30,}` contengono una sola lettera prima della graffa, e
+   `eyJhbGciOiJIUzI1NiJ9` non ha i due punti che il modello del JWT esige.
+   Verificato eseguendo i modelli su questo stesso albero. */
 const AMMESSI = [
-  { file: /^\.env\.example$/, re: /AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/,
-    motivo: 'segnaposto nel file di esempio, evidentemente finto' },
-  { file: /^tests\//, re: /SENTINELLA|ghp_S{20,}|AIzaS{30,}|eyJhbGciOiJIUzI1NiJ9/,
-    motivo: 'valori sentinella dei collaudi, riconoscibili e finti' },
-  { file: /^tests\//, re: /ghp_b{20,}|ghp_z{20,}|ghp_c{20,}|ghp_q{20,}|github_pat_b{20,}/,
+  { file: /^\.env\.example$/, modello: 'chiave API Google', re: /^AIzaSyX+$/,
+    motivo: 'segnaposto del file di esempio: AIzaSy seguito da sole X' },
+  { file: /^tests\//, modello: null,
+    re: /SENTINELLA|ghp_S{20,}|AIzaS{30,}|eyJhbGciOiJIUzI1NiJ9/,
+    motivo: 'valori sentinella dei collaudi, riconoscibili e finti. Devono esserci: servono a dimostrare che l\'audit dei segreti li trova davvero' },
+  { file: /^tests\//, modello: 'token GitHub',
+    re: /ghp_b{20,}|ghp_z{20,}|ghp_c{20,}|ghp_q{20,}|github_pat_b{20,}/,
     motivo: 'token finti dei collaudi, composti da un carattere ripetuto' },
-  { file: /^(SECURITY-REPORT|SYNC-DECISION|GIST-MIGRATION)\.md$/,
+  { file: /^(SECURITY-REPORT|SYNC-DECISION|GIST-MIGRATION|GLOBAL-COLLISIONS)\.md$/,
+    modello: null,
     re: /ghp_TOKEN_DI_PROVA|REFRESH_DI_PROVA|IDTOKEN_DI_PROVA|ghp_S{20,}/,
     motivo: 'valori di prova citati nella documentazione come prova eseguita' },
-  { file: /^FIREBASE-SETUP\.md$/, re: /AIzaSy…|AIza…/,
+  { file: /^FIREBASE-SETUP\.md$/, modello: 'chiave API Google', re: /AIzaSy…|AIza…/,
     motivo: 'segnaposto troncato nella procedura' }
 ];
 
+/* `modello: null` vuol dire «per qualunque modello»; un nome vuol dire
+   «solo per quel modello». Prima il terzo argomento veniva usato come
+   `&& modello`, che è sempre vero: le eccezioni valevano per tutto. */
 function ammesso(rel, testo, modello) {
-  return AMMESSI.some(a => a.file.test(rel) && a.re.test(testo) && modello);
+  return AMMESSI.some(a =>
+    a.file.test(rel) &&
+    (a.modello === null || a.modello === modello.nome) &&
+    a.re.test(testo));
 }
 
 function elenca(dir, out = []) {

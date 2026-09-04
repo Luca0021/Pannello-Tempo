@@ -79,11 +79,20 @@ function importaEventi(eventi){
 }
 
 /* Adattatore per una futura integrazione con account esterni. Dichiara ciò che
-   serve invece di fingere che funzioni. */
+   serve invece di fingere che funzioni.
+
+   Non ha chiamanti: nessuna parte dell'interfaccia lo invoca, e va bene così
+   finché l'integrazione non esiste. `motivo` è però scritto per essere
+   MOSTRATO, quindi è in italiano corrente e senza sigle: il giorno in cui
+   qualcuno lo collega a un pulsante, il testo è già presentabile. Un
+   messaggio che parla di «registrazione applicativa OAuth» a chi voleva
+   sincronizzare l'agenda non spiega niente, e la prova sulla terminologia
+   non lo intercetterebbe, perché controlla solo ciò che viene disegnato. */
 var CalendarioEsterno = {
   disponibile: function(){ return false; },
-  requisiti: "Serve una registrazione applicativa OAuth presso Google o Microsoft, "+
-             "un backend che custodisca il segreto client e il rinnovo dei token. "+
-             "Nessuno dei tre esiste in questa installazione.",
+  requisiti: "Un collegamento vero con Google Calendar o Outlook richiede "+
+             "un'autorizzazione permanente al posto tuo e un servizio che la "+
+             "custodisca. Questa versione non ce l'ha: per ora il calendario "+
+             "si aggiorna con un file che esporti tu.",
   collega: function(){ return { esito:"non-disponibile", motivo: CalendarioEsterno.requisiti }; }
 };

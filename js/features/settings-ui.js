@@ -523,7 +523,7 @@ function zonaImpostazioni(){
     '</div>'+
     '<p class="hint"><b>Integrazione automatica non attiva.</b> Un collegamento vero con '+
     'Google Calendar o Outlook — che legga e scriva da solo, nei due sensi — richiede '+
-    'un\'autorizzazione OAuth e un servizio che la custodisca. Questa versione non ce l\'ha, '+
+    'un\'autorizzazione permanente al posto tuo, e un servizio che la custodisca. Questa versione non ce l\'ha, '+
     'e finché non c\'è preferiamo dirlo invece di chiamare «collegamento» un file.</p>';
   if (S.icsAnteprima) {
     var ev = S.icsAnteprima.eventi;
