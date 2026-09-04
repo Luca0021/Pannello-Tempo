@@ -61,12 +61,17 @@ distinguono.
 | i **7 pulsanti dei giorni** larghi 9px e attaccati, con la sola iniziale come nome («M» due volte) e lo stato nel solo colore | misura dei bersagli con l'eccezione di spaziatura |
 | la stella delle priorità a **1,03:1** sullo sfondo di pagina | contrasto dei comandi |
 | `.dayb` selezionato: bianco su azzurro chiaro, **3,08:1** in tema scuro | contrasto del testo in tema scuro |
+| **i limiti di importazione non scattavano mai**: `LIMITI` dichiarato da due moduli, e `byte > undefined` è `false` | esecuzione dei controlli che il rapporto dichiarava |
+| **ogni modifica salvata non risultava da sincronizzare**: `aggiornaVersioni()` passava un istante dove la firma viva vuole un dataset | esecuzione del percorso di salvataggio |
+| **il controllo dei segreti segnalava sé stesso**, bloccando il primo passo della pipeline | riesecuzione dei suoi undici modelli sull'albero |
+| le eccezioni del controllo dei segreti valevano per tutti i modelli (`&& modello` è sempre vero) | lettura guidata dal difetto precedente |
+| «OAuth» nel testo mostrato all'utente, in tre punti | prova sulla terminologia su 25 630 caratteri |
 
 ### Interfaccia e terminologia
 
 | Prova | Esito |
 |---|---|
-| nessuna parola vietata nel testo visibile | **passata** — 21 modelli su 23.303 caratteri, compresi `aria-label`, `placeholder`, `title` |
+| nessuna parola vietata nel testo visibile | **passata** — 22 modelli su 25.630 caratteri con tutte le schede aperte, compresi `aria-label`, `placeholder`, `title`. Ha trovato «OAuth» in tre punti, ora riscritti |
 | nessuna frase ambigua su calendario e sincronizzazione | **passata** — 10 frasi |
 | le tre affermazioni di trasparenza sono presenti | **passata** |
 | nessuna parola dell'Account nella sezione Calendario, e viceversa | **passata** |
@@ -112,6 +117,39 @@ campi, 13 testi, 7 campi senza nome, 31 etichette scoperte e 7 pulsanti da
 `ACCESSIBILITY-REPORT.md` riporta i numeri per condizione, i valori scelti
 con il fondo peggiore misurato, e gli **otto falsi allarmi** da cui gli
 auditor sono nati.
+
+### Limiti dell'importazione, e nomi globali
+
+Quindici prove eseguite nel browser **dopo** aver scoperto che nessun limite
+scattava (`GLOBAL-COLLISIONS.md` §2):
+
+| Prova | Esito |
+|---|---|
+| `LIMITI_IMPORT` e `LIMITI_INVIO` esistono con i propri valori | **passata** |
+| il nome generico `LIMITI` non esiste più | **passata** |
+| backup oltre 8 MB · oltre 5000 voci | **respinti**, dicendo quante voci ha trovato (5100) |
+| JSON non valido · array · file senza `items` | **respinti** |
+| inquinamento del prototipo | **bonificato**: la chiave non sopravvive e il prototipo resta pulito |
+| backup valido | **accettato**, con l'anteprima corretta |
+| ICS oltre 4 MB · oltre 500 eventi | **respinti**, dicendo quanti (520) |
+| ICS valido | **accettato** |
+| titolo di 900 caratteri | **troncato a 500** |
+| caratteri di controllo e spazi invisibili | **rimossi** |
+| collisioni fra nomi globali | **0** su 590 nomi in 60 moduli |
+| controllo dei segreti su tutto l'albero | **0 segnalazioni**: 122 file, 11 modelli, 2 esenzioni con motivo |
+
+### Versione per record (SYN-004)
+
+Sei prove eseguite nel browser, dopo aver scoperto che le modifiche non
+venivano segnate:
+
+| Prova | Esito |
+|---|---|
+| una modifica salvata risulta da sincronizzare | **passata** - `sporco:true, del:false` |
+| una voce non toccata NON risulta modificata | **passata** - nessun conflitto falso |
+| una cancellazione lascia una lapide | **passata** - `del:true, sporco:true` |
+| le tre funzioni vive sono quelle di `js/conflitti.js` | **passata** - arità 2, 1, 2 |
+| ogni chiamante di `aggiornaVersioni()` e `azzeraIstantanea()` | **verificato** - tre punti, tutti senza argomenti |
 
 ### Migrazioni
 
@@ -182,6 +220,7 @@ faranno non si sa.
 | `tests/ui/ui006.spec.js` | 60 + regressione visiva | Node + Playwright |
 | `tests/ui/terminologia.spec.js` | 8 | Node + Playwright |
 | `tests/unit/migrazioni.test.js` | 15 | Node |
+| `tests/unit/limiti-e-versioni.test.js` | 13 | Node |
 | `tests/integration/gist-migrazione.test.js` | 20 | Node |
 | `tests/avvio.test.js` | 60 | Node |
 
@@ -226,6 +265,9 @@ eseguito.
 | SEC-001 credenziali | **COMPLETATO** | verificato eseguendo, sei meccanismi |
 | SEC-002 isolamento per utente | **PARZIALE** | output di `regole.test.js` con `falliti: 0` |
 | SEC-003 CSP | **PARZIALE** | il passo CSP verde, con l'agenda che si disegna |
+| SEC-004 sanitizzazione | **COMPLETATO** | verificato eseguendo, dopo aver scoperto che il troncamento non scattava |
+| SEC-005 limiti del backup | **COMPLETATO** | idem: sei limiti, tutti provati |
+| SEC-006 limiti dell'ICS | **COMPLETATO** | idem |
 | SEC-008 rate limit | **COMPLETATO** per la parte applicativa | la limitazione dei tentativi di accesso è di Firebase, non nostra |
 | SEC-009 App Check | **PARZIALE** | App Check è predisposto e non attivo |
 | PRV-001 trasparenza | **COMPLETATO** | verificato eseguendo |

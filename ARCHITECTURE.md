@@ -38,6 +38,33 @@ sostenibile `script-src 'self'` nella Content Security Policy. Le
 dipendenze in `package.json` servono ai collaudi e alla build, e non
 finiscono nel sito.
 
+### Il costo peggiore: un solo spazio dei nomi
+
+Lo scope condiviso ha un modo di rompersi che merita una riga a parte,
+perché è silenzioso. Se due moduli dichiarano `var X`, **vince l'ultimo
+caricato** e il primo perde il proprio valore: nessuna eccezione, nessun
+avviso, niente nella console.
+
+È già accaduto due volte in questo progetto, e in entrambi i casi ha
+disattivato codice che risultava funzionante:
+
+- `LIMITI` in `js/sicurezza.js` contro `LIMITI` in `js/appcheck.js`: tutti i
+  limiti di importazione — dimensione dei backup, numero di voci, dimensione
+  e numero di eventi dei calendari, troncamento dei titoli — **non
+  scattavano mai**;
+- tre funzioni omonime fra `js/versioni.js` e `js/conflitti.js`, con
+  conseguenza che le modifiche non risultavano da sincronizzare (§3).
+
+Da qui `strumenti/controlla-globali.mjs`, che a ogni build cerca i nomi
+dichiarati da più di un modulo e fallisce se ne trova. Sono 590 nomi globali
+di primo livello: controllarli a occhio non è un piano.
+
+Convenzione adottata: quando due moduli hanno bisogno dello stesso concetto,
+il nome dice **di quale modulo è** — `LIMITI_IMPORT` e `LIMITI_INVIO`, non
+due `LIMITI`. E si rinominano **entrambi**, perché un riferimento
+dimenticato diventa così un `ReferenceError` rumoroso invece di un
+`undefined` silenzioso.
+
 ---
 
 ## 2. Gli strati
@@ -158,10 +185,40 @@ sporco  modificato qui e non ancora inviato
 del     lapide, per propagare la cancellazione
 ```
 
-`confrontaInsiemi()` produce cinque categorie — solo locale, solo remoto,
-invariati, conflitti, cancellati — e `unisci()` applica tutto ciò che **non**
-è in conflitto lasciando in sospeso il resto. È il motivo per cui due
-modifiche su voci diverse non producono un conflitto.
+La fusione vera la fa **`fondiPerRecord()` in `js/conflitti.js`**: applica
+tutto ciò che non è in conflitto e lascia in sospeso il resto, ed è il motivo
+per cui due modifiche su voci diverse non producono un conflitto.
+
+### Due generazioni nello stesso scope, e che cosa è costato
+
+Qui c'è un debito da dichiarare, perché leggendo i file si prende la
+conclusione sbagliata. `js/versioni.js` è una **generazione precedente**
+della stessa funzione, superata da `js/conflitti.js`, e i due file
+dichiarano **tre nomi identici**: `versioni`, `segnaModifica`,
+`risolviRecord`. `conflitti.js` si carica dopo, quindi vince, e le tre
+copie in `versioni.js` erano codice morto che sembrava vivo.
+
+Non era innocuo. `aggiornaVersioni()` — che è in `versioni.js` ed è
+**viva**, chiamata a ogni salvataggio — invocava `segnaModifica(id, quando)`
+passando un istante. La firma viva è `segnaModifica(id, dati)`, dove il
+secondo argomento è un insieme di dati: `versioni("2026-…")` restituiva un
+registro usa e getta e il record di versione finiva lì. Risultato: **ogni
+modifica salvata dal percorso normale non risultava da sincronizzare.** Le
+cancellazioni sì, perché `segnaCancellazione(id)` ha un solo argomento.
+
+Corretto, e le tre copie morte sono state rimosse. Ciò che resta di
+`versioni.js` — `confrontaInsiemi`, `unisci`, `raccogliRecord`,
+`differenzeRecord`, `accettaRevisione`, `versioneDi` — **non ha chiamanti**
+fuori dal file: è la parte della vecchia generazione che nessuno usa. Non è
+stata cancellata in questo passaggio perché non esiste ancora una prova
+eseguibile del percorso di sincronizzazione, e rimuovere ottanta righe alla
+cieca è più rischioso del debito. Le funzioni vive del file sono
+`aggiornaVersioni`, `istantaneaRecord`, `raccogliRecord` (usata da queste
+due), `segnaCancellazione` e `azzeraIstantanea`.
+
+`strumenti/controlla-globali.mjs` gira a ogni build e fallisce se due moduli
+dichiarano lo stesso nome. È la rete che mancava: con 60 file in un unico
+scope, questa collisione non produce nessun errore, solo un valore perduto.
 
 **Ma il trasporto è un documento unico.** `users/{uid}/datasets/current`
 contiene l'intero dataset serializzato in un campo stringa. Quindi:

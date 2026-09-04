@@ -1,0 +1,186 @@
+# CHANGELOG.md
+
+Che cosa è cambiato, e — dove conta — che cosa era rotto.
+
+Le voci raccontano il difetto insieme alla correzione: «migliorata la
+gestione dei limiti» non permette a nessuno di capire se il proprio backup
+era a rischio.
+
+---
+
+## Build candidata — schema 6
+
+**Non pubblicata.** Vedi `DEPLOYMENT-REPORT.md` §7.
+
+### Difetti corretti che disattivavano codice esistente
+
+Questi tre non si vedono leggendo il codice. Sono stati trovati eseguendo i
+controlli che i documenti dichiaravano.
+
+- **I limiti di importazione non scattavano mai.** `js/sicurezza.js`
+  dichiarava `var LIMITI` e `js/appcheck.js` un altro `var LIMITI`: i 60
+  moduli condividono un unico scope, `appcheck.js` si carica dopo, e a
+  runtime `LIMITI.backupByte` valeva `undefined`. Poiché `byte > undefined`
+  è `false`, erano **disattivati** il limite di 8 MB per un backup, quello
+  di 5000 voci, i 4 MB e i 500 eventi per un file di calendario, e il
+  troncamento dei titoli a 500 caratteri. Tre ticket di sicurezza
+  risultavano coperti da controlli inesistenti. I due nomi sono ora
+  `LIMITI_IMPORT` e `LIMITI_INVIO`. → `GLOBAL-COLLISIONS.md` §2
+
+- **Le modifiche non risultavano da sincronizzare.** `aggiornaVersioni()`
+  chiamava `segnaModifica(id, quando)` passando un istante, ma
+  l'implementazione viva — in `js/conflitti.js`, che vince sulla copia
+  omonima in `js/versioni.js` — ha firma `segnaModifica(id, dati)`. Il
+  record di versione finiva in un registro usa e getta: **ogni modifica
+  salvata dal percorso normale non veniva segnata come da inviare**, quindi
+  con un account collegato non sarebbe mai arrivata sull'altro dispositivo.
+  Le cancellazioni funzionavano. → `GLOBAL-COLLISIONS.md` §3
+
+- **La regione di annuncio per i lettori di schermo era duplicata.**
+  `id="annunci"` esisteva due volte, e quella dentro `#app` veniva ricreata
+  a ogni ridisegno — una regione viva sostituita nello stesso istante in cui
+  il testo cambia può non essere annunciata affatto. Rimossa anche
+  `annunciaMirato()`, che non aveva un solo chiamante.
+
+- **Il controllo dei segreti segnalava sé stesso.** L'eccezione per il
+  segnaposto di `.env.example` era scritta riproducendo il valore che
+  ammetteva — trentacinque `X` in chiaro — e trentacinque `X` soddisfano il
+  modello «chiave API Google» che quello stesso file dichiara. Il primo
+  passo della pipeline usciva in errore e **bloccava tutti i successivi**,
+  con una diagnosi incomprensibile. Ora l'eccezione descrive la *forma* del
+  segnaposto invece di riprodurlo. Nello stesso file: le eccezioni valevano
+  per **tutti** i modelli invece che per quello a cui erano destinate,
+  perché il terzo argomento veniva usato come `&& modello`, sempre vero.
+
+### Accessibilità
+
+Cinque viste in quattro condizioni di tema e larghezza, più due condizioni
+sul solo contrasto: **0 fallimenti** su contrasto del testo, contrasto dei
+comandi, dimensione dei bersagli, nomi accessibili, id duplicati,
+riferimenti ARIA rotti, salti di intestazione e scorrimento orizzontale.
+Controprova 0 → 3 → 0. → `ACCESSIBILITY-REPORT.md`
+
+- **Il bordo dei campi era invisibile**, in entrambi i temi: 1,50:1 sulle
+  schede in chiaro, 1,70:1 in scuro, contro il 3:1 richiesto dalla 1.4.11.
+  Per un campo bianco dentro una scheda bianca il bordo è l'unica cosa che
+  dice che lì c'è un campo. Riguardava 31 campi e ogni pulsante contornato.
+  Nuovo token `--bordo-campo`, con il fondo peggiore **misurato** e non
+  ipotizzato.
+- **Sette campi senza nome accessibile**, e uno il cui unico nome era il
+  segnaposto — che sparisce appena si scrive.
+- **31 `<label>` che non etichettavano niente.** Ora il nome sta sul
+  comando, con un `aria-label` che contiene il testo visibile, e la
+  didascalia è uno `<span>`.
+- **I sette pulsanti dei giorni erano larghi 9 pixel** a 375px, e attaccati.
+  Nello stesso blocco: il nome era la sola iniziale, e «M» compariva due
+  volte; lo stato scelto stava solo nel colore. Ora 31×32 px a 320px, nomi
+  pieni da `DAYNAMES`, e `aria-pressed`.
+- **La stella delle priorità era a 1,03:1** sullo sfondo di pagina: un
+  comando che non si vedeva.
+- **Il testo del giorno selezionato era `#fff` fisso**: in tema scuro, su
+  azzurro chiaro, 3,08:1.
+- **`--muted` era ancora sotto soglia** in 13 testi: il caso peggiore non
+  era la tappa scura dello sfondo, ma la riga della griglia **sopra** quella
+  tappa. Correzione di una correzione precedente, che aveva dichiarato un
+  caso peggiore incompleto.
+
+### Sincronizzazione e account
+
+- **Un solo fornitore per chi usa il prodotto**, e la **modalità locale è il
+  predefinito**: `provider` passa da `"gist"` a `"locale"`.
+  → `SYNC-DECISION.md`
+- **Nessun token su disco.** «Resta collegato» è stato rimosso: non era
+  difficile da fare bene, non si può fare bene senza un server. `saveSync()`
+  scrive a lista chiusa; i token delle versioni precedenti vengono rimossi
+  all'avvio. Tre difetti trovati eseguendo: `saveSync()` scriveva tre
+  segreti in chiaro, la pulizia ne rimuoveva uno su tre, e
+  `controllaCampiGist` veniva chiamata con gli argomenti invertiti.
+  → `SECURITY-REPORT.md` SEC-001
+- **Gist è deprecato e in sola lettura.** `gistWrite()` è stata cancellata
+  dal codice; il fornitore non è più selezionabile; il token vive solo in
+  memoria e viene dimenticato anche in caso di errore. Resta una via
+  d'uscita per portare via i dati. → `GIST-MIGRATION.md`
+- **Account e Calendario sono due cose diverse**, in tutta l'interfaccia,
+  nella guida, nell'onboarding e nella pagina di presentazione. Il
+  calendario è **esportazione**, non integrazione, e ora lo dice.
+  → `CALENDAR-SYNC.md`
+- **La prima sincronizzazione si decide, non avviene**: conteggi locali e
+  remoti, quattro scelte esplicite, copia di sicurezza prima, nessuna
+  sovrascrittura silenziosa. I titoli delle attività non compaiono nel
+  riepilogo.
+- **La configurazione Firebase viene dalla build**, non dall'utente: nessuno
+  deve creare un progetto, copiare una API key o pubblicare regole. Con
+  `non-configurato` l'account non è disponibile e l'interfaccia **lo
+  dichiara** invece di offrire un pulsante che fallisce.
+  → `FIREBASE-SETUP.md`
+- **Limiti, ritmo e cicli**: attesa crescente con tetto, sospensione dopo
+  sei errori, rispetto del 429, deduplicazione, riconoscimento dei cicli,
+  limiti sul dataset. App Check **predisposto e non attivo**, con tre costi
+  dichiarati.
+
+### Privacy e cancellazione
+
+- **Si dice anche ciò che NON è protetto.** Tre affermazioni di trasparenza
+  nell'interfaccia, e una tabella di otto protezioni con il loro limite.
+  Nessuna dichiarazione di cifratura end-to-end, che non c'è.
+  → `PRIVACY.md`, `E2EE-DECISION.md`
+- **La cancellazione ha sette passi e nessuna falsa conferma.** Dopo un
+  `DELETE` riuscito il documento viene **riletto**: se è ancora leggibile,
+  l'esito è parziale e lo dice. Scelta separata su dati locali, dati nel
+  servizio e account.
+
+### Interfaccia
+
+- **L'indicatore Lavoro/Vita non è più una barra colorata** accanto alla
+  casella, che comunicava l'area col solo colore ed era ambigua rispetto
+  allo stato di completamento. Ora è un punto più la parola, nella riga dei
+  metadati, e sparisce quando la lista è già raggruppata per area.
+  14/14 asserzioni in sette condizioni. → `UI-BEFORE-AFTER.md`
+- **La casella di completamento è nativa**, annunciata come tale e comandata
+  dalla barra spaziatrice senza codice nostro. Nell'agenda in elenco era a
+  destra: spostata a sinistra.
+- **Il diffing del DOM non sincronizzava la proprietà `checked`.** Per una
+  casella nativa lo stato vero è la proprietà, non l'attributo: i dati
+  dicevano «fatto» e la casella restava vuota quando lo stato cambiava da
+  qualcosa che non era il clic.
+
+### Costruzione e verifica
+
+- **Impronta deterministica** sui 76 file serviti, stampigliata nei quattro
+  punti che devono coincidere. Un elenco di esclusioni divergente fra lo
+  strumento canonico e quello di lavoro avrebbe fatto riscaricare l'intero
+  scheletro a tutti gli utenti per niente: allineato. → `BUILD.md`
+- **Controllo delle collisioni fra nomi globali** a ogni build: 590 nomi in
+  un solo spazio, controllarli a occhio non è un piano.
+- **Pipeline GitHub Actions**: tre lavori, 34 passi, due browser,
+  `workflow_dispatch` con la scelta dell'ambiente. Mai avviata.
+  → `RUN-CI.md`
+- **`backlog.json` è la fonte** degli stati dei ticket, e
+  `BACKLOG-COVERAGE.md` si ricalcola da lì: i conteggi non si scrivono a
+  mano da nessuna parte.
+- **Schema 6**: date del calendario e marcatore di migrazione. La migrazione
+  lascia le date **nulle** invece di inventarle. → `MIGRATIONS.md`
+
+### Documentazione
+
+Venti documenti, tutti riferiti alla stessa build. `SECURITY-REPORT.md` è
+stato **riscritto** invece di ricevere altre sezioni di aggiornamento: le
+versioni precedenti si contraddicevano fra loro — «SEC-001 PARZIALE» e
+«SEC-001 chiuso» a tre sezioni di distanza — e citavano due file di collaudo
+che in questo repository non sono mai esistiti.
+
+### Quel che resta aperto
+
+Nove ticket sono **PARZIALE**, e non per pigrizia: richiedono Node, Java,
+Playwright, l'emulatore Firestore o un progetto Firebase reale, che in
+questo ambiente non ci sono. Circa 240 asserzioni sono scritte e **non
+eseguite**. → `TEST-REPORT.md`, `BACKLOG-COVERAGE.md`
+
+---
+
+## Pubblicate in precedenza
+
+| Commit | Che cosa |
+|---|---|
+| `f090579` | contrasto: azzerati 90 testi illeggibili, «Da riprogrammare» compreso |
+| `a985f52` | prima release verificata in un browser vero: la CSP era rotta e l'agenda non si disegnava |
