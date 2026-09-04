@@ -115,12 +115,17 @@ function avviaAppCheck(){
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   LIMITI, RIPETIZIONI E CICLI
+   LIMITI_INVIO, RIPETIZIONI E CICLI
 
    Questa parte non dipende da App Check ed è attiva.
    ───────────────────────────────────────────────────────────────────────── */
 
-var LIMITI = {
+/* Si chiamava `LIMITI`, e così si chiamava anche la costante dei limiti di
+   importazione in js/sicurezza.js. Questo file si carica dopo, quindi
+   vinceva questo e quello perdeva i propri valori in silenzio: i limiti di
+   importazione erano tutti disattivati. Il nome ora dice di che limiti si
+   tratta; vedi la nota in js/sicurezza.js. */
+var LIMITI_INVIO = {
   tentativiMax: 6,             /* oltre, si smette e si dice perché */
   attesaMinima: 5000,          /* 5 s */
   attesaMassima: 300000,       /* 5 min */
@@ -144,8 +149,8 @@ var RITMO = {
 /* Attesa crescente. Raddoppia a ogni tentativo, con un tetto: senza tetto,
    dopo dieci errori l'attesa sarebbe di giorni. */
 function attesaDopoErrore(tentativi){
-  var a = LIMITI.attesaMinima * Math.pow(2, Math.min(6, Math.max(0, tentativi - 1)));
-  return Math.min(LIMITI.attesaMassima, a);
+  var a = LIMITI_INVIO.attesaMinima * Math.pow(2, Math.min(6, Math.max(0, tentativi - 1)));
+  return Math.min(LIMITI_INVIO.attesaMassima, a);
 }
 
 /* Registra un errore e restituisce quanto aspettare. Oltre il massimo dei
@@ -159,9 +164,9 @@ function registraErroreSync(e){
   var m = String((e && e.message) || e || "");
   if (/HTTP 429|RESOURCE_EXHAUSTED|Too Many Requests/i.test(m))
     attesa = Math.max(attesa, 60000);
-  if (RITMO.tentativi >= LIMITI.tentativiMax) {
-    RITMO.sospesoFinoA = Date.now() + LIMITI.attesaMassima;
-    RITMO.motivoSospensione = "Dopo "+LIMITI.tentativiMax+" tentativi falliti la "+
+  if (RITMO.tentativi >= LIMITI_INVIO.tentativiMax) {
+    RITMO.sospesoFinoA = Date.now() + LIMITI_INVIO.attesaMassima;
+    RITMO.motivoSospensione = "Dopo "+LIMITI_INVIO.tentativiMax+" tentativi falliti la "+
       "sincronizzazione è sospesa per qualche minuto. I dati restano sul dispositivo.";
   }
   ATTESA_RIPROVA = Date.now() + attesa;
@@ -183,7 +188,7 @@ function puoInviare(){
   /* deduplicazione temporale: due invii non possono susseguirsi più veloci
      del minimo. Senza, una raffica di modifiche produce una raffica di
      scritture identiche. */
-  if (RITMO.ultimoInvio && ora - RITMO.ultimoInvio < LIMITI.minimoFraInvii)
+  if (RITMO.ultimoInvio && ora - RITMO.ultimoInvio < LIMITI_INVIO.minimoFraInvii)
     return { ok:false, motivo:"Invio già partito da poco: le modifiche vengono accorpate." };
   return { ok:true };
 }
@@ -195,14 +200,14 @@ function puoInviare(){
 function registraScambio(tipo){
   var ora = Date.now();
   RITMO.scambi.push({ tipo: tipo, quando: ora });
-  RITMO.scambi = RITMO.scambi.filter(function(s){ return ora - s.quando < LIMITI.finestraCicli; });
+  RITMO.scambi = RITMO.scambi.filter(function(s){ return ora - s.quando < LIMITI_INVIO.finestraCicli; });
   if (tipo === "invio") RITMO.ultimoInvio = ora;
   if (tipo === "lettura") RITMO.ultimaLettura = ora;
   var alternanze = 0;
   for (var i = 1; i < RITMO.scambi.length; i++)
     if (RITMO.scambi[i].tipo !== RITMO.scambi[i-1].tipo) alternanze++;
-  if (alternanze >= LIMITI.cicliSospetti * 2) {
-    RITMO.sospesoFinoA = ora + LIMITI.attesaMassima;
+  if (alternanze >= LIMITI_INVIO.cicliSospetti * 2) {
+    RITMO.sospesoFinoA = ora + LIMITI_INVIO.attesaMassima;
     RITMO.motivoSospensione = "La sincronizzazione si ripeteva senza concludere e "+
       "l'ho sospesa. I dati sono al sicuro sul dispositivo. Riprova fra qualche minuto, "+
       "oppure scollega e ricollega l'account.";
@@ -218,13 +223,13 @@ function registraScambio(tipo){
 function datasetTroppoGrande(dati){
   var d = dati || S.data;
   var voci = (d.items || []).length + (d.capture || []).length;
-  if (voci > LIMITI.vociMax)
+  if (voci > LIMITI_INVIO.vociMax)
     return { troppo:true, motivo:"Ci sono "+voci+" voci fra attività e note, e il limite "+
-             "per una sincronizzazione è "+LIMITI.vociMax+". Archivia ciò che non ti serve "+
+             "per una sincronizzazione è "+LIMITI_INVIO.vociMax+". Archivia ciò che non ti serve "+
              "più, oppure cancella la cronologia dal Centro privacy." };
   var dim = 0;
   try { dim = JSON.stringify(d).length; } catch (e) { dim = 0; }
-  if (dim >= LIMITI.dimensioneMax)
+  if (dim >= LIMITI_INVIO.dimensioneMax)
     return { troppo:true, motivo:"L'insieme dei dati supera il limite di un singolo "+
              "documento del servizio. Archivia le voci che non ti servono più, oppure "+
              "cancella la cronologia dal Centro privacy." };
@@ -232,7 +237,7 @@ function datasetTroppoGrande(dati){
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { APPCHECK: APPCHECK, LIMITI: LIMITI, RITMO: RITMO,
+  module.exports = { APPCHECK: APPCHECK, LIMITI_INVIO: LIMITI_INVIO, RITMO: RITMO,
     attesaDopoErrore: attesaDopoErrore, registraErroreSync: registraErroreSync,
     azzeraRitmo: azzeraRitmo, puoInviare: puoInviare, registraScambio: registraScambio,
     datasetTroppoGrande: datasetTroppoGrande };

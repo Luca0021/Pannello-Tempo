@@ -93,6 +93,14 @@ jobs:
         # Se divergono, il service worker serve una build e la pagina un'altra.
         run: node strumenti/controlla-impronta.mjs
 
+      - name: Nessuna collisione fra nomi globali
+        # I 60 moduli condividono un unico scope: due `var` con lo stesso
+        # nome e il primo perde il proprio valore in silenzio. È già
+        # successo — `LIMITI` in sicurezza.js contro `LIMITI` in
+        # appcheck.js — e ha disattivato TUTTI i limiti di importazione
+        # senza un solo messaggio d'errore.
+        run: node strumenti/controlla-globali.mjs
+
       - name: Backlog coerente con la matrice
         # I conteggi di BACKLOG-COVERAGE.md non si scrivono a mano: la fonte
         # è backlog.json. Questo passo li ricalcola e fallisce se non

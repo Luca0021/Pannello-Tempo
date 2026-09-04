@@ -100,7 +100,7 @@ const ATTESI = [
   'SCHEMA_ATTUALE', 'migra', 'versioneDati', 'impostazioniPredefinite',
   'FIREBASE_CONFIG', 'firebaseConfigurato', 'endpointFirestore', 'vietaProduzioneNeiTest',
   'PROVIDER', 'provider', 'syncReady', 'saveSync', 'loadSync', 'senzaSegreti',
-  'LIMITI', 'puoInviare', 'registraScambio', 'datasetTroppoGrande', 'attesaDopoErrore',
+  'LIMITI_INVIO', 'LIMITI_IMPORT', 'puoInviare', 'registraScambio', 'datasetTroppoGrande', 'attesaDopoErrore',
   'accountDisponibile', 'esciAccount', 'ripulisciTokenPersistenti',
   'residuiSegretiSuDisco', 'auditSegreti', 'MODELLI_SENTINELLA',
   'areaDi', 'nomeArea', 'badgeArea', 'nomeAccessibile',

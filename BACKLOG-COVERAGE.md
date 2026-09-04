@@ -58,9 +58,9 @@ si applica e i service worker non si registrano.
 | Ticket | Titolo | Dove | Come è stato verificato |
 |---|---|---|---|
 | **SEC-001** | nessuna credenziale su disco | `js/sync.js`, `js/account.js` | eseguita nel browser: sei meccanismi di persistenza, più controprova con sentinelle |
-| **SEC-004** | normalizzazione dei campi di testo | `js/sicurezza.js` | eseguita nel browser |
-| **SEC-005** | limiti dell'importazione di un backup | `js/sicurezza.js` | eseguita nel browser |
-| **SEC-006** | limiti dell'importazione ICS | `js/sicurezza.js` | eseguita nel browser |
+| **SEC-004** | normalizzazione dei campi di testo | `js/sicurezza.js`, `tests/unit/limiti-e-versioni.test.js` | eseguita nel browser DOPO aver scoperto che non scattava: il troncamento dei titoli era disattivato da una collisione fra due `var LIMITI` globali. Ora tronca a 500 caratteri e rimuove i caratteri di controllo |
+| **SEC-005** | limiti dell'importazione di un backup | `js/sicurezza.js`, `tests/unit/limiti-e-versioni.test.js` | eseguita nel browser DOPO aver scoperto che nessun limite scattava (collisione fra due `var LIMITI` globali): ora 8 MB, 5000 voci, JSON non valido, array, file senza items e inquinamento del prototipo sono tutti respinti, e un backup valido passa con l'anteprima |
+| **SEC-006** | limiti dell'importazione ICS | `js/sicurezza.js`, `tests/unit/limiti-e-versioni.test.js` | eseguita nel browser DOPO la stessa scoperta: ora 4 MB e 500 eventi vengono respinti, e un calendario valido passa |
 | **SEC-008** | limiti e ritmo delle chiamate | `js/appcheck.js`, `js/sync.js` | otto meccanismi eseguiti nel browser (backoff, sospensione, 429, dedup, cicli, dimensioni) |
 | **PRV-001** | trasparenza su ciò che non è protetto | `js/features/settings-ui.js`, `PRIVACY.md`, `E2EE-DECISION.md` | eseguita nel browser: le tre affermazioni sono presenti nel testo visibile |
 | **PRV-003** | esportazione dei propri dati | `js/backup.js`, `js/privacy.js` | eseguita nel browser: JSON e CSV, senza credenziali |
@@ -68,7 +68,7 @@ si applica e i service worker non si registrano.
 | **SYN-001** | contratto del fornitore di sincronizzazione | `js/sync-provider.js` | tre adattatori conformi; il dominio non nomina nessun servizio |
 | **SYN-002** | stato della sincronizzazione leggibile | `js/coda.js`, `js/features/settings-ui.js` | eseguita nel browser: sei stati espliciti, mai una sola icona |
 | **SYN-003** | coda delle modifiche offline | `js/coda.js` | eseguita nel browser |
-| **SYN-004** | versione per record e fusione senza perdite | `js/versioni.js`, `js/conflitti.js` | eseguita nel browser: cinque categorie, conflitti isolati per record |
+| **SYN-004** | versione per record e fusione senza perdite | `js/versioni.js`, `js/conflitti.js` | eseguita nel browser: modifica segnata, voce non toccata non segnata, cancellazione con lapide. Ha fatto emergere il difetto peggiore del programma: `aggiornaVersioni()` passava un istante dove l'implementazione viva aspetta un dataset, e OGNI modifica salvata dal percorso normale non risultava da sincronizzare |
 | **SYN-005** | cambio account senza contaminazione | `js/account.js` | eseguita nel browser: uscita senza residui su sei meccanismi |
 | **SYN-006** | sincronizzazione utilizzabile senza competenze tecniche | `js/features/settings-ui.js`, `js/sync.js`, `js/config-firebase.js` | eseguita nel browser: nessun selettore di fornitore, nessuna configurazione richiesta, terminologia verificata su 23.303 caratteri |
 | **MIG-001** | migrazione dei dati da Gist | `js/sync-provider.js`, `js/migrations.js` | 17 casi eseguiti nel browser, compresi sette contenuti diversi e il token dimenticato dopo un errore |

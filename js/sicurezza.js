@@ -3,8 +3,27 @@
    (import ICS). Il principio: nulla che arrivi da un file o da un altro
    dispositivo viene creduto sulla parola. */
 
-/* ---------- SEC-005: limiti dell'importazione ---------- */
-var LIMITI = {
+/* ---------- SEC-005: limiti dell'importazione ----------
+
+   DIFETTO CORRETTO — questi limiti non scattavano MAI.
+
+   Questa costante si chiamava `LIMITI`, e js/appcheck.js dichiara un altro
+   `var LIMITI` con i limiti degli invii. I 60 moduli condividono un unico
+   scope globale, `appcheck.js` si carica dopo, quindi a runtime `LIMITI`
+   era il suo: `LIMITI.backupByte` valeva `undefined`, e `byte > undefined`
+   è `false`. Senza un'eccezione, senza un avviso, senza niente.
+
+   Erano disattivati: il limite di 8 MB per un backup, quello di 5000 voci,
+   i 4 MB e i 500 eventi per un file di calendario, e il troncamento dei
+   titoli a 500 caratteri. Tre ticket di sicurezza risultavano coperti da
+   controlli che non c'erano.
+
+   Ora i due nomi sono distinti — `LIMITI_IMPORT` qui, `LIMITI_INVIO` in
+   appcheck.js — e sono stati rinominati ENTRAMBI di proposito: un
+   riferimento dimenticato diventa un `ReferenceError` rumoroso invece di un
+   `undefined` silenzioso. `strumenti/controlla-globali.mjs` cerca questa
+   classe di collisioni a ogni build. */
+var LIMITI_IMPORT = {
   backupByte: 8 * 1024 * 1024,     /* 8 MB: un pannello reale sta in poche centinaia di KB */
   icsByte:    4 * 1024 * 1024,
   icsEventi:  500,                 /* oltre, l'anteprima diventa ingestibile */
@@ -20,11 +39,11 @@ var CHIAVI_VIETATE = ["__proto__", "constructor", "prototype"];
 function ripulisciProfondo(v, livello){
   if (livello > 12) return null;                 /* struttura troppo annidata: sospetta */
   if (v === null || typeof v !== "object") {
-    if (typeof v === "string" && v.length > LIMITI.nota) return v.slice(0, LIMITI.nota);
+    if (typeof v === "string" && v.length > LIMITI_IMPORT.nota) return v.slice(0, LIMITI_IMPORT.nota);
     return v;
   }
   if (Array.isArray(v)) {
-    return v.slice(0, LIMITI.voci).map(function(x){ return ripulisciProfondo(x, (livello||0)+1); });
+    return v.slice(0, LIMITI_IMPORT.voci).map(function(x){ return ripulisciProfondo(x, (livello||0)+1); });
   }
   var out = Object.create(null);
   Object.keys(v).forEach(function(k){
@@ -38,7 +57,7 @@ function ripulisciProfondo(v, livello){
 /* Legge un backup senza applicarlo: dice cosa contiene e cosa non va. */
 function leggiBackup(testo, byte){
   var r = { ok:false, errori:[], avvisi:[], anteprima:null, dati:null };
-  if (byte !== undefined && byte > LIMITI.backupByte) {
+  if (byte !== undefined && byte > LIMITI_IMPORT.backupByte) {
     r.errori.push("Il file è troppo grande ("+Math.round(byte/1048576)+" MB): il limite è 8 MB.");
     return r;
   }
@@ -61,8 +80,8 @@ function leggiBackup(testo, byte){
   }
   /* il conteggio va fatto prima della pulizia, che tronca gli elenchi lunghi:
      altrimenti un file smisurato passerebbe silenziosamente, ridotto */
-  if (d.items.length > LIMITI.voci) {
-    r.errori.push("Il backup contiene "+d.items.length+" attività: oltre "+LIMITI.voci+
+  if (d.items.length > LIMITI_IMPORT.voci) {
+    r.errori.push("Il backup contiene "+d.items.length+" attività: oltre "+LIMITI_IMPORT.voci+
                   " non viene importato.");
     return r;
   }
@@ -123,11 +142,11 @@ function applicaBackup(dati){
 
 /* ---------- SEC-006: limiti dell'import ICS ---------- */
 function controllaIcs(testo, byte){
-  if (byte !== undefined && byte > LIMITI.icsByte)
+  if (byte !== undefined && byte > LIMITI_IMPORT.icsByte)
     return { ok:false, motivo:"Il file è troppo grande: il limite è 4 MB." };
   var n = (String(testo||"").match(/BEGIN:VEVENT/g) || []).length;
-  if (n > LIMITI.icsEventi)
-    return { ok:false, motivo:"Il file contiene "+n+" eventi: oltre "+LIMITI.icsEventi+
+  if (n > LIMITI_IMPORT.icsEventi)
+    return { ok:false, motivo:"Il file contiene "+n+" eventi: oltre "+LIMITI_IMPORT.icsEventi+
              " l'anteprima diventa ingestibile. Esporta un intervallo più corto." };
   return { ok:true, eventi:n };
 }
@@ -137,7 +156,7 @@ function testoSicuro(v, max){
   var t = String(v === undefined || v === null ? "" : v);
   t = t.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");  /* caratteri di controllo */
   t = t.replace(/[\u200B-\u200D\uFEFF]/g, "");                            /* spazi invisibili */
-  return t.slice(0, max || LIMITI.testo).trim();
+  return t.slice(0, max || LIMITI_IMPORT.testo).trim();
 }
 
 /* ---------- cronologia locale delle operazioni (SEC-005, BCK-003) ---------- */

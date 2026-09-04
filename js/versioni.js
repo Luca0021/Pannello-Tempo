@@ -16,20 +16,15 @@
 
 var TIPI_SINCRONIZZABILI = ["items", "capture", "links", "modelli", "obiettivi"];
 
-function versioni(){
-  S.data.versioni = S.data.versioni || {};
-  return S.data.versioni;
-}
+/* RIMOSSE — `versioni()` e `segnaModifica()` stavano qui, e js/conflitti.js
+   le dichiara di nuovo. Caricandosi dopo, vinceva quello: queste due
+   definizioni erano già morte a runtime, e leggerle qui faceva credere il
+   contrario. Le firme non coincidevano — vedi il difetto corretto in
+   `aggiornaVersioni()` più sotto. L'implementazione viva è in
+   js/conflitti.js; `strumenti/controlla-globali.mjs` impedisce che una
+   collisione così torni senza che nessuno se ne accorga. */
 function versioneDi(id){
   return versioni()[id] || null;
-}
-/* Segna un record come toccato adesso. Chiamata da commit(). */
-function segnaModifica(id, quando){
-  if (!id) return;
-  var v = versioni();
-  var prec = v[id] || { rev: 0 };
-  v[id] = { mod: quando || new Date().toISOString(), rev: prec.rev || 0,
-            sporco: true, del: false };
 }
 function segnaCancellazione(id){
   if (!id) return;
@@ -136,25 +131,11 @@ function unisci(locale, remoto){
   return { dati: uniti, conflitti: c.conflitti, riepilogo: c };
 }
 
-/* La decisione dell'utente, record per record. */
-function risolviRecord(dati, conflitto, scelta){
-  var t = conflitto.tipo;
-  var scelto = (scelta === "remoto") ? conflitto.remoto
-             : (scelta === "locale") ? conflitto.locale
-             : null;
-  if (scelta === "unisci") {
-    /* unione campo per campo: dove uno solo dei due ha un valore, si prende
-       quello; dove entrambi hanno valori diversi, vince il locale e lo si
-       dichiara, invece di scegliere in silenzio */
-    scelto = Object.assign({}, conflitto.remoto, conflitto.locale);
-  }
-  if (!scelto) return { ok:false, motivo:"Scelta non riconosciuta." };
-  dati[t] = (dati[t] || []).filter(function(x){ return x.id !== conflitto.id; });
-  dati[t].push(scelto);
-  dati.versioni = dati.versioni || {};
-  dati.versioni[conflitto.id] = { mod: new Date().toISOString(), rev: 0, del: false };
-  return { ok:true, scelta: scelta };
-}
+/* RIMOSSA — `risolviRecord(dati, conflitto, scelta)` stava qui, tre
+   parametri, e js/conflitti.js la dichiara con due. Vinceva quello, e
+   l'unico chiamante (js/events.js) passa due argomenti: era già morta.
+   La decisione dell'utente, record per record, la applica
+   `risolviRecord()` di js/conflitti.js. */
 
 
 /* ---------------------------------------------------------------------------
@@ -170,12 +151,34 @@ function istantaneaRecord(){
   Object.keys(r).forEach(function(id){ out[id] = JSON.stringify(r[id].dato); });
   return out;
 }
+/* DIFETTO CORRETTO — le modifiche non risultavano mai da sincronizzare.
+
+   Qui c'era `segnaModifica(id, quando)`, con `quando` uguale a una data
+   ISO. Funzionava con la `segnaModifica(id, quando)` dichiarata in questo
+   stesso file, ma quella era morta: js/conflitti.js dichiara di nuovo lo
+   stesso nome, si carica dopo e vince, e la sua firma è
+   `segnaModifica(id, dati)` — il secondo argomento è un INSIEME DI DATI,
+   non un istante.
+
+   Conseguenza: `versioni(dati)` riceveva una stringa, rispondeva
+   `typeof d !== "object"` e restituiva un registro usa e getta. Il record
+   di versione veniva scritto lì e buttato via. Nessuna eccezione, nessun
+   avviso: **ogni modifica salvata dal percorso normale non veniva segnata
+   come da sincronizzare**, quindi con un account collegato non sarebbe mai
+   arrivata sull'altro dispositivo. Le cancellazioni sì, perché
+   `segnaCancellazione(id)` ha un solo argomento.
+
+   Verificato eseguendo, prima e dopo:
+     segnaModifica(id, "2026-…")  →  nessun record scritto
+     segnaModifica(id)            →  { mod:…, rev:0, sporco:true, del:false }
+
+   L'istante lo mette `segnaModifica()` da sé, e va bene: la differenza fra
+   il momento del confronto e quello della scrittura è di microsecondi. */
 function aggiornaVersioni(){
   var ora = istantaneaRecord();
   if (_istantanea === null) { _istantanea = ora; return; }
-  var quando = new Date().toISOString();
   Object.keys(ora).forEach(function(id){
-    if (_istantanea[id] !== ora[id]) segnaModifica(id, quando);
+    if (_istantanea[id] !== ora[id]) segnaModifica(id);
   });
   Object.keys(_istantanea).forEach(function(id){
     if (ora[id] === undefined) segnaCancellazione(id);
