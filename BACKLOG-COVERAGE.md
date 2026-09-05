@@ -29,7 +29,7 @@ lavoro erano in codice che a leggerlo sembrava corretto.
 
 | Area | Totale | COMPLETATO | PARZIALE | NON INIZIATO |
 |---|---|---|---|---|
-| A11Y | 5 | 2 | 3 | 0 |
+| A11Y | 5 | 4 | 1 | 0 |
 | ARC | 2 | 2 | 0 | 0 |
 | CAL | 3 | 2 | 0 | 1 |
 | CPY | 1 | 1 | 0 | 0 |
@@ -37,11 +37,11 @@ lavoro erano in codice che a leggerlo sembrava corretto.
 | MOB | 2 | 0 | 2 | 0 |
 | PRV | 4 | 3 | 1 | 0 |
 | ROU | 2 | 2 | 0 | 0 |
-| SEC | 8 | 5 | 3 | 0 |
+| SEC | 8 | 6 | 2 | 0 |
 | SYN | 6 | 6 | 0 | 0 |
-| TST | 5 | 0 | 5 | 0 |
+| TST | 5 | 2 | 3 | 0 |
 | UI | 2 | 1 | 1 | 0 |
-| **totale** | **41** | **25** | **15** | **1** |
+| **totale** | **41** | **30** | **10** | **1** |
 
 **Non esiste un solo ticket il cui stato dipenda da una prova che non è
 girata.** Dove la prova non è girata, lo stato è PARZIALE. È il motivo per
@@ -94,21 +94,21 @@ Che cosa serve per ognuno, con precisione:
 
 | Ticket | Titolo | Dove | Che cosa manca per chiuderlo |
 |---|---|---|---|
-| **SEC-002** | isolamento dei dati fra utenti | `firebase/firestore.rules`, `js/sync.js` | tests/security/regole.test.js su Emulator con falliti: 0 |
-| **SEC-003** | Content Security Policy | `index.html`, `js/boot.js` | il passo CSP verde in pipeline, con l'agenda che si disegna |
+| **SEC-002** | isolamento dei dati fra utenti | `firebase/firestore.rules`, `js/sync.js` | ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, tre esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza rifiutava le scritture di un client con l'orologio avanti di pochi millisecondi, a intermittenza |
+| **SEC-003** | Content Security Policy | `index.html`, `js/boot.js` | il passo CSP verde IN PIPELINE: la pipeline non è mai stata eseguita |
 | **SEC-009** | App Check | `js/appcheck.js`, `js/config-firebase.js` | chiave reCAPTCHA, attivazione, e la verifica che il traffico legittimo non venga bloccato |
-| **PRV-002** | cancellazione completa e verificata | `js/privacy.js`, `js/distruttive.js` | tests/e2e/cancellazione.spec.js verde, e una cancellazione vista avvenire su un servizio reale |
-| **UI-006** | indicatore Lavoro/Vita nelle righe delle attività | `css/tokens.css`, `css/components.css`, `js/tasks.js` | regressione visiva verde con riferimenti approvati, non appena generati |
-| **A11Y-004** | tastiera e fuoco sempre visibile | `css/accessibility.css`, `css/tokens.css` | il passo Accessibilità verde, e una prova con un lettore di schermo reale |
-| **A11Y-005** | casella di completamento nativa e con un nome | `css/components.css`, `js/tasks.js` | il passo Accessibilità verde |
-| **A11Y-006** | nessuna informazione dal solo colore | `css/components.css`, `js/tasks.js` | il passo Accessibilità verde su tutta la pagina |
-| **TST-003** | prove unitarie | `tests/unit/migrazioni.test.js`, `tests/avvio.test.js`, `tests/runner.js` | Node: il rispettivo passo verde |
-| **TST-004** | prove d'integrazione | `tests/integration/gist-migrazione.test.js` | Node: il rispettivo passo verde |
-| **TST-005** | prove end-to-end | `tests/e2e/cancellazione.spec.js`, `tests/e2e/piattaforma.spec.js`, `tests/security/sentinelle.test.js` | Node e Playwright: i rispettivi passi verdi su entrambi i browser |
-| **TST-006** | regressione visiva | `tests/ui/ui006.spec.js`, `playwright.config.js` | una prima esecuzione che generi gli scatti, la loro revisione, e il commit che li approva |
+| **PRV-002** | cancellazione completa e verificata | `js/privacy.js`, `js/distruttive.js` | una cancellazione vista avvenire su un servizio Firebase reale: il progetto non è raggiungibile da qui |
+| **UI-006** | indicatore Lavoro/Vita nelle righe delle attività | `css/tokens.css`, `css/components.css`, `js/tasks.js` | le 56 prove rimanenti di ui006.spec.js, che su questa macchina non arrivano in fondo, e la regressione visiva verde con riferimenti APPROVATI a mano |
+| **A11Y-004** | tastiera e fuoco sempre visibile | `css/accessibility.css`, `css/tokens.css` | una prova con un lettore di schermo reale: axe trova circa un terzo dei problemi |
+| **A11Y-005** | casella di completamento nativa e con un nome | `css/components.css`, `js/tasks.js` | ESEGUITA con Playwright e axe-core: 22 prove su 22, exit 0. Comprende i nomi accessibili di tutti i campi, i label associati, le didascalie con il nome sul comando e i gruppi di pulsanti |
+| **A11Y-006** | nessuna informazione dal solo colore | `css/components.css`, `js/tasks.js` | ESEGUITA: 22 prove su 22. Ha trovato due difetti veri — il pulsante di selezione a 1,39:1 e il testo «Adesso» a 4,38:1 — entrambi corretti e riverificati |
+| **TST-003** | prove unitarie | `tests/unit/migrazioni.test.js`, `tests/avvio.test.js`, `tests/runner.js` | ESEGUITE con Node 20.20.2: 29 asserzioni su 29, exit 0 (migrazioni 15, limiti e versioni 14). Prima non erano eseguibili affatto: `"type": "module"` in package.json rendeva ESM ogni file .js e i collaudi usano require() |
+| **TST-004** | prove d'integrazione | `tests/integration/gist-migrazione.test.js` | ESEGUITE con Node: 19 asserzioni su 19, exit 0 |
+| **TST-005** | prove end-to-end | `tests/e2e/cancellazione.spec.js`, `tests/e2e/piattaforma.spec.js`, `tests/security/sentinelle.test.js` | la seconda gamba su Firefox: su questa rete i browser di Playwright non si scaricano |
+| **TST-006** | regressione visiva | `tests/ui/ui006.spec.js`, `playwright.config.js` | la suite non arriva in fondo su questa macchina — 5 prove su 61 in 13 minuti, le altre 56 non eseguite — e comunque servono la revisione a mano degli scatti e il commit che li approva. Uno scatto appena generato non dimostra che l'aspetto sia giusto |
 | **TST-007** | pipeline di verifica | `.github/workflows/verifica.yml`, `strumenti/` | una prima esecuzione reale: RUN-CI.md §9 |
-| **MOB-001** | installabile e utilizzabile offline | `sw.js`, `manifest.webmanifest`, `offline.html` | il passo PWA verde, e una prova su un dispositivo fisico |
-| **MOB-002** | utilizzabile su schermo piccolo | `css/mobile.css`, `css/components.css` | il passo responsive verde, e una prova su un dispositivo fisico: l'emulazione non è un telefono |
+| **MOB-001** | installabile e utilizzabile offline | `sw.js`, `manifest.webmanifest`, `offline.html` | una prova su un dispositivo fisico |
+| **MOB-002** | utilizzabile su schermo piccolo | `css/mobile.css`, `css/components.css` | una prova su un dispositivo fisico: l'emulazione non è un telefono |
 
 `RUN-CI.md` §8 dice, per ognuno, quale output serve; `TEST-REPORT.md` §2
 elenca le prove scritte e non eseguite.
@@ -117,7 +117,7 @@ elenca le prove scritte e non eseguite.
 
 | Ticket | Titolo | Perché |
 |---|---|---|
-| **CAL-003** | integrazione automatica del calendario | richiede OAuth e un servizio che custodisca i refresh token. Senza server non è realizzabile senza promettere una custodia che non esiste: CALENDAR-SYNC.md §6 |
+| **CAL-003** | integrazione automatica del calendario | `CALENDAR-SYNC.md` | richiede OAuth e un servizio che custodisca i refresh token. Senza server non è realizzabile senza promettere una custodia che non esiste: CALENDAR-SYNC.md §6 |
 
 ---
 

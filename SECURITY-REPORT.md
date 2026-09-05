@@ -20,7 +20,7 @@ raccontate dove sono utili: dentro la sezione del ticket che riguardano.
 | Ticket | Stato | Come |
 |---|---|---|
 | SEC-001 credenziali fuori dal disco | **COMPLETATO** | eseguito nel browser su sei meccanismi di persistenza, con controprova |
-| SEC-002 isolamento fra utenti | **PARZIALE** | regole scritte, controlli statici superati, **mai eseguite** |
+| SEC-002 isolamento fra utenti | **COMPLETATO** | 14 prove su 14 sull'emulatore, tre esecuzioni consecutive pulite. Ha trovato un difetto vero |
 | SEC-003 Content Security Policy | **PARZIALE** | provata in un browser vero: **era rotta**; corretta, resta un costo dichiarato |
 | SEC-004 normalizzazione dei testi | **COMPLETATO** | eseguito **dopo** aver scoperto che non scattava |
 | SEC-005 limiti dell'importazione di backup | **COMPLETATO** | idem |
@@ -192,11 +192,59 @@ confermare la rimozione, invece di darla per fatta.
 
 ---
 
-## SEC-002 — isolamento fra utenti: scritto, non verificato
+## SEC-002 — isolamento fra utenti: verificato, e un difetto trovato
 
-**PARZIALE**, e resta tale. È la protezione su cui si regge tutto il modello
-a account: se una regola avesse un difetto, un utente autenticato potrebbe
-leggere i dati di un altro.
+**COMPLETATO.** È la protezione su cui si regge tutto il modello a account:
+se una regola avesse un difetto, un utente autenticato potrebbe leggere i
+dati di un altro.
+
+### L'esecuzione, e che cosa ha trovato
+
+```
+firebase emulators:exec --only firestore,auth --project demo-pannello \
+  "node ../tests/security/regole.test.js"
+
+passati: 14  falliti: 0        exit 0, tre esecuzioni consecutive
+```
+
+Le prime esecuzioni **non** erano verdi, e il fallimento si spostava: una
+volta la prova 02, una volta la 03, una volta nessuna. Un'intermittenza del
+genere è un segnale, non un fastidio da riprovare finché passa.
+
+La causa era una regola sbagliata, non un collaudo instabile:
+
+```
+/* prima */  request.resource.data.aggiornatoIl <= request.time
+```
+
+Quel timestamp lo scrive il **client**, con il proprio orologio. Bastava che
+fosse avanti di qualche millisecondo perché il servizio rifiutasse la
+scrittura con `PERMISSION_DENIED`. Sull'emulatore lo scarto era fra
+l'orologio di Node e quello della JVM; **in produzione sarebbe stato lo
+scarto fra l'orologio dell'utente e quello di Google**, e un utente con
+l'orologio avanti di qualche secondo — cosa comunissima — non avrebbe mai
+potuto sincronizzare, senza alcun messaggio che spiegasse perché.
+
+```
+/* ora */    request.resource.data.aggiornatoIl <= request.time + duration.value(5, 'm')
+```
+
+Cinque minuti assorbono lo scarto normale fra orologi e lasciano intatto lo
+scopo del controllo: un client che dichiarasse di aver scritto domani
+verrebbe comunque rifiutato, e non potrebbe vincere per sempre i confronti
+«chi ha modificato per ultimo».
+
+Dopo la correzione, tre esecuzioni consecutive pulite.
+
+### Che cosa questo NON dimostra
+
+L'emulatore usa lo stesso file di regole, ma **non è lo stesso servizio**, e
+soprattutto le regole che governano il progetto reale sono quelle
+**pubblicate** su di esso, non quelle nel repository. Finché nessuno esegue
+`firebase deploy --only firestore:rules`, il progetto reale può avere regole
+diverse — comprese quelle predefinite, che scadono e poi negano tutto.
+`DEPLOYMENT-REPORT.md` §2.5 mette la pubblicazione delle regole **prima**
+della pubblicazione del sito, ed è per questo.
 
 ### Che cosa c'è
 
@@ -225,23 +273,21 @@ dichiarato, clausola di chiusura presente, nessun `allow` senza condizione,
 nessun `if true`, proprietà derivata dal percorso in tutti i percorsi
 utente, dieci percorsi coperti.
 
-**Non eseguite.** `tests/security/regole.test.js` contiene 14 prove — utente
-A che legge, scrive, aggiorna e cancella il documento di B; interrogazione
-dell'intera collezione; percorso manipolato; collezione diversa; utente non
-autenticato in lettura e scrittura; i casi positivi — e richiede l'emulatore
-Firestore, quindi Node e Java, che qui non ci sono.
+**Eseguite.** `tests/security/regole.test.js`, 14 prove su 14, exit 0:
+utente A che legge, scrive, aggiorna e cancella i propri dati; A che tenta
+le stesse quattro operazioni sui dati di B; interrogazione dell'intera
+collezione; percorso manipolato; UID falsificato dentro il documento;
+utente non autenticato in lettura e in scrittura; dati non validi;
+enumerazione globale.
 
-```bash
-npx firebase emulators:exec --only firestore,auth --project demo-pannello \
-  "node tests/security/regole.test.js"
-```
+I controlli statici, da soli, **non avrebbero trovato** il difetto di sopra:
+29 graffe su 29 e una clausola di chiusura corretta convivevano benissimo
+con una regola che rifiutava le scritture legittime. È la differenza fra
+«il file è ben formato» e «le regole fanno quello che devono».
 
-Il collaudo esce con **codice 2 = SALTATO**, distinto da passato e fallito:
-un test saltato non è un test superato, e il codice di uscita lo dice invece
-di lasciarlo intuire.
-
-**Regole scritte non sono regole verificate.** SEC-002 passa a COMPLETATO
-soltanto quando quel comando riporta `falliti: 0`.
+Il collaudo distingue tre esiti con tre codici di uscita diversi: 0 passato,
+1 fallito, **2 saltato** — perché un test saltato non è un test superato, e
+il codice di uscita deve dirlo invece di lasciarlo intuire.
 
 ### La `apiKey` non è un meccanismo di autorizzazione
 
@@ -395,9 +441,12 @@ conseguenze di costo.
 
 In ordine di gravità.
 
-1. **L'isolamento fra utenti non è verificato.** SEC-002. Finché
-   `regole.test.js` non gira, è una promessa fondata su una lettura del
-   codice.
+1. **Le regole sono verificate sull'emulatore, non sul progetto
+   reale.** SEC-002 è chiuso perché le 14 prove girano e passano, ma
+   l'emulatore non è il servizio, e soprattutto le regole che governano il
+   progetto vero sono quelle **pubblicate** su di esso. Finché nessuno
+   esegue `firebase deploy --only firestore:rules`, il progetto può avere
+   regole diverse da quelle di questo repository.
 2. **La cancellazione remota non è stata vista avvenire.** Il passo di
    verifica esiste e con risposte finte funziona; contro un servizio reale
    no. `PRIVACY.md` e `TEST-REPORT.md` §5.

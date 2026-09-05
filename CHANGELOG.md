@@ -12,6 +12,36 @@ era a rischio.
 
 **Non pubblicata.** Vedi `DEPLOYMENT-REPORT.md` §7.
 
+### I collaudi sono stati eseguiti, e hanno trovato nove difetti
+
+Fino a questa build i collaudi erano dichiarati «predisposti». Non lo
+erano: `package.json` conteneva `"type": "module"`, che rende modulo ES
+ogni file `.js`, e tutti i collaudi usano `require()`. **Nessuno di loro
+poteva partire.** Tolta quella chiave — i sei strumenti hanno estensione
+`.mjs` e non ne hanno bisogno — sono state eseguite **246 asserzioni**,
+tutte verdi, più le 14 prove delle regole Firestore sull'emulatore.
+
+Difetti trovati soltanto eseguendo:
+
+- **Le regole Firestore rifiutavano le scritture legittime** a
+  intermittenza. `aggiornatoIl <= request.time` non tollerava alcuno
+  scarto, e quel timestamp lo scrive il client con il proprio orologio: un
+  utente con l'orologio avanti di qualche secondo non avrebbe **mai**
+  potuto sincronizzare, senza un messaggio che lo spiegasse. Ora la
+  tolleranza è di cinque minuti, e un timestamp nel futuro resta rifiutato.
+- **A versione corrente girava solo l'ultima migrazione**, quindi i campi
+  introdotti dai passi precedenti non venivano completati: un insieme di
+  dati marcato v6 e privo di `tipo` restava incompleto.
+- **«Adesso» a 4,38:1** e **il pulsante di selezione a 1,39:1**: due
+  elementi sotto soglia in viste che le misure a mano non coprivano.
+- **A 320px l'intestazione delle schede sforava di 14px**, e la pagina
+  prendeva una barra di scorrimento orizzontale.
+
+Più tre difetti nei collaudi stessi, che accusavano il prodotto di problemi
+che non aveva. Uno di questi è una buona notizia travestita: la Content
+Security Policy ha **bloccato** `page.addStyleTag()`, dimostrando che
+`style-src-elem` è davvero applicato.
+
 ### Difetti corretti che disattivavano codice esistente
 
 Questi tre non si vedono leggendo il codice. Sono stati trovati eseguendo i
