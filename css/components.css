@@ -197,8 +197,14 @@
     text-anchor:middle;dominant-baseline:central;}
 .pt .ring[data-late="1"] .ringfg{stroke:var(--rust);}
 
+/* MOB-002 — `flex-wrap` mancava, e su schermo stretto l'intestazione non
+   aveva scampo: icona (20px, non riducibile) + titolo + contatore
+   (`flex:none`) sforavano di 14px a 320px, e la pagina intera guadagnava
+   una barra di scorrimento orizzontale. Andando a capo il contatore
+   scende sotto il titolo e non sfora più; dove c'è spazio non cambia
+   niente, perché senza necessità non si va a capo. */
 .pt h2{font-family:var(--sans);font-size:16px;letter-spacing:-.01em;text-transform:none;
-    color:var(--ink);font-weight:600;margin:0 0 15px;display:flex;
+    color:var(--ink);font-weight:600;margin:0 0 15px;display:flex;flex-wrap:wrap;
     justify-content:flex-start;align-items:center;gap:10px;line-height:1.25;}
 .pt h2::before{content:"";width:20px;height:20px;flex:none;background-color:var(--brass);
     -webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat;}
@@ -1059,6 +1065,15 @@
 .pt h2 > button.foldbtn{display:flex;align-items:center;gap:9px;flex:1;min-width:0;
   background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;
   text-align:left;cursor:pointer;}
+/* MOB-002 — il pulsante aveva `min-width:0`, ma i suoi FIGLI no: il titolo
+   non si restringeva sotto la larghezza del testo e il contatore è
+   `flex:none`, così a 320px «Calendario e promemoria» più «2 di 6»
+   sforavano di 14px e comparivano barre di scorrimento orizzontali su
+   tutta la pagina. Trovato dal collaudo responsive alla prima esecuzione:
+   a mano avevo provato 320px, ma il pannello del browser ne restituiva 334
+   e il difetto non si vedeva. Ora il titolo può restringersi e andare a
+   capo; il contatore resta intero, perché è corto ed è l'informazione. */
+.pt h2 > button.foldbtn > span:first-child{min-width:0;overflow-wrap:anywhere;}
 .pt h2 > button.foldbtn:focus-visible{outline:2px solid var(--pen);outline-offset:3px;
   border-radius:6px;}
 
@@ -1079,8 +1094,16 @@
 .pt p.grp.fascia .sub{flex-basis:100%;font-size:12.5px;color:var(--muted);font-weight:400;
   text-transform:none;letter-spacing:0;}
 .pt p.hint.riassunto{margin:0 0 9px;}
+/* A11Y-006 — il bordo era `--line2`, che è un colore da separatore, e il
+   riempimento `--surface`, cioè lo stesso fondo della scheda: 1,39:1.
+   Questo è il pulsante con cui si SCEGLIE una riga per un'azione di
+   gruppo, e a 1,39:1 non si vede che ci sia. `--bordo-campo` è il token
+   dei contorni dei comandi, tarato per la 1.4.11: qui dà 4,44:1.
+   Trovato dal collaudo di accessibilità alla prima esecuzione — la
+   modalità selezione non era fra le cinque viste che avevo misurato a
+   mano. */
 .pt button.scegli{flex:none;width:19px;height:19px;border-radius:5px;cursor:pointer;
-  border:1.5px solid var(--line2);background:var(--surface);margin-right:2px;}
+  border:1.5px solid var(--bordo-campo);background:var(--field);margin-right:2px;}
 .pt button.scegli[data-on="1"]{background:var(--brass);border-color:var(--brass);}
 
 /* ---------- ONB-004: checklist di attivazione ---------- */

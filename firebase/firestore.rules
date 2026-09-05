@@ -75,11 +75,31 @@ service cloud.firestore {
 
     /* `aggiornatoIl` deve essere una data plausibile e non nel futuro:
      * un timestamp futuro farebbe vincere per sempre questo dispositivo in
-     * ogni confronto «chi ha modificato per ultimo». */
+     * ogni confronto «chi ha modificato per ultimo».
+     *
+     * DIFETTO CORRETTO — la condizione era `<= request.time` senza alcuna
+     * tolleranza, e il timestamp lo scrive il CLIENT con il proprio
+     * orologio. Bastava che l'orologio del dispositivo fosse avanti di
+     * qualche millisecondo perché la scrittura venisse rifiutata con
+     * PERMISSION_DENIED. Non è un caso di laboratorio: gli orologi dei
+     * computer sono spesso avanti o indietro di secondi, e un utente con
+     * l'orologio avanti sarebbe rimasto per sempre senza poter
+     * sincronizzare, senza capire perché.
+     *
+     * Trovato eseguendo le regole sull'emulatore per la prima volta: le
+     * prove 02 e 03 fallivano a intermittenza — una volta l'una, una volta
+     * l'altra, una volta nessuna — perché l'orologio di Node e quello
+     * della JVM non coincidono al millisecondo. Un'intermittenza del
+     * genere in produzione sarebbe stata diagnosticata come «a volte la
+     * sincronizzazione non funziona».
+     *
+     * Cinque minuti di tolleranza assorbono lo scarto normale fra
+     * orologi e lasciano intatto lo scopo del controllo: un client che
+     * dichiarasse di aver scritto domani verrebbe comunque rifiutato. */
     function tempoPlausibile() {
       return !('aggiornatoIl' in request.resource.data)
              || (request.resource.data.aggiornatoIl is timestamp
-                 && request.resource.data.aggiornatoIl <= request.time);
+                 && request.resource.data.aggiornatoIl <= request.time + duration.value(5, 'm'));
     }
 
     /* Lo schema non può regredire: un client vecchio non deve poter

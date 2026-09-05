@@ -174,9 +174,30 @@ function migra(dati, registra){
     return { dati: dati, log: log, esito: "troppo-recente" };
   }
   if (v === SCHEMA_ATTUALE) {
-    /* idempotenza: anche a versione corrente i campi mancanti vengono creati */
-    var ultimo = PASSI_MIGRAZIONE[PASSI_MIGRAZIONE.length - 1];
-    dati = ultimo.esegui(dati);
+    /* DIFETTO CORRETTO — qui girava solo l'ULTIMO passo:
+
+         var ultimo = PASSI_MIGRAZIONE[PASSI_MIGRAZIONE.length - 1];
+         dati = ultimo.esegui(dati);
+
+       L'intenzione dichiarata era «anche a versione corrente i campi
+       mancanti vengono creati», ma l'ultimo passo crea soltanto i campi
+       che ha introdotto lui. Un insieme di dati marcato v6 e privo di
+       `tipo` — scritto da una versione difettosa, ripristinato da un
+       backup parziale, o modificato a mano — restava incompleto, e il
+       campo lo aggiunge il passo 4→5.
+
+       Ora girano TUTTI i passi. Si può fare perché sono idempotenti per
+       costruzione, e ognuno completa senza sovrascrivere: il 1→2 non tocca
+       `days` se esiste già, il 2→3 fa `Object.assign` con i valori
+       esistenti che vincono, il 3→4 e il 4→5 riempiono solo i buchi, il
+       5→6 aggiunge solo chiavi assenti. Verificato dal collaudo
+       «idempotenza: rieseguire non cambia nulla».
+
+       Costo: cinque passi invece di uno, una volta per caricamento, su
+       operazioni che scorrono l'elenco delle voci. Trascurabile rispetto a
+       lavorare su dati incompleti. */
+    PASSI_MIGRAZIONE.forEach(function(p){ dati = p.esegui(dati); });
+    dati.v = SCHEMA_ATTUALE;
     nota("già alla versione "+v+": completati eventuali campi mancanti");
     return { dati: dati, log: log, esito: "aggiornato" };
   }

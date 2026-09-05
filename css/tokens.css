@@ -35,8 +35,22 @@
   /* Ottone e verde sono nati come colori di superficie: su fondo chiaro, come
      testo, danno 3,00:1 e 4,45:1. Servono varianti scure per le scritte,
      tenendo `--brass` e `--sage` per bordi, icone e riempimenti, dove la
-     soglia è 3:1 e la passano. */
-  --brass-testo:#7A5819;
+     soglia è 3:1 e la passano.
+
+     DIFETTO CORRETTO — `--brass-testo` stava a #7A5819, e bastava sulle
+     schede (6,37:1) ma non sullo SFONDO DI PAGINA: 4,90:1 sulla tappa
+     scura, e **4,37:1** dove sopra quella tappa passa la riga della
+     griglia. Sotto il minimo di 4,5:1.
+
+     Trovato dal collaudo di accessibilità appena è stato eseguito per la
+     prima volta: l'etichetta «Adesso» del riquadro in cima —
+     `span.prosslab`, 10px in grassetto — sta proprio lì, e il mio giro di
+     misure a mano non l'aveva vista perché copriva cinque viste e non
+     questa. Un difetto reale che nessuna lettura del codice mostra.
+
+     #725217 dà 4,82:1 sul composito peggiore e 7,02:1 sulle schede.
+     Resta ottone: è la stessa tinta, due gradini più scura. */
+  --brass-testo:#725217;
   --sage-testo:#3D6659;
   --rust-testo:#8E3A2E;
   /* Il riquadro delle priorità è scuro nei DUE temi, quindi i suoi colori non
