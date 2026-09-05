@@ -324,9 +324,39 @@ const MISURE = () => {
    throttla le animazioni — succede a schede in secondo piano — lascia la
    transizione ferma sul valore di partenza, e `getComputedStyle` riporta il
    fondo vecchio col colore nuovo. Ho inseguito per mezz'ora un pulsante a
-   1,00:1 che non era rotto. */
+   1,00:1 che non era rotto.
+
+   DIFETTO CORRETTO — qui c'era `page.addStyleTag()`, e la Content Security
+   Policy del pannello lo BLOCCA:
+
+     Applying inline style violates the following Content Security Policy
+     directive 'style-src-elem 'self''
+
+   Tre prove fallivano per questo, e non per il prodotto. Il fatto che sia
+   stato bloccato è una buona notizia — dimostra che `style-src-elem` è
+   davvero applicato — ma un collaudo non può aggirare la CSP né chiedere
+   di allentarla per potersi eseguire.
+
+   `insertRule` su un foglio già caricato è consentito: la CSP governa
+   l'INSERIMENTO di elementi <style>, non la manipolazione dei fogli
+   esistenti tramite CSSOM. È la stessa via usata da `_collaudo.js`. */
 async function congela(page) {
-  await page.addStyleTag({ content: '.pt *, .pt *::before, .pt *::after{transition:none !important;animation:none !important;}' });
+  const fatto = await page.evaluate(() => {
+    const regola = '.pt *, .pt *::before, .pt *::after' +
+                   '{ transition: none !important; animation: none !important; }';
+    for (const foglio of Array.from(document.styleSheets)) {
+      try {
+        foglio.insertRule(regola, foglio.cssRules.length);
+        void document.body.offsetHeight;   /* forza il ricalcolo */
+        return true;
+      } catch (e) { /* foglio di altra origine o non modificabile: il prossimo */ }
+    }
+    return false;
+  });
+  /* Se nessun foglio è modificabile la misura resterebbe esposta alle
+     transizioni congelate, e un fallimento inventato è peggio di nessuna
+     misura: meglio saperlo subito. */
+  expect(fatto, 'nessun foglio di stile modificabile: non posso azzerare le transizioni').toBe(true);
   await page.waitForTimeout(60);
 }
 
@@ -401,6 +431,23 @@ test.describe('A11Y · contrasto misurato, non stimato', () => {
       const ber = [];
       document.querySelectorAll(SEL).forEach(e => {
         if (!__M.visibile(e)) return;
+        /* ECCEZIONE «ESSENZIALE» della 2.5.8, e non è uno sconto: il
+           criterio la prevede per i bersagli la cui presentazione è
+           essenziale all'informazione che trasmettono.
+
+           I blocchi dell'agenda (`.agblk`) sono alti quanto dura
+           l'impegno: un quarto d'ora è 18px, un'ora è 72. Portarli tutti
+           a 24px vorrebbe dire che un impegno di 15 minuti occupa lo
+           stesso spazio di uno di mezz'ora, e l'agenda smette di dire
+           quanto dura una cosa — che è l'unica ragione per cui esiste una
+           vista ad agenda invece di un elenco.
+
+           L'alternativa equivalente esiste e non è teorica: le stesse
+           voci compaiono nelle liste, con comandi a misura piena. Le due
+           asserzioni in fondo a questa prova verificano che i blocchi
+           abbiano un nome e siano raggiungibili da tastiera, così
+           l'eccezione resta un'eccezione e non una zona franca. */
+        if (e.classList && e.classList.contains('agblk')) return;
         const r = e.getBoundingClientRect();
         ber.push({ e, r, p: (r.width < 24 || r.height < 24) });
       });
@@ -426,6 +473,40 @@ test.describe('A11Y · contrasto misurato, non stimato', () => {
        bene è piccolo e affollato insieme — i sette pulsanti dei giorni
        larghi 9px e attaccati erano esattamente quello. */
     expect(esito.falliti, 'bersagli piccoli e affollati').toEqual([]);
+  });
+
+  /* Il prezzo dell'eccezione di sopra: se i blocchi dell'agenda sono
+     esentati dalla misura, devono almeno essere nominati e raggiungibili.
+     Senza queste due asserzioni l'eccezione diventerebbe il posto dove
+     nascondere i difetti dell'agenda. */
+  test('2.5.8 · i blocchi dell\'agenda, esentati per altezza, restano usabili', async ({ page }) => {
+    await page.evaluate(() => { if (typeof vaiA === 'function') vaiA('agenda'); render(); });
+    await page.waitForTimeout(300);
+    const esito = await page.evaluate(() => {
+      const blocchi = Array.from(document.querySelectorAll('#app .agblk'))
+        .filter(e => e.offsetParent !== null);
+      const senzaNome = [], nonRaggiungibili = [];
+      for (const b of blocchi) {
+        const nome = (b.getAttribute('aria-label') || b.textContent || '').replace(/\s+/g, ' ').trim();
+        if (nome.length < 2) senzaNome.push(b.className);
+        /* un `button` è raggiungibile da tastiera per natura, a meno che
+           qualcuno lo escluda con tabindex negativo */
+        const ti = b.getAttribute('tabindex');
+        const raggiungibile = (b.tagName === 'BUTTON' || b.tagName === 'A' || (ti !== null && Number(ti) >= 0))
+                              && !(ti !== null && Number(ti) < 0) && !b.disabled;
+        if (!raggiungibile) nonRaggiungibili.push(b.className + ' tabindex=' + ti);
+      }
+      return { quanti: blocchi.length, senzaNome, nonRaggiungibili,
+               altezze: blocchi.slice(0, 6).map(b => Math.round(b.getBoundingClientRect().height)) };
+    });
+    expect(esito.quanti, 'nessun blocco in agenda: la prova non sta guardando niente').toBeGreaterThan(0);
+    expect(esito.senzaNome, 'blocchi dell\'agenda senza nome accessibile').toEqual([]);
+    expect(esito.nonRaggiungibili, 'blocchi dell\'agenda non raggiungibili da tastiera').toEqual([]);
+    /* e l'altezza deve davvero variare con la durata: se fossero tutti
+       uguali, l'eccezione «essenziale» non avrebbe fondamento */
+    expect(new Set(esito.altezze).size,
+      'tutti i blocchi hanno la stessa altezza: allora l\'altezza non codifica la durata, e l\'eccezione non vale')
+      .toBeGreaterThan(1);
   });
 });
 

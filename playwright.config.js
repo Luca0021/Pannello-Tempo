@@ -36,7 +36,14 @@ module.exports = defineConfig({
        riuscita sono gigabyte che nessuno guarda */
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    /* Il video richiede il binario ffmpeg, che Playwright scarica dallo
+       stesso CDN dei browser. Dove quel CDN è bloccato — vedi `PT_CANALE`
+       più sotto — ffmpeg non c'è, e OGNI prova falliva su
+       `browserContext.newPage`: «Executable doesn't exist … ffmpeg-win64.exe».
+       Otto prove su otto rosse per un artefatto diagnostico, non per il
+       prodotto. Quando si ripiega su un browser di sistema il video si
+       spegne; traccia e scatti restano, e bastano a capire un fallimento. */
+    video: process.env.PT_CANALE ? 'off' : 'retain-on-failure',
     locale: 'it-IT',
     timezoneId: 'Europe/Rome'
   },
@@ -52,9 +59,30 @@ module.exports = defineConfig({
     }
   },
 
+  /* `PT_CANALE` fa usare un browser GIÀ INSTALLATO sul sistema — `chrome`
+     o `msedge` — invece di quello che Playwright scarica.
+
+     Serve dove il download dei browser non riesce: su una rete che
+     interrompe i trasferimenti lunghi, `npx playwright install` fallisce
+     con «Download failure» anche quando i CDN rispondono e servono byte a
+     una richiesta diretta. Senza questa via d'uscita l'intera suite in
+     browser resta ineseguibile, e «ineseguibile» diventa in fretta
+     «mai eseguita».
+
+     In CI la variabile non è impostata e il comportamento non cambia: si
+     usano i browser di Playwright, che è la scelta giusta quando si
+     possono scaricare, perché la versione è riproducibile. Con un canale
+     di sistema la versione è quella della macchina, e va dichiarata
+     nell'esito. */
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox',  use: { ...devices['Desktop Firefox'] } }
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(process.env.PT_CANALE ? { channel: process.env.PT_CANALE } : {})
+      }
+    },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } }
   ],
 
   /* Se il server non è già in piedi, Playwright lo avvia. `reuseExisting`

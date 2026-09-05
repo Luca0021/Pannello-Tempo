@@ -45,7 +45,16 @@ function assert(c, m) { if (!c) throw new Error(m || 'asserzione falsa'); }
 
 /* Carica i moduli NELL'ORDINE DI ORDINE.txt, che è il punto: l'ordine è
    ciò che decide quale dichiarazione vince. Caricarli in un altro ordine
-   nasconderebbe esattamente il difetto che stiamo verificando. */
+   nasconderebbe esattamente il difetto che stiamo verificando.
+
+   `js/boot.js` e `js/pwa-boot.js` restano fuori, come in avvio.test.js:
+   avviano l'applicazione e pretendono un DOM completo. Alla prima
+   esecuzione questo collaudo li caricava, e quattro prove su quattro
+   morivano con «window.addEventListener is not a function» — un difetto
+   del banco di prova, non del prodotto, ma che nascondeva il risultato
+   delle prove vere. */
+const SALTA_AVVIO = new Set(['js/boot.js', 'js/pwa-boot.js']);
+
 function carica(quali) {
   const magazzino = {};
   const ctx = {
@@ -61,9 +70,15 @@ function carica(quali) {
     sessionStorage: { getItem: () => null, setItem(){}, removeItem(){}, key: () => null, length: 0 },
     document: { documentElement: { setAttribute(){}, lang: 'it' }, getElementById: () => null,
                 querySelectorAll: () => [], addEventListener(){}, createElement: () => ({ style:{}, setAttribute(){} }) },
-    navigator: { onLine: true }, location: { protocol: 'http:', href: 'http://localhost/' },
+    navigator: { onLine: true, userAgent: 'nodo-di-prova', language: 'it-IT' },
+    location: { protocol: 'http:', href: 'http://localhost/', search: '', hash: '', pathname: '/' },
     setTimeout, clearTimeout, setInterval: () => 0, clearInterval,
     fetch: () => Promise.reject(new Error('rete non disponibile nei collaudi')),
+    addEventListener(){}, removeEventListener(){}, dispatchEvent(){ return true; },
+    matchMedia: () => ({ matches: false, addEventListener(){}, addListener(){} }),
+    requestAnimationFrame: fn => setTimeout(fn, 0),
+    URL, Blob: function(){}, crypto: { getRandomValues: a => a },
+    caches: undefined, indexedDB: undefined,
     __magazzino: magazzino
   };
   ctx.window = ctx; ctx.globalThis = ctx; ctx.__PT_TEST__ = true;
@@ -71,6 +86,7 @@ function carica(quali) {
   const ordine = fs.readFileSync(path.join(RADICE, 'js/ORDINE.txt'), 'utf8')
     .split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   for (const f of ordine) {
+    if (SALTA_AVVIO.has(f)) continue;
     if (quali && !quali.some(q => f.indexOf(q) >= 0)) continue;
     try { vm.runInContext(fs.readFileSync(path.join(RADICE, f), 'utf8'), sandbox, { filename: f }); }
     catch (e) { throw new Error('caricamento di ' + f + ': ' + e.message); }

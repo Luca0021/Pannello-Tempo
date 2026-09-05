@@ -107,13 +107,34 @@ async function apriTutto(page) {
     });
     savePrefs();
     render();
-    /* secondo giro: alcune schede compaiono solo dopo il primo disegno */
-    document.querySelectorAll('[data-act="fold"]').forEach(b => {
-      const v = b.getAttribute('data-v'); if (v) P.fold[v] = false;
-    });
-    savePrefs();
-    render();
   });
+
+  /* DIFETTO CORRETTO — due giri di `P.fold[v] = false` non bastavano.
+     Restavano chiuse cinque schede, fra cui Sincronizzazione e Calendario,
+     e con loro i quattro stati che questa prova deve controllare:
+     «Solo su questo dispositivo», «Nessun calendario collegato»,
+     «Ultima esportazione», «Promemoria nell'app». La prova falliva
+     dichiarandoli assenti dall'interfaccia, mentre erano solo dentro un
+     cassetto che il collaudo non aveva aperto — un falso allarme che
+     accusava il prodotto.
+
+     Ora si CLICCA, come farebbe una persona, e si ripete finché non resta
+     nulla di chiuso. Il limite di dieci giri evita che un pieghevole che
+     si riapre da solo faccia girare la prova all'infinito: se dopo dieci
+     giri qualcosa è ancora chiuso, l'asserzione successiva fallirà e dirà
+     che cosa manca, che è l'esito giusto. */
+  for (let giro = 0; giro < 10; giro++) {
+    const chiusi = page.locator('#app [data-act="fold"][aria-expanded="false"]');
+    const quanti = await chiusi.count();
+    if (!quanti) break;
+    for (let i = 0; i < quanti; i++) {
+      /* si rileggono a ogni clic: aprire una scheda ne fa comparire altre */
+      const b = page.locator('#app [data-act="fold"][aria-expanded="false"]').first();
+      if (!(await b.count())) break;
+      await b.click({ timeout: 5000 }).catch(() => {});
+    }
+    await page.waitForTimeout(150);
+  }
   await page.waitForTimeout(400);
 }
 

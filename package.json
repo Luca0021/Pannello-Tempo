@@ -3,7 +3,18 @@
   "version": "1.0.0",
   "description": "Pannello Tempo — le priorità di oggi. Applicazione web e PWA senza dipendenze a runtime.",
   "private": true,
-  "type": "module",
+  "_commento_type": [
+    "DIFETTO CORRETTO — qui c'era \"type\": \"module\", e rendeva modulo ES",
+    "OGNI file .js del progetto. Tutti i collaudi usano require(), quindi",
+    "nessuno di loro poteva partire: `node tests/runner.js` moriva alla",
+    "prima riga con «require is not defined in ES module scope». Le 242",
+    "asserzioni dichiarate «predisposte» non erano eseguibili, e la",
+    "dichiarazione non poteva accorgersene perché nessuno le aveva lanciate.",
+    "",
+    "Toglierlo non costa niente: i sei strumenti in strumenti/ hanno",
+    "estensione .mjs, che è ES module comunque, indipendentemente da questa",
+    "chiave. Verificato: 13 file .js usano require, 0 usano import."
+  ],
   "_commento": [
     "Nessuna dipendenza a RUNTIME, e non è un vanto casuale: il pannello",
     "carica solo i propri file, quindi non esiste una catena di fornitura",
@@ -19,6 +30,8 @@
     "config": "node strumenti/genera-config-firebase.mjs --ambiente emulatore",
     "config:produzione": "node strumenti/genera-config-firebase.mjs --ambiente produzione",
     "segreti": "node strumenti/controlla-segreti.mjs",
+    "globali": "node strumenti/controlla-globali.mjs",
+    "backlog": "node strumenti/backlog.mjs",
     "coerenza": "node strumenti/controlla-impronta.mjs",
     "servi": "http-server . -p 8765 -c-1",
     "test:unit": "node tests/runner.js --solo unit",
@@ -28,7 +41,7 @@
     "test:browser": "playwright test",
     "test:visivi": "playwright test tests/ui/ui006.spec.js",
     "test:visivi:approva": "playwright test tests/ui/ui006.spec.js --update-snapshots",
-    "verifica": "npm run segreti && npm run build && npm run coerenza && npm run test:unit && npm run test:integration && npm run test:avvio"
+    "verifica": "npm run segreti && npm run globali && npm run build && npm run coerenza && npm run backlog && npm run test:unit && npm run test:integration && npm run test:avvio"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
