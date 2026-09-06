@@ -10,7 +10,90 @@ era a rischio.
 
 ## Build candidata — schema 6
 
-**Non pubblicata.** Vedi `DEPLOYMENT-REPORT.md` §7.
+**Pubblicata su GitHub Pages** (dal ramo, automaticamente), **senza
+configurazione Firebase**: sul sito l'Account risulta non disponibile e il
+pannello lo dichiara.
+
+### La pipeline ha girato per la prima volta, ed è stata rossa
+
+Sul commit `da24a58`. Il lavoro locale è passato per intero — 23 passi su
+23, regole Firestore sull'Emulator comprese — e i due lavori in browser sono
+falliti al passo UI-006, lasciando **saltati** i quattro successivi:
+sentinelle, cancellazione, CSP/PWA/offline/responsive, accessibilità. Un
+passo saltato non è un passo passato, e SEC-003 e TST-005 restano PARZIALE
+per questo.
+
+Dentro il rosso, una prima volta: «Terminologia della UI consumer» è passato
+anche **su Firefox**.
+
+Due cause, e sono di natura diversa.
+
+### 1. La data scaduta era la scritta meno leggibile del pannello
+
+**3,73:1 in tema scuro**, contro il minimo di 4,5:1. Uno stile inline in
+`js/features/task-list-ui.js` usava `--rust` — un colore di **superficie** —
+dove serviva `--rust-testo`, la variante per le scritte, che sullo stesso
+fondo dà 5,91:1. Il bordo resta `--rust`: per un contorno la soglia è 3:1 e
+la passa.
+
+`tokens.css` lo dice da sempre, righe 35-38: «Ottone e verde sono nati come
+colori di superficie… Servono varianti scure per le scritte». Vale per la
+ruggine allo stesso modo, e qui era stata presa la variante sbagliata.
+
+Nessuna lettura del CSS l'avrebbe trovato: la regola nel CSS non c'è. Ed è
+una delle prove che su questa macchina non arrivavano mai in fondo — l'ha
+trovata la pipeline, su entrambi i browser, e sopravviveva al retry.
+
+### 2. Il confronto visivo faceva fallire ciò che non c'entrava
+
+In `ui006.spec.js` convivevano due controlli con prerequisiti opposti: 14
+asserzioni **strutturali**, che non richiedono nulla di approvato, e il
+**confronto visivo**, che ha senso solo contro un riferimento che qualcuno ha
+guardato. Stando nella stessa prova, il secondo faceva fallire il primo.
+
+Ora il confronto gira solo contro riferimenti **approvati**, e approvato
+significa **versionato in git** — non «presente sul disco». Un file appena
+scritto da Playwright è sul disco e non dimostra niente; l'unica prova che
+una persona l'abbia guardato è il commit che lo aggiunge.
+`playwright.config.js` passa inoltre a `updateSnapshots: 'none'`: il
+predefinito `missing` crea il riferimento assente e alla seconda esecuzione
+la prova passa contro uno scatto che nessuno ha mai visto.
+
+Non è un controllo indebolito, ed è stato provato nei tre versi: senza
+riferimento la comparazione è saltata e annotata e **nessuno scatto viene
+scritto**; con un riferimento che combacia passa; con uno che differisce
+fallisce, 446.819 pixel diversi, exit 1.
+
+Perché «verde» non possa nascondere «non ho guardato»,
+`strumenti/stato-regressione-visiva.mjs` conta le comparazioni saltate e le
+scrive nel riepilogo della pipeline.
+
+Trovato per strada: `PW_UPDATE_SNAPSHOTS` non è una variabile che Playwright
+legga, quindi l'input «aggiorna_riferimenti_visivi» del flusso di lavoro era
+**decorativo** — metterlo a `true` non produceva alcun effetto né alcun
+errore.
+
+### Un flusso che pubblica davvero il sito, e non parte da solo
+
+Il sito era pubblicato da `pages-build-deployment`, il flusso automatico di
+GitHub che serve Pages **dal ramo**. Due conseguenze verificate
+sull'artefatto vero: finiscono in rete anche `tests/`, `strumenti/`,
+`package.json`, `.env.example` e le regole Firestore; e viene servito
+`js/config-firebase.js` come sta in git, cioè `non-configurato`.
+
+Nuovo `.github/workflows/pubblica.yml`: monta un artefatto con i **soli file
+serviti** — l'elenco lo dichiara `build.mjs --elenco`, la stessa fonte che
+calcola l'impronta — genera la configurazione dai Secrets senza farla entrare
+nel repository, e la controlla prima di pubblicare con
+`strumenti/controlla-artefatto.mjs`.
+
+Si avvia **solo a mano** e chiede di digitare `pubblica`: un flusso che
+pubblica con credenziali di produzione a ogni commit sposta dentro un
+automatismo la decisione «questo è pronto per le persone».
+
+**Non è attivo.** Serve che il proprietario cambi *Settings → Pages →
+Source* da «Deploy from a branch» a «GitHub Actions». Finché non lo fa, il
+file non cambia niente: il sito resta quello di adesso. È deliberato.
 
 ### Il progetto Firebase reale è stato verificato, e le regole non sono pubblicate
 

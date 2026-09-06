@@ -42,7 +42,7 @@
         "js/boot.js"
       ],
       "verifica": "le tre prove CSP di tests/e2e/piattaforma.spec.js sono state ESEGUITE in locale e passano, agenda compresa; il collaudo dell'accessibilità ha inoltre confermato che `style-src-elem` è applicato davvero, bloccando un addStyleTag",
-      "manca": "il passo CSP verde IN PIPELINE: la pipeline non è mai stata eseguita"
+      "manca": "il passo CSP verde IN PIPELINE. La pipeline è stata eseguita, ma quel passo è stato SALTATO: veniva dopo UI-006, che è fallito. Le tre prove CSP passano in locale"
     },
     {
       "id": "SEC-004",
@@ -294,8 +294,8 @@
         "css/components.css",
         "js/tasks.js"
       ],
-      "verifica": "le asserzioni strutturali passano nelle 5 prove che hanno fatto in tempo a girare, e sono passate anche in tutte le misure a mano precedenti; la casella nativa e il badge punto+parola sono verificati anche da altre suite",
-      "manca": "le 56 prove rimanenti di ui006.spec.js, che su questa macchina non arrivano in fondo, e la regressione visiva verde con riferimenti APPROVATI a mano"
+      "verifica": "le 61 prove di ui006.spec.js sono state ESEGUITE in locale, 61 su 61 verdi, dopo aver corretto il difetto di contrasto che la pipeline aveva trovato: la data scaduta in tema scuro stava a 3,73:1 contro 4,5:1, perché usava `--rust` (colore di superficie) invece di `--rust-testo`",
+      "manca": "la regressione visiva verde con riferimenti APPROVATI a mano: vedi TST-006"
     },
     {
       "id": "ARC-001",
@@ -425,8 +425,8 @@
         "tests/e2e/piattaforma.spec.js",
         "tests/security/sentinelle.test.js"
       ],
-      "verifica": "ESEGUITE su Chromium (canale Edge 152 di sistema): 70 prove fra e2e, terminologia, accessibilità e sentinelle, tutte verdi",
-      "manca": "la seconda gamba su Firefox: su questa rete i browser di Playwright non si scaricano"
+      "verifica": "ESEGUITE su Chromium (canale Edge 152 di sistema) in locale: 130 prove fra e2e, terminologia, accessibilità, sentinelle e ui006. In pipeline, sul commit da24a58, il passo «Terminologia della UI consumer» è passato su chromium E SU FIREFOX: è la prima volta che la seconda gamba esegue qualcosa",
+      "manca": "le altre quattro suite su Firefox: sentinelle, cancellazione, CSP/PWA/offline/responsive e accessibilità sono state SALTATE dopo il fallimento di UI-006, su entrambi i browser. Un passo saltato non è un passo passato"
     },
     {
       "id": "TST-006",
@@ -436,8 +436,8 @@
         "tests/ui/ui006.spec.js",
         "playwright.config.js"
       ],
-      "verifica": "prima esecuzione avviata: Playwright ha generato 14 scatti di riferimento e ha fallito le prove corrispondenti, che è il comportamento previsto",
-      "manca": "la suite non arriva in fondo su questa macchina — 5 prove su 61 in 13 minuti, le altre 56 non eseguite — e comunque servono la revisione a mano degli scatti e il commit che li approva. Uno scatto appena generato non dimostra che l'aspetto sia giusto"
+      "verifica": "il confronto visivo è ora separato dalle 14 asserzioni strutturali: gira solo contro riferimenti APPROVATI, cioè versionati in git, e non ne scrive mai di nuovi da sé. Verificato nei tre versi: senza riferimento la comparazione è saltata e annotata e nessuno scatto viene creato; con un riferimento che combacia passa; con uno che differisce FALLISCE (446.819 pixel diversi, exit 1)",
+      "manca": "i riferimenti approvati. Ce ne sono 19 sul disco, non tracciati e non guardati, e sono per Windows: in pipeline il suffisso è `linux`, quindi non varrebbero comunque. Servono una revisione a mano e un commit apposta. Finché non succede la pipeline può essere verde con ZERO copertura visiva, e strumenti/stato-regressione-visiva.mjs lo scrive nel riepilogo perché non passi inosservato"
     },
     {
       "id": "TST-007",
@@ -447,8 +447,8 @@
         ".github/workflows/verifica.yml",
         "strumenti/"
       ],
-      "verifica": "YAML e strumenti verificati staticamente: 0 tabulazioni, 3 lavori, 33 passi, i 15 file invocati esistono",
-      "manca": "una prima esecuzione reale: RUN-CI.md §9"
+      "verifica": "ESEGUITA per la prima volta sul commit da24a58, evento push. Il lavoro «Build e collaudi locali» è passato per intero: 23 passi su 23, comprese la doppia build deterministica, la coerenza dell'impronta, le collisioni globali, unit, integrazione, avvio e le regole Firestore sull'Emulator. I due lavori in browser sono falliti al passo UI-006 e hanno lasciato NON ESEGUITI i quattro passi successivi",
+      "manca": "un'esecuzione VERDE. Le due cause del rosso sono state corrette — il contrasto della data scaduta, e il confronto visivo che faceva fallire anche le asserzioni strutturali — ma la correzione non è ancora stata provata in pipeline. YAML valido e correzione locale non significano pipeline verde"
     },
     {
       "id": "MOB-001",

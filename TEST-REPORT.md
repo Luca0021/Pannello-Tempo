@@ -200,7 +200,45 @@ sopportabile da un orologio reale. Ticket **SEC-010: COMPLETATO**.
 
 ---
 
-## 2. I tredici difetti trovati eseguendo
+## 1-bis. La pipeline è stata eseguita per la prima volta
+
+Sul commit `da24a58`, evento `push`. **Esito: FALLITA.** Non lo si scrive
+volentieri, ma è il primo esito reale che questo progetto abbia mai avuto da
+GitHub Actions, e ha trovato un difetto che nessuna esecuzione locale aveva
+incontrato.
+
+| Lavoro | Esito |
+|---|---|
+| Build e collaudi locali | **success**, 23 passi su 23 — comprese doppia build deterministica, coerenza dell'impronta, collisioni globali, unit, integrazione, avvio e **regole Firestore sull'Emulator** |
+| Collaudi in browser (chromium) | **failure** — 12 ok, 1 fallito, **5 saltati** |
+| Collaudi in browser (firefox) | **failure** — idem |
+| Verdetto | **failure** |
+
+Il passo fallito è «Indicatore Lavoro/Vita (UI-006)»; i quattro successivi —
+sentinelle, cancellazione, CSP/PWA/offline/responsive, accessibilità — sono
+stati **SALTATI**, perché GitHub Actions si ferma al primo passo rosso. **Un
+passo saltato non è un passo passato**: quei sette controlli non sono
+verificati in pipeline, e SEC-003 e TST-005 restano PARZIALE per questo.
+
+Una buona notizia dentro il rosso: «Terminologia della UI consumer» è
+passato su chromium **e su Firefox**. È la prima volta che la seconda gamba
+esegue qualcosa.
+
+Due cause distinte, entrambe corrette:
+
+1. **un difetto vero** — la data scaduta a 3,73:1 in tema scuro (n. 14 qui
+   sotto);
+2. **un difetto di impianto del collaudo** — il confronto visivo e le
+   asserzioni strutturali stavano nella stessa prova, così l'assenza di
+   riferimenti approvati faceva fallire anche ciò che non c'entrava (n. 15).
+
+Dopo le correzioni, in locale: **ui006 61 prove su 61 verdi**, e nessuno
+scatto scritto da sé. Se la pipeline sarà verde lo dirà la pipeline: la
+correzione non è ancora stata provata là.
+
+---
+
+## 2. I sedici difetti trovati eseguendo
 
 Nessuno di questi si vede leggendo il codice.
 
@@ -225,6 +263,23 @@ che l'utente legge davvero.
 | 11 | **Il consiglio per il rifiuto delle scritture indicava il percorso sbagliato**: `pannello/{uid}`, che è il percorso delle versioni precedenti e in sola lettura. Seguirlo non ripristinava niente | `js/sync.js` | lettura del messaggio che il progetto reale fa comparire |
 | 12 | **`fbWrite` buttava via il corpo della risposta**, quindi la voce specifica della tabella non poteva mai corrispondere su una scrittura e usciva il messaggio generico, che parlava dei permessi di un altro servizio | `js/sync.js` | `HTTP 403` senza motivo, contro un rifiuto reale |
 | 13 | **Il controllo dei segreti non chiedeva niente a git**: annunciava «albero versionato» camminando sul filesystem, e falliva su un `.env` ignorato — cioè su una configurazione corretta, fatta seguendo `.env.example` | `strumenti/controlla-segreti.mjs` | primo `npm run segreti` dopo aver creato `.env` |
+| 14 | **La data scaduta era la scritta meno leggibile del pannello**: 3,73:1 in tema scuro contro il minimo di 4,5:1, perché uno stile inline usava `--rust` — un colore di **superficie** — invece di `--rust-testo` | `js/features/task-list-ui.js` | la **pipeline**, su entrambi i browser, sopravvissuto al retry |
+| 15 | **Il confronto visivo faceva fallire anche le asserzioni strutturali**, e con esse i quattro passi successivi del lavoro in pipeline | `tests/ui/ui006.spec.js` | la pipeline: 7 controlli reali non eseguiti su entrambi i browser |
+| 16 | **Un input del flusso di lavoro non faceva niente**: `PW_UPDATE_SNAPSHOTS` non è una variabile che Playwright legga | `.github/workflows/verifica.yml` | lettura, mentre si correggeva il n. 15 |
+
+Il numero **14** merita due righe, perché la diagnosi giusta è arrivata dopo
+una sbagliata. Dal messaggio del collaudo — «rapporto 3.73, testo "mar 1
+set"» — sembrava trattarsi di `.slot.due-soon`, l'unica delle tre classi
+`due-*` senza un override per il tema scuro: deduzione plausibile, e falsa.
+`.due-soon` contiene «Marco», non la data, ed era già a 8,57:1.
+
+L'elemento vero è un `<button class="slot">` colorato da uno **stile
+inline**, che nessuna lettura del CSS avrebbe trovato perché la regola nel
+CSS non c'è. È emerso replicando l'asserzione 11 parola per parola e
+facendole riportare anche tag, classe e fondo compositato — non solo testo e
+rapporto, che è ciò che il collaudo dice. Il valore calcolato a mano per
+`#C0604F` su `rgb(27,37,44)` è 3,73: combacia con la misura, ed è così che
+si è chiuso il cerchio.
 
 Il numero 13 aveva un secondo danno, peggiore del primo: il consiglio che
 stampava — «vanno revocati sul servizio che li ha emessi, e poi rimossi
@@ -267,15 +322,47 @@ proprietà (casella nativa, badge punto + parola, nome accessibile che
 comincia dall'area) sono verificate anche da `terminologia.spec.js` e
 `accessibilita.spec.js`, entrambe verdi.
 
-### Regressione visiva: 14 riferimenti generati, **nessuno approvato**
+### Regressione visiva: 19 riferimenti generati, **nessuno approvato**
 
-Playwright ha creato 14 scatti in `tests/ui/ui006.spec.js-snapshots/` e ha
-fallito le prove corrispondenti. **È il comportamento previsto**: uno scatto
-appena generato non dimostra che l'aspetto sia giusto, dimostra com'era in
-quel momento.
+Uno scatto appena generato non dimostra che l'aspetto sia giusto: dimostra
+com'era in quel momento. Gli scatti **non sono stati approvati** e non sono
+stati committati. TST-006 resta PARZIALE.
 
-Gli scatti **non sono stati approvati** e non sono stati committati. TST-006
-resta PARZIALE.
+Erano 14; sono 19 perché riprodurre il difetto di contrasto ha eseguito
+altri scenari, e Playwright allora scriveva i riferimenti mancanti. **Ora non
+lo fa più.**
+
+Il confronto visivo è stato separato dalle 14 asserzioni strutturali, che
+sono un controllo diverso con un prerequisito diverso:
+
+| | asserzioni strutturali | confronto visivo |
+|---|---|---|
+| prerequisito | nessuno | un riferimento **approvato** |
+| quando gira | sempre | solo se il riferimento è versionato in git |
+| se manca il prerequisito | — | comparazione **saltata e annotata** |
+
+«Approvato» significa **versionato**, non «presente sul disco»: l'unica prova
+che una persona abbia guardato uno scatto è il commit che lo aggiunge.
+
+Verificato nei tre versi, perché un controllo che si allenta va provato
+soprattutto dove deve mordere:
+
+- **nessun riferimento approvato** → 61 prove su 61 verdi, e i file sul disco
+  restano 19, non 20: nulla viene scritto;
+- **riferimento approvato che combacia** → comparazione eseguita, passa;
+- **riferimento approvato che differisce** → comparazione eseguita,
+  **FALLISCE**: 446.819 pixel diversi, rapporto 0,97, exit 1 — e 1 fallito su
+  6, cioè esattamente quello col riferimento approvato.
+
+I 19 scatti sono per **Windows**. In pipeline il suffisso è `linux`, quindi
+non varrebbero comunque: le due basi di riferimento sono separate per
+costruzione, perché il rendering del testo è diverso.
+
+Conseguenza da tenere presente: **la pipeline può essere verde con zero
+copertura visiva.** È il comportamento corretto — un riferimento non
+approvato non misura niente — ma diventa pericoloso se nessuno lo dice.
+`strumenti/stato-regressione-visiva.mjs` conta le comparazioni saltate e le
+scrive nel riepilogo della pipeline.
 
 ---
 
