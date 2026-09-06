@@ -102,9 +102,29 @@ function rowHtml(i, ctx){
     h += '<button class="slot" data-set="1" data-act="slot" data-id="'+i.id+'" '+
          'title="'+(domOf(i)===0 ? "Ultimo giorno del mese" : "Ogni mese il "+domOf(i))+'">'+
          domDateLabel(i, cursor())+'</button>';
+  /* DIFETTO CORRETTO — qui il testo era `color:var(--rust)`, e `--rust` è un
+     colore di SUPERFICIE, non da scrittura. In tema scuro vale #C0604F e su
+     una scheda (rgb 27,37,44) dà **3,73:1**, sotto il minimo di 4,5:1: la
+     data scaduta era la scritta meno leggibile del pannello proprio dove
+     serviva di più. `--rust-testo` esiste esattamente per questo caso e dà
+     5,91:1 sullo stesso fondo.
+
+     Il bordo resta `--rust`: per un contorno la soglia è 3:1 (WCAG 1.4.11) e
+     3,73:1 la passa. Cambiare anche quello schiarirebbe il riquadro senza
+     alcun guadagno.
+
+     tokens.css lo dice, righe 35-38: «Ottone e verde sono nati come colori
+     di superficie… Servono varianti scure per le scritte». Vale per la
+     ruggine allo stesso modo, e qui era stata usata la variante sbagliata.
+
+     Trovato dalla pipeline: è una delle prove di ui006 che su questa
+     macchina non arrivavano mai in fondo. Nessuna lettura del codice lo
+     mostra — `var(--rust)` sembra corretto — e nessuna misura a mano lo
+     aveva incontrato, perché compare solo su una data GIÀ SCADUTA in tema
+     scuro. */
   if (i.freq === "once")
     h += '<button class="slot" data-set="1" data-act="openday" data-id="'+i.id+'" '+
-         (past?'style="color:var(--rust);border-color:var(--rust)"':'')+'>'+esc(shortDate(i.date))+'</button>';
+         (past?'style="color:var(--rust-testo);border-color:var(--rust)"':'')+'>'+esc(shortDate(i.date))+'</button>';
   h += '<button class="slot'+(timed?" ora":"")+'" data-set="'+(timed?1:0)+'" data-act="slot" data-id="'+i.id+'">'+
        (timed ? fmt(i.start) : "Aggiungi orario")+'</button>';
   h += '<button class="del" data-act="open" data-id="'+i.id+'" data-ctx="'+esc(ctx||"sez")+'" '+
