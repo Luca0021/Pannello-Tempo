@@ -126,31 +126,67 @@ sull'emulatore: sei rifiuti su sei. **La cancellazione remota è stata vista
 avvenire**: il documento risponde 200, poi 404. È ciò che mancava a PRV-002,
 che passa a COMPLETATO.
 
-#### L'unico fallimento: la tolleranza sugli orologi non è pubblicata
+#### La prima pubblicazione era precedente di una riga
 
-Il confronto riga per riga fra il file pubblicato e `firebase/firestore.rules`
-dà **una sola differenza su 96 righe di codice**:
+Il confronto riga per riga fra il testo pubblicato e
+`firebase/firestore.rules` diede **una sola differenza su 96 righe**:
 
 ```
 pubblicato:   aggiornatoIl <= request.time
 repository:   aggiornatoIl <= request.time + duration.value(5, 'm')
 ```
 
-È esattamente il difetto corretto in `7bba236`, e sul progetto c'è ancora.
-Dimostrato dal vivo, non per deduzione:
+Cioè il difetto corretto in `7bba236`, ancora in vigore. La copia proveniva
+da `Downloads\pannello-tempo-collaudo`, un duplicato della cartella **senza
+`.git`** e fermo a prima della correzione.
 
-| Prova | Esito sul progetto |
-|---|---|
-| `aggiornatoIl` 2 minuti nel **passato** | permesso |
-| `aggiornatoIl` = **adesso** | **negato** |
-| `aggiornatoIl` 2 minuti nel **futuro** | negato |
-| `aggiornatoIl` 10 minuti nel futuro | negato |
+Dimostrato dal vivo: l'orologio della macchina era avanti di **998 ms** su
+quello del servizio (header `Date` della risposta), e con quel solo secondo
+`aggiornatoIl` = adesso veniva **negato**. Passato permesso, adesso negato,
++2 minuti negato: nessuna tolleranza.
 
-L'orologio di questa macchina è avanti di **998 ms** su quello del servizio
-(letto dall'header `Date` della risposta). **Un solo secondo di scarto basta
-a far negare la scrittura**, e il pannello scrive «adesso»: finché quella
-riga non è aggiornata la sincronizzazione resta rotta per chiunque abbia
-l'orologio anche solo un attimo avanti. Ticket **SEC-010**, ora PARZIALE.
+#### Dopo la seconda pubblicazione: 20 controlli su 20
+
+Il proprietario ha ripubblicato copiando l'intero file dal repository
+versionato. Rieseguite le prove sul progetto remoto — solo API REST con un
+idToken di utente normale, **nessun Admin SDK, nessun service account,
+nessun bypass delle regole**, quindi le Security Rules erano in vigore su
+ogni chiamata:
+
+| # | Prova | Atteso | Esito |
+|---|---|---|---|
+| 01 | `aggiornatoIl` 2 minuti nel passato | permesso | **PASSATO** |
+| 02 | `aggiornatoIl` **all'istante corrente del client** | permesso | **PASSATO** |
+| 03 | `aggiornatoIl` 2 minuti nel futuro | permesso, entro i 5 minuti | **PASSATO** |
+| 04 | `aggiornatoIl` 10 minuti nel futuro | negato | **PASSATO** |
+| 05 | creazione del documento del proprietario | permesso | **PASSATO** |
+| 06 | lettura del documento del proprietario | permesso | **PASSATO** |
+| 07 | aggiornamento del documento del proprietario | permesso | **PASSATO** |
+| 08 | cancellazione del documento del proprietario | permesso | **PASSATO** |
+| 09 | lettura da parte dell'altro utente | negato | **PASSATO** |
+| 10 | scrittura da parte dell'altro utente | negato | **PASSATO** |
+| 11 | aggiornamento da parte dell'altro utente | negato | **PASSATO** |
+| 12 | cancellazione da parte dell'altro utente | negato | **PASSATO** |
+| 13 | accesso non autenticato | negato | **PASSATO** |
+| 14 | accesso a un percorso non previsto | negato | **PASSATO** |
+
+Più sei controprove, tutte passate: scrittura anonima negata, lettura di un
+percorso non previsto negata, contenitore `users/{uid}` negato, il documento
+del proprietario **intatto** dopo i quattro tentativi dell'altro utente, e i
+due account sintetici rimossi con verifica che l'accesso successivo non
+funzioni. **20 su 20, exit 0.**
+
+Due dettagli di metodo che rendono le prove 05/07 e 10/11 distinte invece di
+ripetute: in REST creazione e aggiornamento sono la stessa `PATCH`, e cambia
+solo se il documento esiste. La creazione è stata quindi fatta su un
+documento inesistente e l'aggiornamento su uno esistente; per l'altro utente,
+la «scrittura» su un percorso nuovo nello spazio del proprietario e
+l'«aggiornamento» sul documento che c'era già.
+
+La prova **02** è quella che conta: è la scrittura che il pannello fa
+davvero, ed è quella che falliva prima. Ora passa, e la **04** continua a
+essere negata — la tolleranza non ha allargato il controllo, l'ha reso
+sopportabile da un orologio reale. Ticket **SEC-010: COMPLETATO**.
 
 > **Nota di metodo, e un errore da non ripetere.** La prima lettura delle
 > sonde dopo la pubblicazione sembrava dire «stato misto»: due letture del
@@ -249,11 +285,11 @@ resta PARZIALE.
 |---|---|---|
 | Seconda gamba su **Firefox** | **BLOCCATO** | su questa rete `npx playwright install` fallisce con «Download failure» per **tutti** i browser e perfino per ffmpeg (1 MB), mentre gli stessi CDN servono byte a una richiesta diretta. Aggirato per Chromium usando Edge 152 di sistema; per Firefox non esiste un'installazione di sistema |
 | **Authentication** su progetto reale | **PASSATO** | non più bloccato: la configurazione è arrivata. Registrazione, accesso, rifiuto della password errata e cancellazione dell'account eseguiti sul progetto vero. Vedi §1 |
-| **Firestore** su progetto reale | **PASSATO**, tranne una riga | dopo la pubblicazione manuale delle regole: il proprietario legge e scrive nel proprio spazio. Resta negata la scrittura con `aggiornatoIl` = adesso, perché la tolleranza sugli orologi non è pubblicata. SEC-010 |
-| **Isolamento fra utenti** su progetto reale | **PASSATO** | non più solo sull'emulatore: sei rifiuti su sei sul servizio vero — lettura e scrittura incrociate, lettura anonima, contenitore, collezione non prevista, schema che regredisce |
+| **Firestore** su progetto reale | **PASSATO** | creazione, lettura, aggiornamento e cancellazione del proprietario, compresa la scrittura con `aggiornatoIl` = adesso, che è quella del pannello |
+| **Isolamento fra utenti** su progetto reale | **PASSATO** | non più solo sull'emulatore: lettura, creazione, aggiornamento e cancellazione da parte di un secondo utente tutte negate, più accesso anonimo, contenitore e percorso non previsto. Con la controprova che il documento resta intatto |
 | **Cancellazione remota del documento** | **PASSATO** | vista avvenire: 200, DELETE 200, poi 404. Più il percorso delle versioni precedenti. PRV-002 chiuso |
 | **App Check** | **NON ATTIVO**, e ora è misurato | `appCheckSiteKey` è vuota perché nessuna Site Key è stata fornita, e il servizio ha accettato registrazione e accesso via REST **senza alcun token di App Check**: l'enforcement non è applicato. Non è una deduzione dal codice, è la risposta del servizio |
-| **Regole pubblicate sul progetto** | **PARZIALE** | pubblicate a mano dalla console dal proprietario, e la pubblicazione è stata verificata. Ma è una versione precedente di **una riga**: manca la tolleranza sugli orologi. Il deploy da riga di comando non è stato eseguito — `firebase login:list` non riporta alcun account autorizzato, e l'accesso è una credenziale che solo il proprietario può fornire |
+| **Regole pubblicate sul progetto** | **PASSATO** | pubblicate a mano dalla console dal proprietario, in due tornate: la prima era precedente di una riga, la seconda è il file corretto. Verificate interrogando il servizio, 20 controlli su 20. Il deploy da riga di comando non è stato eseguito — `firebase login:list` non riporta alcun account autorizzato, e l'accesso è una credenziale che solo il proprietario può fornire |
 | **GitHub Actions** | **NON ESEGUITO** | la pipeline non è mai stata avviata. YAML valido non significa pipeline eseguita |
 | **Lettore di schermo reale** | **NON ESEGUITO** | non automatizzabile; axe trova circa un terzo dei problemi |
 | **Dispositivo fisico** | **NON ESEGUITO** | l'emulazione di viewport non è un telefono |
@@ -302,20 +338,20 @@ npx firebase emulators:exec --only firestore,auth --project demo-pannello \
 
 In ordine di gravità.
 
-1. **La sincronizzazione è ancora rotta sul progetto reale, per una riga.**
-   Non è un rischio: è uno stato accertato e misurato. Le regole pubblicate
-   pretendono `aggiornatoIl <= request.time` senza tolleranza, il pannello
-   scrive «adesso», e un orologio avanti di un secondo — questa macchina è
-   avanti di 998 ms — basta a far negare la scrittura. Un utente si registra,
-   entra, e non riesce a salvare. Si chiude sostituendo `tempoPlausibile()`
-   con quella del repository e ripubblicando: SEC-010.
-2. **Il resto delle regole è in vigore e verificato sul servizio vero.**
-   Non è più un rischio, ed è un guadagno da registrare: isolamento fra
-   utenti, lettura anonima negata, contenitore negato, clausola di chiusura,
-   schema che non regredisce. Sei rifiuti su sei. Resta però la lezione:
-   quello che governa i dati è il testo **pubblicato**, non il file nel
-   repository, e i due possono divergere di una riga senza che nulla lo
-   segnali. Nessun collaudo di questo repository può accorgersene.
+1. **Un file versionato corretto non dimostra un servizio corretto**, e
+   nulla qui dentro tiene allineate le due cose. È il rischio che resta ora
+   che SEC-010 è chiuso, e non è teorico: la prima pubblicazione differiva di
+   una riga e nessun collaudo di questo repository poteva accorgersene —
+   l'emulatore era verde, 14 prove su 14, mentre il progetto applicava un
+   altro testo. La divergenza è stata trovata solo interrogando il servizio,
+   e può ripresentarsi alla prossima modifica delle regole. Nel flusso di
+   lavoro non esiste né un passo che le pubblichi né uno che confronti il
+   testo pubblicato con `firebase/firestore.rules`.
+2. **Due cartelle con lo stesso file e contenuto diverso.**
+   `Downloads\pannello-tempo-collaudo` è un duplicato senza `.git`, fermo a
+   prima delle correzioni, ed è da lì che è arrivata la prima pubblicazione
+   sbagliata. Finché esiste, è una trappola aperta: chi copia un file da
+   quella cartella pubblica una versione vecchia senza alcun segnale.
 3. **App Check non è attivo, e ora è misurato**: il servizio ha accettato
    registrazione e accesso via REST senza alcun token. La quota è esposta
    all'uso automatizzato. Nota di sequenza: conviene attivarlo **dopo** aver

@@ -27,7 +27,7 @@ raccontate dove sono utili: dentro la sezione del ticket che riguardano.
 | SEC-006 limiti dell'importazione ICS | **COMPLETATO** | idem |
 | SEC-008 limiti e ritmo delle chiamate | **COMPLETATO** per la parte applicativa | otto meccanismi eseguiti |
 | SEC-009 App Check | **PARZIALE** | predisposto, non attivo — e l'assenza di enforcement è ora **misurata**, non dedotta |
-| SEC-010 regole pubblicate sul progetto reale | **PARZIALE** | pubblicate a mano e verificate: 12 controlli su 13. Il testo pubblicato è però precedente di **una riga** — manca la tolleranza sugli orologi |
+| SEC-010 regole pubblicate sul progetto reale | **COMPLETATO** | pubblicate a mano in due tornate e verificate interrogando il servizio: **20 controlli su 20**. La prima pubblicazione differiva di una riga |
 
 `SEC-007` non compare: non è stato toccato da questo lavoro.
 
@@ -37,10 +37,14 @@ contro il progetto reale ha mostrato due cose che nessuna lettura del codice
 poteva mostrare, e che nessun collaudo sull'emulatore poteva contraddire.
 
 Prima: le regole non erano pubblicate affatto, quindi erano scritte bene,
-provate a fondo, e non governavano niente. Dopo la pubblicazione: governano
-quasi tutto, e la riga che manca è proprio quella che il pannello attraversa
-a ogni salvataggio. Entrambe le volte, la differenza fra «il file è corretto»
-e «il servizio è corretto» è stata misurabile solo interrogando il servizio.
+provate a fondo, e non governavano niente. Poi la prima pubblicazione
+differiva di una riga — proprio quella che il pannello attraversa a ogni
+salvataggio. Solo la seconda coincide col repository, e adesso è verificata:
+20 controlli su 20.
+
+Tre volte di seguito, la differenza fra «il file è corretto» e «il servizio è
+corretto» è stata misurabile **solo interrogando il servizio**. È il motivo
+per cui questo ticket resta il più istruttivo del lotto anche da chiuso.
 
 ---
 
@@ -282,9 +286,9 @@ creare — danno **12 controlli su 13**:
 **L'isolamento fra utenti è ora verificato dove conta**: non più su una copia
 fedele del servizio, ma sul servizio. Sei rifiuti su sei.
 
-### Ma è una versione precedente di una riga
+### La prima pubblicazione era precedente di una riga
 
-Il confronto riga per riga fra il testo pubblicato e questo file dà **una
+Il confronto riga per riga fra il testo pubblicato e questo file diede **una
 sola differenza su 96 righe di codice**:
 
 ```
@@ -292,21 +296,45 @@ pubblicato:   aggiornatoIl <= request.time
 repository:   aggiornatoIl <= request.time + duration.value(5, 'm')
 ```
 
-È il difetto corretto in `7bba236`, ancora in vigore sul progetto. La copia
-pubblicata proviene da `Downloads\pannello-tempo-collaudo`, che è un
-duplicato **senza `.git`** e fermo a prima della correzione.
+Cioè il difetto corretto in `7bba236`, ancora in vigore. La copia proveniva
+da `Downloads\pannello-tempo-collaudo`, un duplicato **senza `.git`** e fermo
+a prima della correzione.
 
-Dimostrato dal vivo, non dedotto: l'orologio di questa macchina è avanti di
+Dimostrato dal vivo, non dedotto: l'orologio della macchina era avanti di
 **998 ms** su quello del servizio, e con quel solo secondo di scarto una
-scrittura con `aggiornatoIl` = adesso viene **negata**. Il pannello scrive
-«adesso». Passato: permesso. Adesso: negato. +2 minuti: negato. +10 minuti:
-negato — quindi nessuna tolleranza.
+scrittura con `aggiornatoIl` = adesso veniva **negata**. Il pannello scrive
+«adesso». Passato: permesso. Adesso: negato. +2 minuti: negato. Nessuna
+tolleranza.
+
+### La seconda pubblicazione: 20 controlli su 20
+
+Ripubblicato l'intero file dal repository versionato, le prove sono state
+rieseguite sul progetto remoto con sole API REST e un idToken di utente
+normale — **nessun Admin SDK, nessun service account, nessun bypass**, quindi
+le regole erano in vigore su ogni chiamata.
+
+| Gruppo | Esito |
+|---|---|
+| tolleranza: passato, **istante corrente del client**, +2 minuti | **permessi** |
+| `aggiornatoIl` +10 minuti | **negato** — lo scopo del controllo è intatto |
+| proprietario: creazione, lettura, aggiornamento, cancellazione | **permessi** |
+| altro utente: lettura, creazione, aggiornamento, cancellazione | **negati** |
+| accesso non autenticato, in lettura e in scrittura | **negati** |
+| percorso non previsto, in lettura e in scrittura | **negati** |
+| contenitore `users/{uid}` | **negato** |
+| controprova: il documento resta intatto dopo i tentativi altrui | **verificata** |
+
+**14 prove richieste su 14, più sei controprove: 20 su 20, exit 0.** La prova
+decisiva è la scrittura con `aggiornatoIl` all'istante corrente: è quella che
+il pannello fa a ogni salvataggio, ed è quella che prima veniva negata.
 
 **La lezione, che nessun collaudo di questo repository può insegnare:** ciò
 che governa i dati è il testo **pubblicato**, e può divergere dal file
 versionato di una riga senza che nulla lo segnali. L'emulatore leggeva il
-file giusto ed era verde mentre il progetto applicava l'altro. Solo una
-sonda contro il servizio vero distingue i due casi.
+file giusto ed era verde — 14 prove su 14 — mentre il progetto applicava
+l'altro, e le due cose non si contraddicevano: misurano oggetti diversi.
+Solo una sonda contro il servizio vero distingue i due casi, e va rifatta
+dopo ogni modifica delle regole.
 
 `DEPLOYMENT-REPORT.md` §2.5 mette la pubblicazione delle regole **prima**
 della pubblicazione del sito, ed è esattamente per questo.
@@ -519,50 +547,44 @@ adesso.
 
 ---
 
-## SEC-010 — pubblicate, meno una riga
+## SEC-010 — pubblicate, e verificate sul servizio
 
-**PARZIALE.** Il dettaglio della misura sta in «Che cosa questo NON
-dimostra», dentro SEC-002. Qui basta il fatto e che cosa serve.
+**COMPLETATO**, in due tornate. Il dettaglio della misura sta in «Che cosa
+questo NON dimostra», dentro SEC-002.
 
-Il proprietario ha pubblicato le regole a mano dalla console. La struttura è
-quella giusta e la pubblicazione è stata verificata: isolamento, clausola di
-chiusura, contenitore negato, schema che non regredisce, cancellazione
-remota. Dodici controlli su tredici.
+La prima pubblicazione era una versione precedente di una riga:
+`tempoPlausibile()` senza la tolleranza sugli orologi. Il pannello scrive
+`aggiornatoIl` con l'orologio del dispositivo, e un secondo di scarto
+bastava a far negare ogni salvataggio. La seconda pubblicazione ha copiato
+l'intero file dal repository, e le prove sono state rifatte: **20 controlli
+su 20**, comprese le 14 richieste.
 
-Il tredicesimo è `tempoPlausibile()`, che sul progetto è ancora
-`aggiornatoIl <= request.time`, **senza** i cinque minuti di tolleranza. Il
-pannello scrive «adesso» con l'orologio del dispositivo, e un secondo di
-scarto basta: la sincronizzazione resta rotta per chiunque abbia l'orologio
-avanti. È lo stesso difetto di `7bba236`, in vigore su un servizio vero.
+Le due cose che rendono questa chiusura una verifica e non una fiducia:
 
-Serve sostituire nella console quella funzione con questa, e ripubblicare:
+- la prova decisiva è la scrittura con `aggiornatoIl` **all'istante corrente
+  del client** — quella che il pannello fa davvero, e la sola che
+  distingueva le due versioni delle regole. Prima negata, ora permessa;
+- il limite superiore continua a valere: `aggiornatoIl` a dieci minuti nel
+  futuro resta negato. La tolleranza non ha allargato il controllo, l'ha
+  reso sopportabile da un orologio reale.
 
-```
-function tempoPlausibile() {
-  return !('aggiornatoIl' in request.resource.data)
-         || (request.resource.data.aggiornatoIl is timestamp
-             && request.resource.data.aggiornatoIl <= request.time + duration.value(5, 'm'));
-}
-```
+Che cosa resta aperto, e non è dentro questo ticket: **niente tiene allineato
+il testo pubblicato con il file versionato.**
+`.github/workflows/verifica.yml` non contiene alcun passo che pubblichi le
+regole, e la scelta dell'ambiente offre `emulatore`, `non-configurato` e
+`staging` — non `produzione`. Quindi le regole non verrebbero pubblicate
+nemmeno da un push su `main`, e la divergenza può ripresentarsi alla
+prossima modifica. Non è una dimenticanza da correggere di nascosto: un
+flusso che pubblica regole di sicurezza va progettato decidendo chi può
+avviarlo.
 
-Il file completo e corretto è `firebase/firestore.rules` in **questo**
-repository. Attenzione a quale copia si apre: la versione pubblicata proviene
-da `Downloads\pannello-tempo-collaudo`, un duplicato senza `.git` fermo a
-prima della correzione. Due cartelle con lo stesso nome di file e contenuto
-diverso sono lo stesso problema delle tre copie divergenti delle regole, in
-un'altra forma.
-
-Poi rieseguire la sonda: `aggiornatoIl` = adesso deve essere permesso,
-`aggiornatoIl` + 10 minuti deve restare negato. Solo dopo pensare
-all'enforcement di App Check (SEC-009).
-
-Nota sul flusso di lavoro, invariata: `.github/workflows/verifica.yml` **non
-contiene alcun passo che pubblichi le regole**, e la scelta dell'ambiente
-offre `emulatore`, `non-configurato` e `staging` — non `produzione`. Quindi
-le regole non verrebbero pubblicate nemmeno da un push su `main`, e la
-divergenza fra file versionato e testo pubblicato può ripresentarsi. Non è
-una dimenticanza da correggere di nascosto: un flusso che pubblica regole di
-sicurezza va progettato decidendo chi può avviarlo.
+Nell'attesa, la regola pratica è quella che questa tornata ha imparato a
+proprie spese: **copiare solo da un albero versionato**, e controllare che
+la funzione contenga `duration.value(5, 'm')` prima di premere «Pubblica».
+`Downloads\pannello-tempo-collaudo` è un duplicato senza `.git` fermo a
+prima delle correzioni, ed è da lì che è arrivata la prima pubblicazione
+sbagliata. Due cartelle con lo stesso file e contenuto diverso sono lo
+stesso problema delle tre copie divergenti delle regole, in un'altra forma.
 
 ---
 
@@ -619,39 +641,34 @@ lo strumento passerebbe senza aver controllato niente.
 
 In ordine di gravità.
 
-1. **Il testo pubblicato è precedente al file versionato, di una riga, e
-   quella riga rompe la sincronizzazione.** `tempoPlausibile()` sul progetto
-   non ha la tolleranza sugli orologi: il pannello scrive «adesso», un
-   secondo di scarto basta a farsi negare la scrittura, e questa macchina è
-   avanti di 998 ms. **Un utente si registra, entra, e non riesce a
-   salvare.** Non c'è esposizione di dati; c'è una funzione visibile e
-   inutilizzabile. Si chiude con SEC-010, ed è il primo rischio perché è
-   l'unico già in atto.
-2. **Un file versionato corretto non dimostra un servizio corretto.** È il
-   rischio strutturale che resta anche dopo aver sistemato la riga: nulla,
-   in questo repository o nella sua pipeline, confronta il testo pubblicato
-   con `firebase/firestore.rules`. L'emulatore leggeva il file giusto ed era
-   verde — 14 prove su 14 — mentre il progetto applicava un altro testo. La
-   divergenza è stata trovata solo interrogando il servizio vero, e può
-   ripresentarsi alla prossima modifica delle regole.
-3. **Il percorso account è verificato quasi per intero sul servizio vero.**
-   Registrazione, accesso, password errata, scrittura, rilettura, isolamento
-   fra due utenti, cancellazione del documento e dell'account: eseguiti e
-   verificati. Restano non eseguibili conflitto e fusione fra due
-   dispositivi, che richiedono due sessioni concorrenti, e la scrittura con
-   il timestamp che il pannello usa davvero, per il punto 1.
-4. **App Check non è attivo, e l'assenza di enforcement è misurata**: il
+1. **Un file versionato corretto non dimostra un servizio corretto.** È il
+   rischio strutturale che resta ora che SEC-010 è chiuso, e non è teorico:
+   la prima pubblicazione differiva di una riga, e nulla — in questo
+   repository o nella sua pipeline — confronta il testo pubblicato con
+   `firebase/firestore.rules`. L'emulatore leggeva il file giusto ed era
+   verde, 14 prove su 14, mentre il progetto applicava un altro testo. La
+   divergenza è stata trovata solo interrogando il servizio, e può
+   ripresentarsi alla prossima modifica delle regole. Aggravante concreta:
+   `Downloads\pannello-tempo-collaudo` è un duplicato senza `.git` fermo a
+   prima delle correzioni, ed è da lì che venne la copia sbagliata.
+2. **Il percorso account è verificato sul servizio vero, tranne il
+   concorso.** Registrazione, accesso, password errata, creazione, lettura,
+   aggiornamento, cancellazione, isolamento fra due utenti, accesso anonimo
+   negato, percorsi non previsti negati, cancellazione dell'account: tutti
+   eseguiti e verificati. Restano non eseguibili conflitto e fusione fra due
+   dispositivi, che richiedono due sessioni concorrenti sullo stesso account.
+3. **App Check non è attivo, e l'assenza di enforcement è misurata**: il
    servizio ha accettato registrazione e accesso senza alcun token. La quota
    è esposta all'uso automatizzato.
-5. **`style-src` ammette `'unsafe-inline'`** per gli attributi `style`: chi
+4. **`style-src` ammette `'unsafe-inline'`** per gli attributi `style`: chi
    riuscisse a iniettare HTML potrebbe iniettare CSS. Si chiude togliendo i
    141 stili inline.
-6. **Clickjacking coperto solo da JavaScript.** `frame-ancestors` non ha
+5. **Clickjacking coperto solo da JavaScript.** `frame-ancestors` non ha
    effetto in un `<meta>` e GitHub Pages non permette intestazioni.
-7. **Nessun backup del database.** L'unica copia ripristinabile dei dati di
+6. **Nessun backup del database.** L'unica copia ripristinabile dei dati di
    un utente è quella che ha esportato lui.
-8. **Nessun limite proprio sui tentativi di accesso**: dipende dal servizio.
-9. **`js/versioni.js` contiene una generazione precedente** in gran parte
+7. **Nessun limite proprio sui tentativi di accesso**: dipende dal servizio.
+8. **`js/versioni.js` contiene una generazione precedente** in gran parte
    senza chiamanti. Non è un rischio di sicurezza diretto, ma è il tipo di
    codice che ha già prodotto un difetto grave (`ARCHITECTURE.md` §3).
 
@@ -663,12 +680,12 @@ Non dice «il pannello è sicuro». Dice quali controlli sono stati eseguiti e
 quali no, e distingue le due cose.
 
 Soprattutto non dice «i dati degli utenti sono protetti dalle regole di
-questo repository». Dice che il testo **pubblicato** sul progetto isola gli
-utenti — verificato, sei rifiuti su sei sul servizio vero — e che quel testo
-**non è** il file di questo repository: gli manca una riga, e quella riga
-impedisce ogni salvataggio. Le due affermazioni «le regole sono corrette» e
-«le regole in vigore sono queste» restano separate, e nulla qui dentro le
-tiene allineate automaticamente.
+questo repository» come se fosse una proprietà del repository. Dice che il
+testo **pubblicato** sul progetto, il 6 settembre 2026, coincideva con questo
+file e isolava gli utenti: verificato, 20 controlli su 20 sul servizio vero.
+Sono due affermazioni diverse, e la seconda scade. Nulla qui dentro tiene
+allineate «le regole sono corrette» e «le regole in vigore sono queste»: dopo
+ogni modifica va rieseguita la sonda contro il servizio.
 
 La lezione di SEC-004/005/006 vale per tutto il resto del documento: **un
 controllo che esiste nel codice e non è mai stato eseguito è una
@@ -682,4 +699,5 @@ SEC-010 aggiunge un secondo corollario, che l'emulatore non poteva insegnare:
 sul servizio.** Le 14 prove sull'emulatore erano verdi mentre il progetto
 vero prima negava tutto e poi applicava un testo diverso di una riga. Nessuna
 delle due cose contraddiceva l'altra, perché misurano oggetti diversi:
-l'emulatore misura il file, la sonda misura il servizio.
+l'emulatore misura il file, la sonda misura il servizio. Servono entrambe, e
+la seconda va rifatta ogni volta che qualcuno pubblica le regole.
