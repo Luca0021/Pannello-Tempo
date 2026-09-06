@@ -30,8 +30,8 @@
         "firebase/firestore.rules",
         "js/sync.js"
       ],
-      "verifica": "ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza rifiutava le scritture di un client con l'orologio avanti di pochi millisecondi, a intermittenza. VERIFICATO ANCHE SUL PROGETTO REALE, con esito diverso e importante: 8 sonde su 8 sono negate, comprese le 4 che le regole del repository permettono al proprietario. Sul progetto ci sono le regole predefinite «production mode»: nessun dato è esposto, ma le regole di questo repository NON sono quelle in vigore",
-      "manca": "l'isolamento verificato con le regole del repository IN VIGORE sul progetto reale: vedi SEC-010. Oggi l'isolamento in produzione è totale perché è negato tutto, non perché queste regole funzionino"
+      "verifica": "ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza. VERIFICATA ANCHE SUL PROGETTO REALE dopo la pubblicazione delle regole: B non legge il documento di A (403), B non ci scrive (403), la lettura senza autenticazione è negata (403), il contenitore users/{uid} è negato (403), la clausola di chiusura è in vigore su una collezione non prevista (403) e lo schema non può regredire (403). Sei rifiuti su sei, sul servizio vero",
+      "manca": "nulla per l'isolamento. Resta però che le regole pubblicate sono una versione PRECEDENTE di una riga: vedi SEC-010"
     },
     {
       "id": "SEC-003",
@@ -102,13 +102,13 @@
     {
       "id": "SEC-010",
       "titolo": "pubblicare le regole di sicurezza sul progetto reale",
-      "stato": "NON INIZIATO",
+      "stato": "PARZIALE",
       "dove": [
         "firebase/firestore.rules",
         ".github/workflows/verifica.yml"
       ],
-      "verifica": "MISURATO sul progetto reale con 8 sonde autenticate e non autenticate: 0 operazioni permesse su 8, comprese le 4 che le regole del repository concedono al proprietario. Nessuna operazione che dovrebbe essere negata risulta permessa, quindi non c'è esposizione: sul progetto ci sono le regole predefinite «production mode», che negano tutto. Conseguenza misurata, non supposta: l'accesso riesce e il salvataggio viene rifiutato con PERMISSION_DENIED, quindi la sincronizzazione non funziona per NESSUN utente",
-      "manca": "`firebase deploy --only firestore:rules` sul progetto, che richiede un accesso autenticato alla console e non è stato eseguito; poi la riesecuzione delle sonde per confermare che il proprietario scriva e che l'isolamento valga con QUESTE regole. Nel flusso di lavoro non esiste alcun passo che pubblichi le regole, quindi oggi non le pubblicherebbe nemmeno un push su main"
+      "verifica": "PUBBLICATE a mano dalla console il 2026-09-06, e la pubblicazione è stata verificata sul progetto reale: prima 0 operazioni permesse su 8, adesso il proprietario legge e scrive nel proprio spazio e tutto ciò che deve essere negato è negato (12 controlli su 13). Confronto riga per riga fra il file pubblicato e firebase/firestore.rules: UNA sola riga di codice differisce, su 96",
+      "manca": "quella riga. Sul progetto `tempoPlausibile()` è ancora `aggiornatoIl <= request.time`, SENZA i cinque minuti di tolleranza del commit 7bba236. Dimostrato dal vivo: questa macchina è avanti di 998 ms sull'orologio del servizio, e una scrittura con `aggiornatoIl` = adesso viene NEGATA. Il pannello scrive «adesso», quindi la sincronizzazione resta rotta per chiunque abbia l'orologio avanti anche solo di un secondo. Va sostituita la funzione con quella del repository e ripubblicato"
     },
     {
       "id": "PRV-001",
@@ -125,13 +125,13 @@
     {
       "id": "PRV-002",
       "titolo": "cancellazione completa e verificata",
-      "stato": "PARZIALE",
+      "stato": "COMPLETATO",
       "dove": [
         "js/privacy.js",
         "js/distruttive.js"
       ],
-      "verifica": "tests/e2e/cancellazione.spec.js ESEGUITO: 10 prove su 10, exit 0, con risposte finte. Sul servizio REALE è stata vista avvenire la cancellazione dell'ACCOUNT: tre account di prova creati e cancellati via accounts:delete con esito HTTP 200, e la controprova eseguita ogni volta — l'accesso successivo con le stesse credenziali viene rifiutato. Nessun residuo lasciato sul progetto",
-      "manca": "la cancellazione del DOCUMENTO vista avvenire sul servizio reale: non è osservabile finché le regole pubblicate negano ogni scrittura, perché il documento non si può nemmeno creare. Sbloccata da SEC-010"
+      "verifica": "ESEGUITA SUL SERVIZIO REALE, non più con risposte finte. Sul progetto pannello-tempo: documento creato (HTTP 200), riletto col payload corretto, cancellato (HTTP 200), e la rilettura successiva risponde 404 NOT_FOUND — la cancellazione è stata VISTA avvenire. Cancellato anche il percorso delle versioni precedenti, come fa il pannello: lasciarne uno significherebbe dire «cancellato» con una copia ancora leggibile. Verificata inoltre la cancellazione dell'ACCOUNT su cinque account di prova, ognuna con la controprova: l'accesso successivo con le stesse credenziali viene rifiutato. Nessun residuo lasciato sul progetto. In locale restano verdi le 10 prove di tests/e2e/cancellazione.spec.js",
+      "manca": ""
     },
     {
       "id": "PRV-003",

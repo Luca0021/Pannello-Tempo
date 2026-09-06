@@ -79,52 +79,88 @@ Utenti di prova con indirizzi su `example.com` — dominio riservato IANA alla
 documentazione, non di nessuna persona reale — e dati sintetici. Tutti gli
 account creati sono stati cancellati, con la controprova.
 
+Il lavoro si è svolto in due tempi: **prima** della pubblicazione delle
+regole e **dopo**, perché il proprietario le ha pubblicate a mano dalla
+console fra le due tornate. Le due misure insieme valgono più di ognuna da
+sola: mostrano che cosa cambia pubblicandole.
+
+#### Prima della pubblicazione
+
+| # | Controllo | Esito |
+|---|---|---|
+| RETE-01 | endpoint raggiungibile | **PASSATO** |
+| AUTH-01/02 | registrazione di due utenti | **PASSATO** |
+| AUTH-03/04 | accesso con la password giusta, e rifiuto di quella sbagliata | **PASSATO** |
+| FS-01 | il proprietario scrive il proprio documento | **FALLITO**, `403 PERMISSION_DENIED` |
+| PUL-01/02 | cancellazione degli account di prova | **PASSATO** |
+
+Otto sonde, autenticate e non: **0 operazioni permesse su 8**, comprese le
+4 che le regole del repository concedono al proprietario, e **0** che
+dovrebbero essere negate risultavano permesse. Il progetto aveva le regole
+predefinite «production mode». Nessuna esposizione, e sincronizzazione
+impossibile per chiunque.
+
+#### Dopo la pubblicazione
+
+Le stesse sonde, più l'isolamento fra due utenti e la cancellazione, che
+prima non erano eseguibili perché il documento non si poteva creare.
+**12 controlli su 13 passati.**
+
 | # | Controllo | Esito | Che cosa si è visto |
 |---|---|---|---|
-| RETE-01 | endpoint raggiungibile | **PASSATO** | risposta HTTP reale |
-| AUTH-01/02 | registrazione di due utenti | **PASSATO** | HTTP 200, due UID distinti |
-| AUTH-03 | accesso con la password giusta | **PASSATO** | HTTP 200, stesso UID della registrazione |
-| AUTH-04 | accesso con la password **sbagliata** | **PASSATO** | rifiutato: il servizio verifica davvero |
-| FS-01 | il proprietario scrive il proprio documento | **FALLITO** | `HTTP 403 PERMISSION_DENIED` |
-| PUL-01/02 | cancellazione degli account di prova | **PASSATO** | HTTP 200, e l'accesso successivo è rifiutato |
+| OWN-01 | A scrive il proprio documento | **PASSATO** | HTTP 200 |
+| OWN-02 | A lo rilegge | **PASSATO** | HTTP 200, payload identico: andata e ritorno completo |
+| ISO-01 | B legge il documento di A | **PASSATO** | `403 PERMISSION_DENIED` |
+| ISO-02 | B scrive nel documento di A | **PASSATO** | `403 PERMISSION_DENIED` |
+| ISO-03 | lettura **senza autenticazione** | **PASSATO** | `403 PERMISSION_DENIED` |
+| ISO-04 | A legge il contenitore `users/{A}` | **PASSATO** | `403`: `allow read: if false` è in vigore |
+| REG-01 | A scrive in una collezione non prevista | **PASSATO** | `403`: la clausola di chiusura c'è |
+| REG-02 | A scrive schema 5 su un documento a schema 6 | **PASSATO** | `403`: lo schema non regredisce |
+| REG-03 | A scrive con `aggiornatoIl` avanti di 2 minuti | **FALLITO** | `403`: **la tolleranza non è pubblicata** |
+| DEL-01 | A cancella il proprio documento | **PASSATO** | 200 prima, DELETE 200, **404 dopo** |
+| DEL-02 | A cancella il percorso delle versioni precedenti | **PASSATO** | HTTP 200 |
+| PUL-01/02 | cancellazione dei due account | **PASSATO** | 200, e l'accesso successivo è rifiutato |
 
-**Authentication sul progetto reale funziona.** Registrazione, accesso,
-rifiuto della password errata e cancellazione dell'account sono stati
-eseguiti e verificati, non dedotti.
+**L'isolamento fra utenti è verificato sul progetto reale**, non più solo
+sull'emulatore: sei rifiuti su sei. **La cancellazione remota è stata vista
+avvenire**: il documento risponde 200, poi 404. È ciò che mancava a PRV-002,
+che passa a COMPLETATO.
 
-**Firestore nega tutto.** FS-01 non è un difetto del pannello, ed è stato
-accertato invece di essere supposto: una seconda sonda ha provato otto
-operazioni, autenticate e non.
+#### L'unico fallimento: la tolleranza sugli orologi non è pubblicata
 
-| Operazione | Le regole del repository | Il progetto reale |
-|---|---|---|
-| scrittura **minima** (solo `payload`) del proprietario | permessa | **negata** |
-| lettura del proprio `datasets/current` | permessa | **negata** |
-| lettura del proprio `profile/main` | permessa | **negata** |
-| lettura del proprio percorso precedente | permessa | **negata** |
-| lettura senza autenticazione | negata | negata |
-| elenco della collezione `users`, autenticato e non | negato | negato |
-| scrittura in una collezione non prevista | negata | negata |
+Il confronto riga per riga fra il file pubblicato e `firebase/firestore.rules`
+dà **una sola differenza su 96 righe di codice**:
 
-**0 operazioni permesse su 8. 4 che il repository concede al proprietario
-sono negate. 0 che dovrebbero essere negate risultano permesse.**
+```
+pubblicato:   aggiornatoIl <= request.time
+repository:   aggiornatoIl <= request.time + duration.value(5, 'm')
+```
 
-La scrittura minima è il discriminante, e per questo è stata provata: sotto
-le regole del repository è permessa — ogni funzione di validazione è
-protetta da `!('campo' in request.resource.data)` — quindi il suo rifiuto
-esclude che si tratti di una validazione violata dal pannello. Sul progetto
-ci sono le regole predefinite **«production mode»**, che negano tutto.
+È esattamente il difetto corretto in `7bba236`, e sul progetto c'è ancora.
+Dimostrato dal vivo, non per deduzione:
 
-Due conseguenze, di segno opposto, e vanno dette entrambe:
+| Prova | Esito sul progetto |
+|---|---|
+| `aggiornatoIl` 2 minuti nel **passato** | permesso |
+| `aggiornatoIl` = **adesso** | **negato** |
+| `aggiornatoIl` 2 minuti nel **futuro** | negato |
+| `aggiornatoIl` 10 minuti nel futuro | negato |
 
-- **nessun dato è esposto.** Non c'è nulla di aperto, nemmeno per errore.
-- **la sincronizzazione non funziona per nessun utente.** L'accesso riesce,
-  il salvataggio viene rifiutato. È lo stato peggiore da diagnosticare: la
-  parte visibile funziona.
+L'orologio di questa macchina è avanti di **998 ms** su quello del servizio
+(letto dall'header `Date` della risposta). **Un solo secondo di scarto basta
+a far negare la scrittura**, e il pannello scrive «adesso»: finché quella
+riga non è aggiornata la sincronizzazione resta rotta per chiunque abbia
+l'orologio anche solo un attimo avanti. Ticket **SEC-010**, ora PARZIALE.
 
-Si sblocca pubblicando le regole — `firebase deploy --only firestore:rules` —
-che richiede un accesso autenticato alla console e **non è stato eseguito**:
-modificherebbe lo stato remoto del progetto. È il ticket **SEC-010**.
+> **Nota di metodo, e un errore da non ripetere.** La prima lettura delle
+> sonde dopo la pubblicazione sembrava dire «stato misto»: due letture del
+> proprietario risultavano negate. Erano **404 NOT_FOUND**, su documenti mai
+> creati. Su una lettura, `404` è la prova che **il permesso è stato
+> concesso** e il documento non c'è; il diniego è `403`. Il classificatore
+> della sonda usava `response.ok`, che tratta 404 come fallimento, e così
+> accusava le regole appena pubblicate di un difetto che non hanno. Prima
+> della pubblicazione quelle stesse due letture rispondevano `403`: è
+> proprio il passaggio da 403 a 404 il segno che le regole sono cambiate.
 
 ---
 
@@ -213,11 +249,11 @@ resta PARZIALE.
 |---|---|---|
 | Seconda gamba su **Firefox** | **BLOCCATO** | su questa rete `npx playwright install` fallisce con «Download failure» per **tutti** i browser e perfino per ffmpeg (1 MB), mentre gli stessi CDN servono byte a una richiesta diretta. Aggirato per Chromium usando Edge 152 di sistema; per Firefox non esiste un'installazione di sistema |
 | **Authentication** su progetto reale | **PASSATO** | non più bloccato: la configurazione è arrivata. Registrazione, accesso, rifiuto della password errata e cancellazione dell'account eseguiti sul progetto vero. Vedi §1 |
-| **Firestore** su progetto reale | **FALLITO**, per una causa remota | il progetto nega ogni operazione: ha le regole predefinite, non quelle del repository. Accertato con 8 sonde, non supposto. SEC-010 |
-| **Isolamento fra utenti** su progetto reale | **NON VERIFICABILE** allo stato attuale | non si può distinguere l'isolamento da un rifiuto generalizzato: se è negato tutto, anche l'accesso di un estraneo è negato, ma questo non dimostra che le regole del repository funzionino. Verificato sull'emulatore: §1. Si sblocca con SEC-010 |
-| **Cancellazione remota del documento** | **NON VERIFICABILE** allo stato attuale | il documento non si può nemmeno creare. La cancellazione dell'**account**, invece, è stata vista avvenire sul servizio reale: §1 |
+| **Firestore** su progetto reale | **PASSATO**, tranne una riga | dopo la pubblicazione manuale delle regole: il proprietario legge e scrive nel proprio spazio. Resta negata la scrittura con `aggiornatoIl` = adesso, perché la tolleranza sugli orologi non è pubblicata. SEC-010 |
+| **Isolamento fra utenti** su progetto reale | **PASSATO** | non più solo sull'emulatore: sei rifiuti su sei sul servizio vero — lettura e scrittura incrociate, lettura anonima, contenitore, collezione non prevista, schema che regredisce |
+| **Cancellazione remota del documento** | **PASSATO** | vista avvenire: 200, DELETE 200, poi 404. Più il percorso delle versioni precedenti. PRV-002 chiuso |
 | **App Check** | **NON ATTIVO**, e ora è misurato | `appCheckSiteKey` è vuota perché nessuna Site Key è stata fornita, e il servizio ha accettato registrazione e accesso via REST **senza alcun token di App Check**: l'enforcement non è applicato. Non è una deduzione dal codice, è la risposta del servizio |
-| **Regole pubblicate sul progetto** | **NON ESEGUITO**, di proposito | `firebase deploy --only firestore:rules` modifica lo stato remoto del progetto e richiede un accesso autenticato alla console: non è un'operazione da eseguire senza che il proprietario la decida |
+| **Regole pubblicate sul progetto** | **PARZIALE** | pubblicate a mano dalla console dal proprietario, e la pubblicazione è stata verificata. Ma è una versione precedente di **una riga**: manca la tolleranza sugli orologi. Il deploy da riga di comando non è stato eseguito — `firebase login:list` non riporta alcun account autorizzato, e l'accesso è una credenziale che solo il proprietario può fornire |
 | **GitHub Actions** | **NON ESEGUITO** | la pipeline non è mai stata avviata. YAML valido non significa pipeline eseguita |
 | **Lettore di schermo reale** | **NON ESEGUITO** | non automatizzabile; axe trova circa un terzo dei problemi |
 | **Dispositivo fisico** | **NON ESEGUITO** | l'emulazione di viewport non è un telefono |
@@ -266,32 +302,30 @@ npx firebase emulators:exec --only firestore,auth --project demo-pannello \
 
 In ordine di gravità.
 
-1. **La sincronizzazione non funziona sul progetto reale, e l'accesso sì.**
-   Non è più un rischio: è uno stato accertato. Le regole pubblicate negano
-   ogni scrittura, quindi un utente si registra, entra, e poi non riesce a
-   salvare. Finché SEC-010 non è chiuso, la funzione «account» è visibile e
-   inutilizzabile. È il primo rischio perché è l'unico già in atto.
-2. **Le regole del repository non sono mai state in vigore da nessuna
-   parte tranne l'emulatore.** L'emulatore legge lo stesso file, ma non è lo
-   stesso servizio: ora sappiamo — non supponiamo — che il progetto ne ha
-   altre. Il corollario scomodo è che l'isolamento fra utenti, che era il
-   rischio numero uno delle consegne precedenti, in produzione non è
-   verificato con QUESTE regole. Oggi nessuno legge i dati di nessuno perché
-   nessuno legge niente.
-3. **La cancellazione del documento remoto non è stata vista avvenire.** Il
-   passo esiste e con risposte finte funziona; sul servizio reale il
-   documento non si può nemmeno creare. La cancellazione dell'account,
-   invece, è stata verificata sul servizio vero.
-4. **App Check non è attivo, e ora è misurato**: il servizio ha accettato
+1. **La sincronizzazione è ancora rotta sul progetto reale, per una riga.**
+   Non è un rischio: è uno stato accertato e misurato. Le regole pubblicate
+   pretendono `aggiornatoIl <= request.time` senza tolleranza, il pannello
+   scrive «adesso», e un orologio avanti di un secondo — questa macchina è
+   avanti di 998 ms — basta a far negare la scrittura. Un utente si registra,
+   entra, e non riesce a salvare. Si chiude sostituendo `tempoPlausibile()`
+   con quella del repository e ripubblicando: SEC-010.
+2. **Il resto delle regole è in vigore e verificato sul servizio vero.**
+   Non è più un rischio, ed è un guadagno da registrare: isolamento fra
+   utenti, lettura anonima negata, contenitore negato, clausola di chiusura,
+   schema che non regredisce. Sei rifiuti su sei. Resta però la lezione:
+   quello che governa i dati è il testo **pubblicato**, non il file nel
+   repository, e i due possono divergere di una riga senza che nulla lo
+   segnali. Nessun collaudo di questo repository può accorgersene.
+3. **App Check non è attivo, e ora è misurato**: il servizio ha accettato
    registrazione e accesso via REST senza alcun token. La quota è esposta
    all'uso automatizzato. Nota di sequenza: conviene attivarlo **dopo** aver
-   pubblicato le regole, altrimenti si sommano due cause di rifiuto e
-   diventa difficile capire quale delle due stia agendo.
-5. **`style-src` ammette `'unsafe-inline'`** per gli attributi `style`.
-6. **Clickjacking coperto solo da JavaScript**: `frame-ancestors` non ha
+   sistemato SEC-010, altrimenti si sommano due cause di rifiuto e diventa
+   difficile capire quale delle due stia agendo.
+4. **`style-src` ammette `'unsafe-inline'`** per gli attributi `style`.
+5. **Clickjacking coperto solo da JavaScript**: `frame-ancestors` non ha
    effetto in un `<meta>`.
-7. **Nessun backup del database.**
-8. **La regressione visiva non ha riferimenti approvati**, e su questa
+6. **Nessun backup del database.**
+7. **La regressione visiva non ha riferimenti approvati**, e su questa
    macchina non arriva in fondo.
-9. **Una sola gamba di browser.** Firefox non è stato provato.
-10. **Nessuna prova su lettore di schermo reale né su dispositivo fisico.**
+8. **Una sola gamba di browser.** Firefox non è stato provato.
+9. **Nessuna prova su lettore di schermo reale né su dispositivo fisico.**

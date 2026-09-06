@@ -35,17 +35,17 @@ lavoro erano in codice che a leggerlo sembrava corretto.
 | CPY | 1 | 1 | 0 | 0 |
 | MIG | 1 | 1 | 0 | 0 |
 | MOB | 2 | 0 | 2 | 0 |
-| PRV | 4 | 3 | 1 | 0 |
+| PRV | 4 | 4 | 0 | 0 |
 | ROU | 2 | 2 | 0 | 0 |
-| SEC | 9 | 6 | 2 | 1 |
+| SEC | 9 | 6 | 3 | 0 |
 | SYN | 6 | 6 | 0 | 0 |
 | TST | 5 | 2 | 3 | 0 |
 | UI | 2 | 1 | 1 | 0 |
-| **totale** | **42** | **30** | **10** | **2** |
+| **totale** | **42** | **31** | **10** | **1** |
 
 **Non esiste un solo ticket il cui stato dipenda da una prova che non è
 girata.** Dove la prova non è girata, lo stato è PARZIALE. È il motivo per
-cui dodici righe non sono verdi pur avendo il codice al suo posto.
+cui undici righe non sono verdi pur avendo il codice al suo posto.
 
 ---
 
@@ -63,6 +63,7 @@ si applica e i service worker non si registrano.
 | **SEC-006** | limiti dell'importazione ICS | `js/sicurezza.js`, `tests/unit/limiti-e-versioni.test.js` | eseguita nel browser DOPO la stessa scoperta: ora 4 MB e 500 eventi vengono respinti, e un calendario valido passa |
 | **SEC-008** | limiti e ritmo delle chiamate | `js/appcheck.js`, `js/sync.js` | otto meccanismi eseguiti nel browser (backoff, sospensione, 429, dedup, cicli, dimensioni) |
 | **PRV-001** | trasparenza su ciò che non è protetto | `js/features/settings-ui.js`, `PRIVACY.md`, `E2EE-DECISION.md` | eseguita nel browser: le tre affermazioni sono presenti nel testo visibile |
+| **PRV-002** | cancellazione completa e verificata | `js/privacy.js`, `js/distruttive.js` | ESEGUITA SUL SERVIZIO REALE, non più con risposte finte. Sul progetto pannello-tempo: documento creato (HTTP 200), riletto col payload corretto, cancellato (HTTP 200), e la rilettura successiva risponde 404 NOT_FOUND — la cancellazione è stata VISTA avvenire. Cancellato anche il percorso delle versioni precedenti, come fa il pannello: lasciarne uno significherebbe dire «cancellato» con una copia ancora leggibile. Verificata inoltre la cancellazione dell'ACCOUNT su cinque account di prova, ognuna con la controprova: l'accesso successivo con le stesse credenziali viene rifiutato. Nessun residuo lasciato sul progetto. In locale restano verdi le 10 prove di tests/e2e/cancellazione.spec.js |
 | **PRV-003** | esportazione dei propri dati | `js/backup.js`, `js/privacy.js` | eseguita nel browser: JSON e CSV, senza credenziali |
 | **PRV-004** | analisi personali trasparenti | `js/privacy.js` | eseguita nel browser |
 | **SYN-001** | contratto del fornitore di sincronizzazione | `js/sync-provider.js` | tre adattatori conformi; il dominio non nomina nessun servizio |
@@ -111,10 +112,10 @@ Che cosa serve per ognuno, con precisione:
 
 | Ticket | Titolo | Dove | Che cosa manca per chiuderlo |
 |---|---|---|---|
-| **SEC-002** | isolamento dei dati fra utenti | `firebase/firestore.rules`, `js/sync.js` | ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza rifiutava le scritture di un client con l'orologio avanti di pochi millisecondi, a intermittenza. VERIFICATO ANCHE SUL PROGETTO REALE, con esito diverso e importante: 8 sonde su 8 sono negate, comprese le 4 che le regole del repository permettono al proprietario. Sul progetto ci sono le regole predefinite «production mode»: nessun dato è esposto, ma le regole di questo repository NON sono quelle in vigore |
+| **SEC-002** | isolamento dei dati fra utenti | `firebase/firestore.rules`, `js/sync.js` | ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza. VERIFICATA ANCHE SUL PROGETTO REALE dopo la pubblicazione delle regole: B non legge il documento di A (403), B non ci scrive (403), la lettura senza autenticazione è negata (403), il contenitore users/{uid} è negato (403), la clausola di chiusura è in vigore su una collezione non prevista (403) e lo schema non può regredire (403). Sei rifiuti su sei, sul servizio vero |
 | **SEC-003** | Content Security Policy | `index.html`, `js/boot.js` | il passo CSP verde IN PIPELINE: la pipeline non è mai stata eseguita |
 | **SEC-009** | App Check | `js/appcheck.js`, `js/config-firebase.js` | chiave reCAPTCHA, attivazione, enforcement, e la verifica che il traffico legittimo non venga bloccato. Nota: l'enforcement va attivato DOPO aver pubblicato le regole, altrimenti si sommano due cause di rifiuto e diventa difficile capire quale sia |
-| **PRV-002** | cancellazione completa e verificata | `js/privacy.js`, `js/distruttive.js` | la cancellazione del DOCUMENTO vista avvenire sul servizio reale: non è osservabile finché le regole pubblicate negano ogni scrittura, perché il documento non si può nemmeno creare. Sbloccata da SEC-010 |
+| **SEC-010** | pubblicare le regole di sicurezza sul progetto reale | `firebase/firestore.rules`, `.github/workflows/verifica.yml` | quella riga. Sul progetto `tempoPlausibile()` è ancora `aggiornatoIl <= request.time`, SENZA i cinque minuti di tolleranza del commit 7bba236. Dimostrato dal vivo: questa macchina è avanti di 998 ms sull'orologio del servizio, e una scrittura con `aggiornatoIl` = adesso viene NEGATA. Il pannello scrive «adesso», quindi la sincronizzazione resta rotta per chiunque abbia l'orologio avanti anche solo di un secondo. Va sostituita la funzione con quella del repository e ripubblicato |
 | **UI-006** | indicatore Lavoro/Vita nelle righe delle attività | `css/tokens.css`, `css/components.css`, `js/tasks.js` | le 56 prove rimanenti di ui006.spec.js, che su questa macchina non arrivano in fondo, e la regressione visiva verde con riferimenti APPROVATI a mano |
 | **A11Y-004** | tastiera e fuoco sempre visibile | `css/accessibility.css`, `css/tokens.css` | una prova con un lettore di schermo reale: axe trova circa un terzo dei problemi |
 | **A11Y-005** | casella di completamento nativa e con un nome | `css/components.css`, `js/tasks.js` | ESEGUITA con Playwright e axe-core: 22 prove su 22, exit 0. Comprende i nomi accessibili di tutti i campi, i label associati, le didascalie con il nome sul comando e i gruppi di pulsanti |
@@ -135,7 +136,6 @@ elenca le prove scritte e non eseguite.
 | Ticket | Titolo | Perché |
 |---|---|---|
 | **CAL-003** | integrazione automatica del calendario | `CALENDAR-SYNC.md` | richiede OAuth e un servizio che custodisca i refresh token. Senza server non è realizzabile senza promettere una custodia che non esiste: CALENDAR-SYNC.md §6 |
-| **SEC-010** | pubblicare le regole di sicurezza sul progetto reale | `firebase/firestore.rules`, `.github/workflows/verifica.yml` | `firebase deploy --only firestore:rules` sul progetto, che richiede un accesso autenticato alla console e non è stato eseguito; poi la riesecuzione delle sonde per confermare che il proprietario scriva e che l'isolamento valga con QUESTE regole. Nel flusso di lavoro non esiste alcun passo che pubblichi le regole, quindi oggi non le pubblicherebbe nemmeno un push su main |
 
 ---
 

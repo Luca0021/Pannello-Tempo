@@ -132,25 +132,27 @@ dichiara.
 regole nega tutto, il che è sicuro ma rompe l'app; con regole sbagliate
 espone i dati.
 
-> ### Questo passo NON è stato eseguito sul progetto `pannello-tempo`
+> ### Sul progetto `pannello-tempo` è stato eseguito a metà — attenzione a quale file si copia
 >
-> Non è un avvertimento generico: è lo stato **misurato** del progetto.
-> Otto sonde, autenticate e non, sul progetto reale: **0 operazioni
-> permesse su 8**, comprese le quattro che le regole di questo repository
-> concedono al proprietario. Nessuna operazione che dovrebbe essere negata
-> risulta permessa, quindi **non c'è alcuna esposizione** — ci sono le
-> regole predefinite «production mode», che negano tutto.
+> Le regole sono state pubblicate a mano dalla console, e la pubblicazione è
+> stata **verificata sul progetto reale**: 12 controlli su 13. Isolamento fra
+> due utenti, lettura anonima negata, contenitore negato, clausola di
+> chiusura, schema che non regredisce, cancellazione remota: tutti corretti.
 >
-> La frase qui sopra, «è sicuro ma rompe l'app», descrive esattamente la
-> situazione attuale: Authentication funziona (registrazione, accesso,
-> rifiuto della password errata e cancellazione dell'account sono stati
-> verificati sul progetto vero), e il salvataggio viene rifiutato con
-> `PERMISSION_DENIED`. Un utente si registra, entra, e i suoi dati non
-> arrivano da nessuna parte.
+> Il tredicesimo no. Il testo pubblicato è una versione **precedente di una
+> riga** su 96: `tempoPlausibile()` è ancora
+> `aggiornatoIl <= request.time`, **senza** i cinque minuti di tolleranza.
 >
-> Finché il comando qui sotto non viene eseguito, la funzione «account» è
-> visibile e inutilizzabile. È il ticket **SEC-010**; il dettaglio delle
-> sonde sta in `SECURITY-REPORT.md` e `TEST-REPORT.md` §1.
+> Il pannello scrive `aggiornatoIl` con l'orologio del dispositivo, e un
+> secondo di scarto basta a farsi negare la scrittura — misurato: la macchina
+> di collaudo era avanti di 998 ms, e la scrittura è stata negata. Quindi la
+> frase qui sopra, «è sicuro ma rompe l'app», vale ancora, per una riga sola.
+>
+> **La copia sbagliata veniva da `Downloads\pannello-tempo-collaudo`**, un
+> duplicato della cartella **senza `.git`** e fermo a prima della correzione.
+> Copiare sempre da un albero versionato, e controllare che la funzione
+> contenga `duration.value(5, 'm')` prima di incollare. È il ticket
+> **SEC-010**; il dettaglio sta in `SECURITY-REPORT.md` e `TEST-REPORT.md` §1.
 
 ```bash
 npm i -g firebase-tools

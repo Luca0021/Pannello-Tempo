@@ -23,5 +23,5 @@ var BUILD = {
   "commit": "",
   "schema": 6,
   "cache": "pt-3bf50e96",
-  "costruito": "2026-09-06T10:36:46Z"
+  "costruito": "2026-09-06T14:57:06Z"
 };

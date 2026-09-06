@@ -30,16 +30,48 @@ concedono al proprietario; **0** operazioni che dovrebbero essere negate
 risultano permesse. Il progetto ha le regole predefinite «production mode».
 
 Le due conseguenze vanno dette insieme, perché hanno segno opposto:
+**nessun dato era esposto** — non era aperto niente — e **la
+sincronizzazione non funzionava per nessuno**: si entrava e non si salvava.
+È lo stato peggiore da diagnosticare, perché la parte visibile funziona.
 
-- **nessun dato è esposto**: non è aperto niente, nemmeno per errore;
-- **la sincronizzazione non funziona per nessun utente**: si entra e non si
-  salva. È lo stato peggiore da diagnosticare, perché la parte visibile
-  funziona.
+### Poi le regole sono state pubblicate, e mancava una riga
 
-Si chiude con `firebase deploy --only firestore:rules`, che **non è stato
-eseguito**: modifica lo stato remoto di un progetto reale. Nuovo ticket
-**SEC-010**. Nel flusso di lavoro non esiste alcun passo che pubblichi le
-regole, quindi oggi non lo farebbe nemmeno un push su `main`.
+Il proprietario le ha pubblicate a mano dalla console. Le stesse sonde, più
+l'isolamento e la cancellazione che prima non erano eseguibili — il documento
+non si poteva creare — danno **12 controlli su 13**:
+
+- **isolamento fra due utenti verificato sul servizio vero**: B non legge e
+  non scrive il documento di A, la lettura anonima è negata, il contenitore
+  `users/{uid}` è negato, la clausola di chiusura è in vigore, lo schema non
+  regredisce. Sei rifiuti su sei;
+- **la cancellazione remota è stata vista avvenire**: documento a 200,
+  DELETE a 200, rilettura a 404. Più il percorso delle versioni precedenti.
+  È ciò che mancava a **PRV-002**, che passa a COMPLETATO.
+
+Il tredicesimo controllo fallisce, e il confronto riga per riga fra il testo
+pubblicato e `firebase/firestore.rules` dà **una sola differenza su 96 righe
+di codice**:
+
+```
+pubblicato:   aggiornatoIl <= request.time
+repository:   aggiornatoIl <= request.time + duration.value(5, 'm')
+```
+
+È il difetto corretto in questa stessa build, ancora in vigore sul progetto.
+La copia pubblicata veniva da `Downloads\pannello-tempo-collaudo`, un
+duplicato della cartella **senza `.git`** e fermo a prima della correzione.
+
+Dimostrato dal vivo: l'orologio della macchina di collaudo è avanti di
+**998 ms** su quello del servizio, e con quel solo secondo `aggiornatoIl` =
+adesso viene **negato**. Passato permesso, adesso negato, +2 minuti negato:
+nessuna tolleranza. Il pannello scrive «adesso». **SEC-010** resta PARZIALE.
+
+La lezione che nessun collaudo di questo repository può insegnare: ciò che
+governa i dati è il testo **pubblicato**, e può divergere dal file versionato
+di una riga senza che nulla lo segnali. L'emulatore leggeva il file giusto ed
+era verde — 14 prove su 14 — mentre il progetto applicava l'altro. Nel flusso
+di lavoro non esiste alcun passo che pubblichi le regole né che confronti le
+due versioni, quindi la divergenza può ripresentarsi.
 
 Verificare per davvero ha fatto emergere quattro difetti in più, tre dei
 quali **solo** perché il progetto rifiuta le scritture: quel rifiuto è la
