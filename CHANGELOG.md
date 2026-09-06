@@ -61,17 +61,43 @@ repository:   aggiornatoIl <= request.time + duration.value(5, 'm')
 La copia pubblicata veniva da `Downloads\pannello-tempo-collaudo`, un
 duplicato della cartella **senza `.git`** e fermo a prima della correzione.
 
-Dimostrato dal vivo: l'orologio della macchina di collaudo è avanti di
+Dimostrato dal vivo: l'orologio della macchina di collaudo era avanti di
 **998 ms** su quello del servizio, e con quel solo secondo `aggiornatoIl` =
-adesso viene **negato**. Passato permesso, adesso negato, +2 minuti negato:
-nessuna tolleranza. Il pannello scrive «adesso». **SEC-010** resta PARZIALE.
+adesso veniva **negato**. Passato permesso, adesso negato, +2 minuti negato:
+nessuna tolleranza. E il pannello scrive «adesso».
+
+### Poi la seconda pubblicazione, e SEC-010 si chiude
+
+Ripubblicato l'intero file dal repository versionato, le prove sono state
+rifatte sul progetto remoto: **20 controlli su 20, exit 0**, comprese le 14
+fondamentali. Solo API REST con un idToken di utente normale — nessun Admin
+SDK, nessun service account, nessun bypass — quindi le regole erano in vigore
+su ogni chiamata.
+
+- **tolleranza**: passato permesso, **istante corrente del client permesso**,
+  +2 minuti permesso, +10 minuti negato. La prova decisiva è la seconda: è
+  la scrittura che il pannello fa a ogni salvataggio, ed era quella che
+  falliva. Il limite superiore continua a valere, quindi la tolleranza non
+  ha allargato il controllo, l'ha reso sopportabile da un orologio reale;
+- **proprietario**: creazione, lettura, aggiornamento e cancellazione tutti
+  permessi, con la cancellazione vista avvenire (200, poi 404);
+- **altro utente**: lettura, creazione, aggiornamento e cancellazione tutte
+  negate, e la controprova che il documento resta intatto dopo i quattro
+  tentativi;
+- **accesso anonimo** e **percorsi non previsti**: negati in lettura e in
+  scrittura; negato anche il contenitore `users/{uid}`.
+
+**SEC-010: COMPLETATO.** Con esso, l'isolamento fra utenti (SEC-002) non è
+più verificato soltanto su una copia fedele del servizio: è verificato sul
+servizio.
 
 La lezione che nessun collaudo di questo repository può insegnare: ciò che
 governa i dati è il testo **pubblicato**, e può divergere dal file versionato
 di una riga senza che nulla lo segnali. L'emulatore leggeva il file giusto ed
 era verde — 14 prove su 14 — mentre il progetto applicava l'altro. Nel flusso
 di lavoro non esiste alcun passo che pubblichi le regole né che confronti le
-due versioni, quindi la divergenza può ripresentarsi.
+due versioni, quindi la divergenza può ripresentarsi: dopo ogni modifica
+delle regole va rieseguita una sonda contro il servizio.
 
 Verificare per davvero ha fatto emergere quattro difetti in più, tre dei
 quali **solo** perché il progetto rifiuta le scritture: quel rifiuto è la

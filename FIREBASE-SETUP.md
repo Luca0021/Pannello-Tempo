@@ -132,27 +132,35 @@ dichiara.
 regole nega tutto, il che è sicuro ma rompe l'app; con regole sbagliate
 espone i dati.
 
-> ### Sul progetto `pannello-tempo` è stato eseguito a metà — attenzione a quale file si copia
+> ### Sul progetto `pannello-tempo` è fatto, e verificato — ma leggi come è andata
 >
-> Le regole sono state pubblicate a mano dalla console, e la pubblicazione è
-> stata **verificata sul progetto reale**: 12 controlli su 13. Isolamento fra
-> due utenti, lettura anonima negata, contenitore negato, clausola di
-> chiusura, schema che non regredisce, cancellazione remota: tutti corretti.
+> Le regole sono pubblicate e la pubblicazione è stata **verificata
+> interrogando il servizio**: 20 controlli su 20, di cui le 14 fondamentali.
+> Ticket **SEC-010**, chiuso.
 >
-> Il tredicesimo no. Il testo pubblicato è una versione **precedente di una
-> riga** su 96: `tempoPlausibile()` è ancora
-> `aggiornatoIl <= request.time`, **senza** i cinque minuti di tolleranza.
+> Ci sono volute **due** pubblicazioni, e il motivo è la cosa più utile di
+> questa sezione. La prima copia veniva da
+> `Downloads\pannello-tempo-collaudo`, un duplicato della cartella **senza
+> `.git`** e fermo a prima delle correzioni. Differiva per **una riga su
+> 96**: `tempoPlausibile()` senza i cinque minuti di tolleranza.
 >
-> Il pannello scrive `aggiornatoIl` con l'orologio del dispositivo, e un
-> secondo di scarto basta a farsi negare la scrittura — misurato: la macchina
-> di collaudo era avanti di 998 ms, e la scrittura è stata negata. Quindi la
-> frase qui sopra, «è sicuro ma rompe l'app», vale ancora, per una riga sola.
+> Una riga, e la conseguenza era totale: il pannello scrive `aggiornatoIl`
+> con l'orologio del dispositivo, e la macchina di collaudo era avanti di
+> **998 ms** su quello del servizio. Un secondo. La scrittura veniva negata,
+> l'accesso invece funzionava — cioè esattamente «è sicuro ma rompe l'app»,
+> la frase qui sopra, nella sua forma più difficile da diagnosticare.
 >
-> **La copia sbagliata veniva da `Downloads\pannello-tempo-collaudo`**, un
-> duplicato della cartella **senza `.git`** e fermo a prima della correzione.
-> Copiare sempre da un albero versionato, e controllare che la funzione
-> contenga `duration.value(5, 'm')` prima di incollare. È il ticket
-> **SEC-010**; il dettaglio sta in `SECURITY-REPORT.md` e `TEST-REPORT.md` §1.
+> **Due regole pratiche, pagate a caro prezzo:**
+>
+> 1. copiare **solo** da un albero versionato — mai da una cartella
+>    duplicata;
+> 2. prima di pubblicare, controllare che la funzione contenga
+>    `duration.value(5, 'm')`; dopo aver pubblicato, **provare una scrittura
+>    con `aggiornatoIl` all'istante corrente**. È l'unica prova che
+>    distingue le due versioni, e nessun collaudo del repository può farla:
+>    l'emulatore legge il file, non il servizio.
+>
+> Il dettaglio sta in `SECURITY-REPORT.md` e `TEST-REPORT.md` §1.
 
 ```bash
 npm i -g firebase-tools
