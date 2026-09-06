@@ -48,6 +48,24 @@ module.exports = defineConfig({
     timezoneId: 'Europe/Rome'
   },
 
+  /* Gli scatti di riferimento NON si scrivono per inerzia.
+   *
+   * Il valore predefinito di Playwright è `missing`: un riferimento che non
+   * c'è viene creato, e la prova falla una volta sola. Alla seconda
+   * esecuzione passa — contro uno scatto che nessuno ha guardato. È il modo
+   * più rapido di trasformare la regressione visiva in un controllo che
+   * approva se stesso.
+   *
+   * Con `none` un riferimento assente non viene creato. Chi vuole
+   * approvarli lo dichiara: `npm run test:visivi:approva` passa
+   * `--update-snapshots`, che ha la precedenza su questa riga, oppure si
+   * imposta PT_APPROVA_SCATTI.
+   *
+   * Il caso «riferimento assente» è comunque intercettato prima, in
+   * tests/ui/ui006.spec.js: là il confronto viene saltato e annotato. Questa
+   * riga è la seconda difesa, per le suite che quella guardia non ha. */
+  updateSnapshots: process.env.PT_APPROVA_SCATTI ? 'all' : 'none',
+
   /* La regressione visiva tollera un pixel su cento: sotto quella soglia
      le differenze sono rendering del testo fra una versione del browser e
      l'altra, non cambiamenti dell'interfaccia. */

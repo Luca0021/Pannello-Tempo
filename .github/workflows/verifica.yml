@@ -184,10 +184,18 @@ jobs:
         run: npx playwright test tests/ui/terminologia.spec.js --project=${{ matrix.browser }}
 
       - name: Indicatore Lavoro/Vita (UI-006)
+        # Le 14 asserzioni strutturali girano sempre e bloccano sempre. Il
+        # confronto visivo gira solo contro riferimenti APPROVATI, cioè
+        # versionati: vedi l'intestazione di tests/ui/ui006.spec.js.
         run: npx playwright test tests/ui/ui006.spec.js --project=${{ matrix.browser }}
         env:
-          # Rigenera i riferimenti solo se richiesto a mano.
-          PW_UPDATE_SNAPSHOTS: ${{ inputs.aggiorna_riferimenti_visivi && 'all' || 'none' }}
+          # DIFETTO CORRETTO — qui c'era `PW_UPDATE_SNAPSHOTS`, che Playwright
+          # NON legge: non esiste una variabile d'ambiente con quel nome.
+          # L'input «aggiorna_riferimenti_visivi» era quindi decorativo, e
+          # chi lo avesse messo a `true` non avrebbe ottenuto niente — senza
+          # alcun errore che lo dicesse. La variabile giusta è letta da
+          # playwright.config.js.
+          PT_APPROVA_SCATTI: ${{ inputs.aggiorna_riferimenti_visivi && '1' || '' }}
 
       - name: Sentinelle dei segreti
         run: npx playwright test tests/security/sentinelle.test.js --project=${{ matrix.browser }}
@@ -200,6 +208,15 @@ jobs:
 
       - name: Accessibilità
         run: npx playwright test tests/a11y/ --project=${{ matrix.browser }}
+
+      - name: Stato della regressione visiva
+        # Non fa fallire nulla: dice quante comparazioni visive sono state
+        # saltate per mancanza di riferimenti approvati. Serve perché da
+        # quando il confronto viene saltato invece di fallire, «verde» può
+        # significare «zero copertura visiva», e va detto invece di lasciarlo
+        # dedurre.
+        if: always()
+        run: node strumenti/stato-regressione-visiva.mjs
 
       - name: Rapporto e scatti
         if: always()

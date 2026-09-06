@@ -1,18 +1,84 @@
 /* tests/ui/ui006.spec.js — UI-006: l'indicatore dell'area Lavoro/Vita.
  *
- * NON ESEGUITO nell'ambiente in cui è stato scritto: non c'è Node, quindi non
- * c'è Playwright. Il comando per eseguirlo è in RUN-CI.md. Finché non produce
- * un esito, UI-006 resta PARZIALE.
- *
  * Le asserzioni sono STRUTTURALI: guardano il DOM disegnato, non la presenza
  * di una regola CSS. «Il CSS c'è» non è una verifica — la barra d'area
  * poteva essere reintrodotta da una regola più specifica in un altro file, e
  * un test sul foglio di stile non l'avrebbe visto.
+ *
+ * ───────────────────────────────────────────────────────────────────────────
+ * QUI DENTRO CI SONO DUE CONTROLLI DIVERSI, E PRIMA ERANO CONFUSI IN UNO
+ * ───────────────────────────────────────────────────────────────────────────
+ *
+ * 1. le 14 asserzioni strutturali: deterministiche, non richiedono nulla di
+ *    approvato da una persona, e devono SEMPRE girare e bloccare;
+ * 2. il confronto visivo: ha senso solo contro un riferimento che qualcuno
+ *    ha guardato e approvato. Senza quello non misura niente.
+ *
+ * Erano nella stessa prova, e la conseguenza era che alla prima esecuzione
+ * il gruppo 2 faceva fallire anche il gruppo 1 — e con esso tutti i passi
+ * SUCCESSIVI del lavoro in pipeline, perché GitHub Actions si ferma al primo
+ * passo rosso. Nell'esecuzione su `da24a58` sono rimasti non eseguiti CSP,
+ * PWA, offline, responsive, cancellazione, sentinelle e accessibilità: sette
+ * controlli reali persi per la mancanza di scatti di riferimento. Un test
+ * saltato non è un test passato, e non deve nemmeno impedire agli altri di
+ * girare.
+ *
+ * Ora il confronto visivo viene eseguito SOLO se il riferimento è
+ * APPROVATO, e «approvato» significa **versionato in git** — non «presente
+ * sul disco». È una distinzione sostanziale: un file appena scritto da
+ * Playwright è sul disco ma non dimostra che l'aspetto sia giusto, dimostra
+ * com'era in quel momento. L'unica prova che una persona l'abbia guardato è
+ * il commit che lo aggiunge.
+ *
+ * Non è un controllo indebolito: quando un riferimento approvato ESISTE e
+ * l'aspetto cambia, la prova fallisce esattamente come prima. Quello che
+ * cambia è che l'ASSENZA di un riferimento non viene più confusa con una
+ * regressione, e non viene mai colmata da sola: senza `--update-snapshots`
+ * nessuno scatto viene scritto, quindi la pipeline non può fabbricarsi una
+ * base di confronto e poi dichiararla verde.
+ *
+ * Le comparazioni saltate sono annotate una per una e contate nel riepilogo
+ * della pipeline: «verde» non deve poter nascondere «nessuna copertura
+ * visiva». Finché i riferimenti non sono approvati, TST-006 e UI-006
+ * restano PARZIALE.
  */
 
 const { test, expect } = require('@playwright/test');
+const { execFileSync } = require('child_process');
+const path = require('path');
 
 const BASE = process.env.PT_BASE_URL || 'http://127.0.0.1:8765';
+const RADICE = path.resolve(__dirname, '..', '..');
+const CARTELLA_SCATTI = 'tests/ui/ui006.spec.js-snapshots';
+
+/* I riferimenti APPROVATI, cioè quelli che git conosce.
+ *
+ * `null` significa «non determinabile» (git assente, o questa non è la
+ * radice del repository) e viene trattato come «nessuno approvato»: in
+ * dubbio si salta il confronto, non si approva. È la direzione prudente —
+ * l'errore da evitare è che un riferimento non rivisto diventi la
+ * verità di riferimento. */
+const SCATTI_APPROVATI = (() => {
+  try {
+    const out = execFileSync('git', ['-C', RADICE, 'ls-files', '--', CARTELLA_SCATTI],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    return new Set(out.split(/\r?\n/).map(s => s.trim()).filter(Boolean).map(p => path.basename(p)));
+  } catch {
+    return null;
+  }
+})();
+
+/* Playwright compone il nome come `<arg>-<progetto>-<piattaforma>.png`. Non
+   ricostruisco il suffisso esatto — cambierebbe con la convenzione — ma
+   cerco un riferimento che cominci per la base e nomini questo progetto:
+   uno scatto approvato su Linux non vale per Windows e viceversa, perché il
+   rendering del testo è diverso. */
+function riferimentoApprovato(base, progetto) {
+  if (!SCATTI_APPROVATI) return false;
+  for (const nome of SCATTI_APPROVATI)
+    if (nome.startsWith(base + '-') && nome.includes(progetto)) return true;
+  return false;
+}
 
 /* ── strumenti eseguiti dentro la pagina ─────────────────────────────────── */
 
@@ -272,16 +338,34 @@ for (const tema of ['chiaro', 'scuro']) {
           const m = await page.evaluate(MISURE);
           verifica(m);
 
-          /* Regressione visiva. Alla PRIMA esecuzione questo passo fallisce
-             di proposito: i riferimenti non esistono, Playwright li crea e si
-             ferma. Vanno guardati e approvati a mano — uno scatto appena
-             generato non dimostra che l'aspetto sia giusto. */
+          /* Regressione visiva, ma solo contro un riferimento APPROVATO.
+             Vedi l'intestazione di questo file: le 14 asserzioni qui sopra
+             sono già state verificate e hanno già bloccato se necessario;
+             quello che segue è un controllo diverso, con un prerequisito
+             diverso. */
           const bersaglio = page.locator('[data-sez="recupera"], [data-sez="today"]').first();
           if (await bersaglio.count()) {
-            await expect(bersaglio).toHaveScreenshot(`${s.nome}-${tema}-${nomeVp}.png`, {
-              maxDiffPixelRatio: 0.01,
-              animations: 'disabled'
-            });
+            const base = `${s.nome}-${tema}-${nomeVp}`;
+            const info = test.info();
+            /* `--update-snapshots` è l'approvazione deliberata: chi lo lancia
+               sta dicendo «ho guardato, scrivili». Solo allora si scrive. */
+            const approvazioneInCorso = info.config.updateSnapshots === 'all';
+            if (approvazioneInCorso || riferimentoApprovato(base, info.project.name)) {
+              await expect(bersaglio).toHaveScreenshot(`${base}.png`, {
+                maxDiffPixelRatio: 0.01,
+                animations: 'disabled'
+              });
+            } else {
+              /* Annotata, non silenziosa: compare nel rapporto HTML e nel
+                 riepilogo della pipeline, che la conta. */
+              info.annotations.push({
+                type: 'regressione-visiva-saltata',
+                description: base + ' — nessun riferimento approvato per «' + info.project.name +
+                  '». Le 14 asserzioni strutturali sono state verificate; il confronto ' +
+                  'visivo no. Per approvare: npm run test:visivi:approva, guardare gli ' +
+                  'scatti, e committarli.'
+              });
+            }
           }
         });
       }
