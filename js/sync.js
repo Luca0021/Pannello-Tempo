@@ -125,37 +125,79 @@ function setStatus(s){
   sync.at = new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 }
 /* Traduce l'errore grezzo in: che cosa è successo, che cosa fare.
-   Senza questo, «HTTP 400» non dice se sbagli password o chiave. */
+   Senza questo, «HTTP 400» non dice se sbagli password o qualcos'altro.
+
+   ─────────────────────────────────────────────────────────────────────────
+   QUESTI TESTI SONO INTERFACCIA, NON DIAGNOSTICA.
+   ─────────────────────────────────────────────────────────────────────────
+
+   `dettaglioErrore()` è richiamata da otto punti — `sync.err`, js/privacy.js,
+   js/account.js, js/events.js — e i tre campi «titolo», «causa» e «cosa
+   fare» finiscono sotto gli occhi di chi usa il pannello. Valgono quindi le
+   regole di CPY-002: niente nomi di servizi, niente gergo, niente istruzioni
+   da console. Le fa rispettare tests/unit/messaggi-errore.test.js.
+
+   DIFETTI CORRETTI, tutti della stessa famiglia: istruzioni rimaste da
+   quando era l'UTENTE a possedere il progetto e a incollare la chiave nelle
+   impostazioni. Quell'architettura è stata sostituita (SYNC-DECISION.md), i
+   campi di configurazione sono spariti dall'interfaccia, ma questi messaggi
+   continuavano a mandare l'utente in una console che non è sua e su cui non
+   ha alcun potere.
+
+     - 13 campi su 33 contenevano espressioni vietate dall'interfaccia
+       consumer: nomi di servizi, «apiKey», «chiave API». Nessuna guardia le
+       aveva mai lette, perché tests/ui/terminologia.spec.js cerca nel DOM
+       RENDERIZZATO e un messaggio d'errore è sullo schermo solo quando
+       l'errore capita.
+     - il consiglio per PERMISSION_DENIED indicava `pannello/{uid}`, che è
+       il percorso delle VERSIONI PRECEDENTI e in sola lettura. Seguirlo
+       alla lettera non ripristinava la sincronizzazione. Era l'ultima delle
+       tre copie divergenti citate in firebase/firestore.rules.
+     - il consiglio per la sessione scaduta diceva di premere «Scollega»,
+       che nell'area Account non esiste: il pulsante è «Disconnetti», e
+       «Scollega» stacca un task da una priorità, cosa del tutto diversa.
+
+   Il dettaglio tecnico non è stato perso: `dettaglioErrore` lo conserva nel
+   campo `tecnico`, che è il posto giusto per il messaggio grezzo del
+   servizio. Per chi gestisce il servizio: quando il salvataggio viene
+   rifiutato con PERMISSION_DENIED, il percorso scritto dal pannello è
+   `users/{uid}/datasets/current` e le regole si pubblicano con
+   `firebase deploy --only firestore:rules` (vedi FIREBASE-SETUP.md §7). */
 var ERRORI_FB = [
-  ["API_KEY_INVALID|API key not valid", "Chiave API non valida",
-   "La chiave web del progetto è sbagliata o incompleta.",
-   "Console Firebase → ⚙ Impostazioni progetto → Le tue app → App web → apiKey."],
-  ["OPERATION_NOT_ALLOWED", "Accesso con email e password non attivo",
-   "Il progetto non consente questo tipo di accesso.",
-   "Console Firebase → Authentication → Sign-in method → abilita «Email/Password»."],
-  ["EMAIL_NOT_FOUND", "Utente inesistente",
-   "Nessun utente registrato con questa email.",
-   "Console Firebase → Authentication → Users → Add user, con la stessa email."],
-  ["INVALID_PASSWORD|INVALID_LOGIN_CREDENTIALS", "Password errata",
-   "Email o password non corrispondono.",
-   "Ricontrolla la password, oppure reimpostala da Authentication → Users."],
-  ["INVALID_EMAIL", "Email non valida", "L'indirizzo non ha un formato corretto.", "Correggi l'email."],
-  ["USER_DISABLED", "Utente disabilitato", "L'account esiste ma è stato disattivato.",
-   "Console Firebase → Authentication → Users → riattiva l'utente."],
-  ["TOO_MANY_ATTEMPTS", "Troppi tentativi", "Firebase ha bloccato temporaneamente l'accesso.",
+  ["API_KEY_INVALID|API key not valid", "Servizio di account non disponibile",
+   "Questa copia del pannello non è collegata correttamente al servizio di account.",
+   "Non dipende da te e non lo puoi correggere da qui: i tuoi dati restano su questo dispositivo e non si perdono. Segnalalo a chi ti ha dato il pannello."],
+  ["OPERATION_NOT_ALLOWED", "Creazione dell'account non attiva",
+   "Il servizio non accetta la creazione di account con email e password.",
+   "Non dipende da te: i tuoi dati restano su questo dispositivo. Riprova più tardi, oppure segnalalo a chi gestisce il servizio."],
+  ["EMAIL_NOT_FOUND", "Nessun account con questa email",
+   "Non risulta nessun account registrato con questo indirizzo.",
+   "Controlla l'indirizzo, oppure crea un account nuovo."],
+  /* Un solo messaggio per email inesistente e password sbagliata, come fa
+     il servizio: dire quale dei due è errato racconta a un estraneo se un
+     indirizzo è registrato. */
+  ["INVALID_PASSWORD|INVALID_LOGIN_CREDENTIALS", "Email o password errate",
+   "I dati inseriti non corrispondono a nessun account.",
+   "Ricontrolla email e password, poi riprova."],
+  ["INVALID_EMAIL", "Email non valida", "L'indirizzo non ha un formato corretto.",
+   "Correggi l'email e riprova."],
+  ["USER_DISABLED", "Account disattivato", "L'account esiste ma è stato disattivato.",
+   "I tuoi dati restano su questo dispositivo. Rivolgiti a chi gestisce il servizio per riattivarlo."],
+  ["TOO_MANY_ATTEMPTS", "Troppi tentativi",
+   "Il servizio ha bloccato l'accesso per qualche minuto dopo troppi tentativi.",
    "Attendi qualche minuto e riprova."],
   ["TOKEN_EXPIRED|INVALID_REFRESH_TOKEN|USER_NOT_FOUND", "Sessione scaduta",
-   "Le credenziali salvate non sono più valide.",
-   "Premi «Scollega» e ricollega inserendo di nuovo la password."],
-  ["SERVICE_DISABLED|has not been used in project|Cloud Firestore API", "Firestore non attivo",
-   "Il database non è stato creato in questo progetto.",
-   "Console Firebase → Build → Firestore Database → Crea database → modalità produzione."],
-  ["PERMISSION_DENIED|Missing or insufficient permissions", "Regole di sicurezza troppo strette",
-   "Firestore rifiuta la scrittura per l'utente collegato.",
-   "Firestore → Rules: consenti lettura e scrittura su pannello/{uid} all'utente con quell'uid."],
-  ["NOT_FOUND|The database .* does not exist", "Database non trovato",
-   "Il progetto non ha un database Firestore predefinito.",
-   "Crea il database, oppure controlla l'identificativo del progetto."]
+   "La sessione non è più valida.",
+   "Premi «Disconnetti» e rientra inserendo di nuovo la password."],
+  ["SERVICE_DISABLED|has not been used in project|Cloud Firestore API", "Servizio dati non disponibile",
+   "Lo spazio in cui l'account salva i dati non è attivo.",
+   "Non dipende da te: i tuoi dati restano su questo dispositivo. Segnalalo a chi gestisce il servizio."],
+  ["PERMISSION_DENIED|Missing or insufficient permissions", "Il servizio non accetta i dati",
+   "L'accesso è riuscito, ma il salvataggio viene rifiutato: le regole di sicurezza pubblicate non permettono a questo account di scrivere nel proprio spazio.",
+   "Non è un errore tuo e non lo puoi correggere dal pannello: i tuoi dati restano su questo dispositivo e non si perdono. Chi gestisce il servizio deve pubblicare le regole di sicurezza aggiornate."],
+  ["NOT_FOUND|The database .* does not exist", "Spazio dati non trovato",
+   "Lo spazio in cui l'account dovrebbe salvare i dati non esiste.",
+   "Non dipende da te: i tuoi dati restano su questo dispositivo. Segnalalo a chi gestisce il servizio."]
 ];
 /* Controlli fatti prima di chiamare il servizio: un campo incollato male
    produce altrimenti un errore oscuro del server. */
@@ -192,22 +234,29 @@ function dettaglioErrore(e){
     if (new RegExp(ERRORI_FB[i][0], "i").test(m))
       return { titolo:ERRORI_FB[i][1], causa:ERRORI_FB[i][2], cosa:ERRORI_FB[i][3], tecnico:m.slice(0,300) };
   }
+  /* Rami di ripiego, per gli errori che la tabella non riconosce. Valgono
+     anche qui le regole di CPY-002: erano il posto dove sopravvivevano i
+     consigli su un servizio di sincronizzazione diverso da quello in uso —
+     un 403 sull'account suggeriva di controllare i permessi di un token che
+     l'utente non ha mai creato. */
   if (/Failed to fetch|NetworkError|Load failed|ERR_INTERNET/i.test(m))
     return { titolo:"Nessuna connessione", causa:"Il pannello non riesce a raggiungere il servizio.",
-             cosa:"Controlla la rete. Se apri il file da disco, alcuni browser bloccano le chiamate: pubblicalo su GitHub Pages.",
+             cosa:"Controlla la rete e riprova. Se hai aperto il pannello da un file sul disco, alcuni browser bloccano le chiamate: apri invece l'indirizzo pubblicato.",
              tecnico:m.slice(0,300) };
   if (/HTTP 401/.test(m))
     return { titolo:"Credenziali rifiutate", causa:"Il servizio non riconosce le credenziali.",
-             cosa:"Ricontrolla chiave, email e password, poi ricollega.", tecnico:m.slice(0,300) };
+             cosa:"Ricontrolla email e password, poi riprova.", tecnico:m.slice(0,300) };
   if (/HTTP 403/.test(m))
-    return { titolo:"Accesso negato", causa:"Le credenziali sono valide ma non autorizzate.",
-             cosa:"Controlla le regole di sicurezza di Firestore, o i permessi del token GitHub (serve «gist»).",
+    return { titolo:"Operazione non consentita", causa:"Le credenziali sono valide, ma non autorizzate a questa operazione.",
+             cosa:"Non è un errore tuo: i tuoi dati restano su questo dispositivo. Se si ripete, segnalalo a chi gestisce il servizio.",
              tecnico:m.slice(0,300) };
   if (/HTTP 404/.test(m))
-    return { titolo:"Destinazione non trovata", causa:"L'indirizzo richiesto non esiste.",
-             cosa:"Controlla l'identificativo del progetto o del gist.", tecnico:m.slice(0,300) };
+    return { titolo:"Destinazione non trovata", causa:"Il servizio non ha trovato l'indirizzo richiesto.",
+             cosa:"I tuoi dati restano su questo dispositivo. Se si ripete, segnalalo a chi gestisce il servizio.",
+             tecnico:m.slice(0,300) };
   return { titolo:"Errore imprevisto", causa:"Il servizio ha risposto in modo inatteso.",
-           cosa:"Copia il dettaglio qui sotto e verifica la configurazione.", tecnico:m.slice(0,300) };
+           cosa:"I tuoi dati restano su questo dispositivo. Copia il dettaglio qui sotto se devi segnalare il problema.",
+           tecnico:m.slice(0,300) };
 }
 function syncError(e){
   var m = String(e && e.message || e);
@@ -407,7 +456,23 @@ function fbWrite(text){
           schema:{ integerValue: String(SCHEMA_ATTUALE) },
           aggiornatoIl:{ timestampValue: new Date().toISOString() }
         } }) });
-  }).then(function(r){ if (!r.ok) throw new Error("HTTP "+r.status); return true; });
+  }).then(function(r){
+    /* DIFETTO CORRETTO — qui c'era `throw new Error("HTTP "+r.status)`, che
+       buttava via il corpo della risposta. Il corpo è l'UNICO posto dove il
+       servizio scrive il motivo: PERMISSION_DENIED, o «Missing or
+       insufficient permissions». Senza di esso la voce specifica di
+       ERRORI_FB non poteva mai corrispondere su una scrittura, e si cadeva
+       nel ramo generico `/HTTP 403/`, il cui consiglio parlava di un altro
+       servizio di sincronizzazione.
+
+       Asimmetria che lo rendeva invisibile alla lettura: la LETTURA passa da
+       `jsonOrThrow`, che il corpo lo conserva. Lo stesso rifiuto dava quindi
+       un messaggio corretto in lettura e uno fuorviante in scrittura. */
+    if (!r.ok) return r.text().then(function(t){
+      throw new Error("HTTP "+r.status+" "+String(t).slice(0,120));
+    });
+    return true;
+  });
 }
 
 /* PRV-002 — cancellazione REALE del documento remoto.
@@ -429,8 +494,13 @@ function fbDelete(){
   }).then(function(rs){
     /* 404 significa che non c'era nulla: è comunque il risultato voluto */
     var falliti = rs.filter(function(r){ return !r.ok && r.status !== 404; });
-    if (falliti.length) throw new Error("HTTP "+falliti[0].status);
-    return true;
+    if (!falliti.length) return true;
+    /* Come in fbWrite: il motivo sta nel corpo, e una cancellazione che
+       fallisce è la cosa su cui l'utente ha più diritto a una spiegazione
+       precisa — gli abbiamo appena detto che i suoi dati verranno eliminati. */
+    return falliti[0].text().then(function(t){
+      throw new Error("HTTP "+falliti[0].status+" "+String(t).slice(0,120));
+    }, function(){ throw new Error("HTTP "+falliti[0].status); });
   });
 }
 
