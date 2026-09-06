@@ -13,10 +13,67 @@
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, relative, sep, extname } from 'node:path';
+import { dirname, join, relative, sep, extname, resolve } from 'node:path';
 
 const RADICE = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CHE COSA VUOL DIRE «VERSIONATO» — DIFETTO CORRETTO
+   ─────────────────────────────────────────────────────────────────────────
+
+   Questo strumento annunciava «SEGRETI TROVATI NELL'ALBERO VERSIONATO» ma
+   camminava sul FILESYSTEM con un elenco di cartelle da saltare scritto a
+   mano, senza chiedere niente a git. Un file ignorato da .gitignore veniva
+   trattato come se fosse committato.
+
+   La conseguenza non era teorica. `.env.example` dice, alla terza riga:
+   «Copia questo file in `.env` e compilalo con i valori del TUO progetto».
+   Chi seguiva l'istruzione si trovava il PRIMO passo di `npm run verifica`
+   rosso, con due danni:
+
+     1. la pipeline si fermava su una configurazione corretta, e la via
+        d'uscita più comoda era aggiungere `.env` alle eccezioni o mettere
+        `|| true` sul comando — entrambe peggiori del problema;
+
+     2. il consiglio stampato era SBAGLIATO e allarmante: «Vanno revocati
+        sul servizio che li ha emessi, e poi rimossi dalla cronologia», per
+        un file che nella cronologia non è mai entrato. Qualcuno avrebbe
+        revocato una chiave senza motivo e cercato a lungo qualcosa che non
+        c'era.
+
+   Ora l'insieme dei file da controllare lo dichiara git:
+
+       git ls-files --cached --others --exclude-standard
+
+   cioè ciò che è già versionato PIÙ ciò che entrerebbe al prossimo commit.
+   È esattamente la domanda a cui lo strumento vuole rispondere.
+
+   I file ignorati non vengono buttati via: vengono guardati comunque e
+   riportati a parte, senza far fallire nulla. Un segreto in un `.env`
+   locale è normale e va detto in un tono normale.
+
+   PRUDENZA. Se git non c'è, o se questa cartella non è la radice del
+   repository, l'insieme di git NON viene usato e si torna a esaminare
+   tutto: meglio un falso allarme che un segreto non cercato. Il caso
+   pericoloso da evitare è il silenzio — se i percorsi di git e quelli del
+   filesystem non combaciassero, ogni file risulterebbe «ignorato» e lo
+   strumento passerebbe senza aver controllato niente. */
+function insiemeDiGit() {
+  try {
+    const cima = execFileSync('git', ['rev-parse', '--show-toplevel'],
+      { cwd: RADICE, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    if (!cima || resolve(cima) !== resolve(RADICE)) return null;
+    const out = execFileSync('git',
+      ['ls-files', '--cached', '--others', '--exclude-standard', '--full-name', '-z'],
+      { cwd: RADICE, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const elenco = out.split('\0').filter(Boolean);
+    return elenco.length ? new Set(elenco) : null;
+  } catch {
+    return null;
+  }
+}
 
 const SALTA_CARTELLE = new Set(['.git', 'node_modules', 'playwright-report',
   'test-results', '.firebase', '.claude']);
@@ -93,19 +150,32 @@ function elenca(dir, out = []) {
   return out;
 }
 
-const trovati = [];
-for (const pieno of elenca(RADICE)) {
+const secondoGit = insiemeDiGit();
+const tutti = elenca(RADICE);
+
+const trovati = [];    /* nell'albero versionato: fanno fallire */
+const ignorati = [];   /* fuori da git: si riportano, non fanno fallire */
+let esaminati = 0, saltatiPerchéIgnorati = 0;
+
+for (const pieno of tutti) {
   const rel = relative(RADICE, pieno).split(sep).join('/');
+  const fuoriDaGit = secondoGit !== null && !secondoGit.has(rel);
   let testo;
   try { testo = readFileSync(pieno, 'utf8'); } catch { continue; }
+  esaminati++;
+  if (fuoriDaGit) saltatiPerchéIgnorati++;
   for (const m of MODELLI) {
     const trovato = m.re.exec(testo);
     if (!trovato) continue;
     if (ammesso(rel, trovato[0], m)) continue;
     const riga = testo.slice(0, trovato.index).split('\n').length;
-    trovati.push({ file: rel, riga, tipo: m.nome,
-                   /* si mostra solo il PRINCIPIO, mai il valore intero */
-                   anteprima: trovato[0].slice(0, 12) + '…' });
+    /* Dei file ignorati non si mostra nemmeno l'anteprima: non c'è niente
+       da diagnosticare, e un valore in meno a schermo è un valore in meno
+       che finisce in un registro della pipeline. */
+    if (fuoriDaGit) ignorati.push({ file: rel, riga, tipo: m.nome });
+    else trovati.push({ file: rel, riga, tipo: m.nome,
+                        /* si mostra solo il PRINCIPIO, mai il valore intero */
+                        anteprima: trovato[0].slice(0, 12) + '…' });
   }
 }
 
@@ -113,12 +183,33 @@ if (trovati.length) {
   console.error('SEGRETI TROVATI NELL\'ALBERO VERSIONATO:\n');
   for (const t of trovati)
     console.error(`  ${t.file}:${t.riga}  ${t.tipo}  (${t.anteprima})`);
-  console.error('\nRimuoverli dal file NON basta: restano nella cronologia di git.');
-  console.error('Vanno revocati sul servizio che li ha emessi, e poi rimossi dalla cronologia.');
+  console.error('\nQuesti file sono versionati, o entrerebbero al prossimo commit.');
+  console.error('Rimuoverli dal file NON basta se sono già stati committati: restano');
+  console.error('nella cronologia di git. Vanno revocati sul servizio che li ha');
+  console.error('emessi, e poi rimossi dalla cronologia.');
   process.exit(1);
 }
 
-console.log('nessun segreto trovato.');
+console.log('nessun segreto nell\'albero versionato.');
 console.log('  modelli cercati: ' + MODELLI.length);
-console.log('  file esaminati:  ' + elenca(RADICE).length);
+console.log('  file esaminati:  ' + esaminati +
+            (secondoGit === null ? '' : ' (' + (esaminati - saltatiPerchéIgnorati) + ' versionati, ' +
+             saltatiPerchéIgnorati + ' ignorati da git)'));
+if (secondoGit === null)
+  console.log('  NOTA: l\'insieme dei file versionati non è stato ottenuto da git\n' +
+              '        (git assente, o questa non è la radice del repository).\n' +
+              '        Esaminato tutto quello che c\'è sul disco: può produrre\n' +
+              '        falsi allarmi su file locali, ma non lascia buchi.');
+
+if (ignorati.length) {
+  /* Non è un fallimento. È il posto GIUSTO per una chiave di configurazione:
+     `.env` esiste per questo, ed è escluso da git proprio perché ci finisca
+     dentro. Dirlo comunque serve a due cose: confermare che il file è fuori
+     dal repository, e accorgersi subito se un giorno smettesse di esserlo. */
+  console.log('\n  Fuori dall\'albero versionato, e quindi non un problema:');
+  for (const t of ignorati)
+    console.log(`    ${t.file}:${t.riga}  ${t.tipo}  — ignorato da git, non verrà committato`);
+  console.log('  Se uno di questi dovesse comparire nell\'elenco sopra, allora sì:');
+  console.log('  vorrebbe dire che non è più ignorato.');
+}
 process.exit(0);
