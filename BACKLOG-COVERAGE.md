@@ -37,15 +37,15 @@ lavoro erano in codice che a leggerlo sembrava corretto.
 | MOB | 2 | 0 | 2 | 0 |
 | PRV | 4 | 4 | 0 | 0 |
 | ROU | 2 | 2 | 0 | 0 |
-| SEC | 9 | 6 | 3 | 0 |
+| SEC | 9 | 7 | 2 | 0 |
 | SYN | 6 | 6 | 0 | 0 |
 | TST | 5 | 2 | 3 | 0 |
 | UI | 2 | 1 | 1 | 0 |
-| **totale** | **42** | **31** | **10** | **1** |
+| **totale** | **42** | **32** | **9** | **1** |
 
 **Non esiste un solo ticket il cui stato dipenda da una prova che non è
 girata.** Dove la prova non è girata, lo stato è PARZIALE. È il motivo per
-cui undici righe non sono verdi pur avendo il codice al suo posto.
+cui dieci righe non sono verdi pur avendo il codice al suo posto.
 
 ---
 
@@ -62,6 +62,7 @@ si applica e i service worker non si registrano.
 | **SEC-005** | limiti dell'importazione di un backup | `js/sicurezza.js`, `tests/unit/limiti-e-versioni.test.js` | eseguita nel browser DOPO aver scoperto che nessun limite scattava (collisione fra due `var LIMITI` globali): ora 8 MB, 5000 voci, JSON non valido, array, file senza items e inquinamento del prototipo sono tutti respinti, e un backup valido passa con l'anteprima |
 | **SEC-006** | limiti dell'importazione ICS | `js/sicurezza.js`, `tests/unit/limiti-e-versioni.test.js` | eseguita nel browser DOPO la stessa scoperta: ora 4 MB e 500 eventi vengono respinti, e un calendario valido passa |
 | **SEC-008** | limiti e ritmo delle chiamate | `js/appcheck.js`, `js/sync.js` | otto meccanismi eseguiti nel browser (backoff, sospensione, 429, dedup, cicli, dimensioni) |
+| **SEC-010** | pubblicare le regole di sicurezza sul progetto reale | `firebase/firestore.rules`, `.github/workflows/verifica.yml` | PUBBLICATE sul progetto reale e VERIFICATE interrogando il servizio, non fidandosi della console. 20 controlli su 20, exit 0, con API REST e un idToken di utente normale — nessun Admin SDK, nessun service account, nessun bypass delle regole. Le 14 prove richieste: aggiornatoIl nel passato permesso, ALL'ISTANTE CORRENTE DEL CLIENT permesso (era la prova che prima falliva), due minuti nel futuro permesso entro la tolleranza, dieci minuti nel futuro negato; creazione, lettura, aggiornamento e cancellazione del proprietario tutti permessi, con la cancellazione VISTA avvenire (200, poi 404); lettura, creazione, aggiornamento e cancellazione da parte di un secondo utente tutte negate con PERMISSION_DENIED; accesso non autenticato negato in lettura e in scrittura; percorso non previsto negato in lettura e in scrittura. Più sei controprove: il documento del proprietario è rimasto intatto dopo i quattro tentativi dell'altro utente, il contenitore users/{uid} è negato, e i due account sintetici sono stati rimossi con verifica che l'accesso successivo non funzioni |
 | **PRV-001** | trasparenza su ciò che non è protetto | `js/features/settings-ui.js`, `PRIVACY.md`, `E2EE-DECISION.md` | eseguita nel browser: le tre affermazioni sono presenti nel testo visibile |
 | **PRV-002** | cancellazione completa e verificata | `js/privacy.js`, `js/distruttive.js` | ESEGUITA SUL SERVIZIO REALE, non più con risposte finte. Sul progetto pannello-tempo: documento creato (HTTP 200), riletto col payload corretto, cancellato (HTTP 200), e la rilettura successiva risponde 404 NOT_FOUND — la cancellazione è stata VISTA avvenire. Cancellato anche il percorso delle versioni precedenti, come fa il pannello: lasciarne uno significherebbe dire «cancellato» con una copia ancora leggibile. Verificata inoltre la cancellazione dell'ACCOUNT su cinque account di prova, ognuna con la controprova: l'accesso successivo con le stesse credenziali viene rifiutato. Nessun residuo lasciato sul progetto. In locale restano verdi le 10 prove di tests/e2e/cancellazione.spec.js |
 | **PRV-003** | esportazione dei propri dati | `js/backup.js`, `js/privacy.js` | eseguita nel browser: JSON e CSV, senza credenziali |
@@ -94,7 +95,7 @@ Diceva: «in questo ambiente non ci sono Node, npm, Java né Python
 (verificato, non supposto)». Adesso ci sono. Node 20.20.2 e Temurin JRE 11
 sono stati installati, e con loro sono girati i runner delle prove unitarie,
 Playwright su Edge di sistema e l'Emulator Firestore. Delle quindici righe
-che quella frase giustificava ne restano dieci, e ognuna ha ora un motivo
+che quella frase giustificava ne restano **nove**, e ognuna ha ora un motivo
 proprio e specifico invece di un motivo comune:
 
 - **una gamba di browser mancante** (Firefox non si scarica su questa rete);
@@ -103,19 +104,22 @@ proprio e specifico invece di un motivo comune:
 - **la pipeline mai avviata**, che è il criterio letterale di due ticket;
 - **scatti di riferimento da approvare a mano**, che è il punto della
   regressione visiva;
-- **le regole di sicurezza non pubblicate sul progetto reale** (SEC-010),
-  che è ciò che blocca il percorso account dal funzionare davvero.
+- **App Check non attivo**, che richiede una chiave e una decisione di costo.
 
 Nessuno di questi si risolve installando qualcosa.
+
+Fra i motivi non c'è più «le regole non sono pubblicate sul progetto reale»:
+era la voce che bloccava il percorso account, ed è stata chiusa. Le regole
+sono pubblicate e **verificate sul servizio**, con 20 controlli su 20 —
+vedi SEC-010 fra i COMPLETATO.
 
 Che cosa serve per ognuno, con precisione:
 
 | Ticket | Titolo | Dove | Che cosa manca per chiuderlo |
 |---|---|---|---|
-| **SEC-002** | isolamento dei dati fra utenti | `firebase/firestore.rules`, `js/sync.js` | ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza. VERIFICATA ANCHE SUL PROGETTO REALE dopo la pubblicazione delle regole: B non legge il documento di A (403), B non ci scrive (403), la lettura senza autenticazione è negata (403), il contenitore users/{uid} è negato (403), la clausola di chiusura è in vigore su una collezione non prevista (403) e lo schema non può regredire (403). Sei rifiuti su sei, sul servizio vero |
+| **SEC-002** | isolamento dei dati fra utenti | `firebase/firestore.rules`, `js/sync.js` | ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza. VERIFICATA POI SUL PROGETTO REALE con le regole del repository IN VIGORE: lettura, creazione, aggiornamento e cancellazione da parte di un secondo utente tutte negate; accesso non autenticato negato; contenitore users/{uid} negato; percorso non previsto negato; e la controprova che il documento del proprietario resta intatto dopo i tentativi altrui. L'isolamento non è più verificato soltanto su una copia fedele del servizio: è verificato sul servizio |
 | **SEC-003** | Content Security Policy | `index.html`, `js/boot.js` | il passo CSP verde IN PIPELINE: la pipeline non è mai stata eseguita |
 | **SEC-009** | App Check | `js/appcheck.js`, `js/config-firebase.js` | chiave reCAPTCHA, attivazione, enforcement, e la verifica che il traffico legittimo non venga bloccato. Nota: l'enforcement va attivato DOPO aver pubblicato le regole, altrimenti si sommano due cause di rifiuto e diventa difficile capire quale sia |
-| **SEC-010** | pubblicare le regole di sicurezza sul progetto reale | `firebase/firestore.rules`, `.github/workflows/verifica.yml` | quella riga. Sul progetto `tempoPlausibile()` è ancora `aggiornatoIl <= request.time`, SENZA i cinque minuti di tolleranza del commit 7bba236. Dimostrato dal vivo: questa macchina è avanti di 998 ms sull'orologio del servizio, e una scrittura con `aggiornatoIl` = adesso viene NEGATA. Il pannello scrive «adesso», quindi la sincronizzazione resta rotta per chiunque abbia l'orologio avanti anche solo di un secondo. Va sostituita la funzione con quella del repository e ripubblicato |
 | **UI-006** | indicatore Lavoro/Vita nelle righe delle attività | `css/tokens.css`, `css/components.css`, `js/tasks.js` | le 56 prove rimanenti di ui006.spec.js, che su questa macchina non arrivano in fondo, e la regressione visiva verde con riferimenti APPROVATI a mano |
 | **A11Y-004** | tastiera e fuoco sempre visibile | `css/accessibility.css`, `css/tokens.css` | una prova con un lettore di schermo reale: axe trova circa un terzo dei problemi |
 | **A11Y-005** | casella di completamento nativa e con un nome | `css/components.css`, `js/tasks.js` | ESEGUITA con Playwright e axe-core: 22 prove su 22, exit 0. Comprende i nomi accessibili di tutti i campi, i label associati, le didascalie con il nome sul comando e i gruppi di pulsanti |

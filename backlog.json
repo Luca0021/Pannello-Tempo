@@ -30,8 +30,8 @@
         "firebase/firestore.rules",
         "js/sync.js"
       ],
-      "verifica": "ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza. VERIFICATA ANCHE SUL PROGETTO REALE dopo la pubblicazione delle regole: B non legge il documento di A (403), B non ci scrive (403), la lettura senza autenticazione è negata (403), il contenitore users/{uid} è negato (403), la clausola di chiusura è in vigore su una collezione non prevista (403) e lo schema non può regredire (403). Sei rifiuti su sei, sul servizio vero",
-      "manca": "nulla per l'isolamento. Resta però che le regole pubblicate sono una versione PRECEDENTE di una riga: vedi SEC-010"
+      "verifica": "ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza. VERIFICATA POI SUL PROGETTO REALE con le regole del repository IN VIGORE: lettura, creazione, aggiornamento e cancellazione da parte di un secondo utente tutte negate; accesso non autenticato negato; contenitore users/{uid} negato; percorso non previsto negato; e la controprova che il documento del proprietario resta intatto dopo i tentativi altrui. L'isolamento non è più verificato soltanto su una copia fedele del servizio: è verificato sul servizio",
+      "manca": ""
     },
     {
       "id": "SEC-003",
@@ -102,13 +102,13 @@
     {
       "id": "SEC-010",
       "titolo": "pubblicare le regole di sicurezza sul progetto reale",
-      "stato": "PARZIALE",
+      "stato": "COMPLETATO",
       "dove": [
         "firebase/firestore.rules",
         ".github/workflows/verifica.yml"
       ],
-      "verifica": "PUBBLICATE a mano dalla console il 2026-09-06, e la pubblicazione è stata verificata sul progetto reale: prima 0 operazioni permesse su 8, adesso il proprietario legge e scrive nel proprio spazio e tutto ciò che deve essere negato è negato (12 controlli su 13). Confronto riga per riga fra il file pubblicato e firebase/firestore.rules: UNA sola riga di codice differisce, su 96",
-      "manca": "quella riga. Sul progetto `tempoPlausibile()` è ancora `aggiornatoIl <= request.time`, SENZA i cinque minuti di tolleranza del commit 7bba236. Dimostrato dal vivo: questa macchina è avanti di 998 ms sull'orologio del servizio, e una scrittura con `aggiornatoIl` = adesso viene NEGATA. Il pannello scrive «adesso», quindi la sincronizzazione resta rotta per chiunque abbia l'orologio avanti anche solo di un secondo. Va sostituita la funzione con quella del repository e ripubblicato"
+      "verifica": "PUBBLICATE sul progetto reale e VERIFICATE interrogando il servizio, non fidandosi della console. 20 controlli su 20, exit 0, con API REST e un idToken di utente normale — nessun Admin SDK, nessun service account, nessun bypass delle regole. Le 14 prove richieste: aggiornatoIl nel passato permesso, ALL'ISTANTE CORRENTE DEL CLIENT permesso (era la prova che prima falliva), due minuti nel futuro permesso entro la tolleranza, dieci minuti nel futuro negato; creazione, lettura, aggiornamento e cancellazione del proprietario tutti permessi, con la cancellazione VISTA avvenire (200, poi 404); lettura, creazione, aggiornamento e cancellazione da parte di un secondo utente tutte negate con PERMISSION_DENIED; accesso non autenticato negato in lettura e in scrittura; percorso non previsto negato in lettura e in scrittura. Più sei controprove: il documento del proprietario è rimasto intatto dopo i quattro tentativi dell'altro utente, il contenitore users/{uid} è negato, e i due account sintetici sono stati rimossi con verifica che l'accesso successivo non funzioni",
+      "manca": ""
     },
     {
       "id": "PRV-001",
