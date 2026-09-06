@@ -1,0 +1,245 @@
+name: Pubblica
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PERCHÉ QUESTO FLUSSO ESISTE, E PERCHÉ NON PARTE DA SOLO
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Oggi il sito è pubblicato da GitHub Pages «direttamente dal ramo». Ha due
+# conseguenze, entrambe verificate sul sito vero:
+#
+#   1. viene servito il repository COSÌ COM'È, quindi finiscono in rete anche
+#      `tests/`, `strumenti/`, `package.json`, `.env.example` e le regole
+#      Firestore. Nessuno di quei file contiene segreti, ma nessuno serve a
+#      chi apre il pannello;
+#   2. viene servito `js/config-firebase.js` come sta in git, cioè
+#      `non-configurato`. Sul sito pubblicato l'Account risulta NON
+#      DISPONIBILE — il pannello lo dichiara, il che è corretto, ma la
+#      sincronizzazione non esiste per nessuno.
+#
+# Un artefatto si può invece costruire: contiene solo i file serviti, e la
+# configurazione viene generata al momento dai Secrets, senza entrare mai
+# nel repository.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# NON SI AVVIA DA SOLO, ED È UNA SCELTA
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Solo `workflow_dispatch`. Nessun `push`. Un flusso che pubblica un sito con
+# credenziali di produzione a ogni commit sposta una decisione — «questo è
+# pronto per le persone» — dentro un automatismo, e chi lo eredita non sa più
+# dove sia stata presa.
+#
+# Serve inoltre digitare `pubblica` nel campo di conferma: un click sbagliato
+# nella lista dei flussi non deve poter cambiare ciò che vedono gli utenti.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# PRIMA DI POTER FUNZIONARE SERVE UN'AZIONE DEL PROPRIETARIO
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Settings → Pages → Source: da «Deploy from a branch» a «GitHub Actions».
+# Finché non è fatto, `deploy-pages` fallisce con un errore esplicito e il
+# sito resta quello di adesso: questo file non cambia nulla da solo.
+#
+# È deliberato. La decisione di cambiare COME viene pubblicato un sito non è
+# una riga di YAML, ed è del proprietario.
+#
+# ROLLBACK: rimettere Source su «Deploy from a branch». Il sito torna alla
+# pubblicazione dal ramo, e `js/config-firebase.js` torna a essere quello
+# versionato, cioè `non-configurato`: l'Account risulta non disponibile e il
+# pannello lo dichiara. È uno stato dichiarato e sicuro, non un guasto.
+# In alternativa: rieseguire questo flusso con ambiente `non-configurato`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ambiente:
+        description: "Configurazione Firebase da generare"
+        required: true
+        default: "non-configurato"
+        type: choice
+        options: [non-configurato, produzione]
+      conferma:
+        description: "Scrivi «pubblica» per confermare"
+        required: true
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una pubblicazione alla volta, e non si annulla quella in corso: interrompere
+# un deploy a metà è il modo migliore per lasciare il sito in uno stato che
+# nessuno ha mai collaudato.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+
+  # ───────────────────────────────────────────────────────────────────────
+  # 1. CONTROLLI — non si pubblica ciò che non è stato verificato
+  # ───────────────────────────────────────────────────────────────────────
+  controlli:
+    name: Controlli prima di pubblicare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conferma esplicita
+        # Prima di qualunque altra cosa: se manca la conferma, si esce.
+        if: inputs.conferma != 'pubblica'
+        run: |
+          echo "Conferma mancante o diversa da «pubblica»: non pubblico niente."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Dipendenze
+        run: npm ci || npm install
+
+      - name: Nessun segreto nell'albero
+        run: node strumenti/controlla-segreti.mjs
+
+      - name: Configurazione per i controlli
+        # I controlli girano sulla configurazione NEUTRA. La generazione con
+        # i valori veri avviene nel lavoro successivo, e solo là.
+        run: node strumenti/genera-config-firebase.mjs --ambiente non-configurato
+
+      - name: Build
+        run: node strumenti/build.mjs
+
+      - name: Doppia build deterministica
+        run: |
+          node strumenti/build.mjs --solo-impronta > /tmp/i1.txt
+          node strumenti/build.mjs --solo-impronta > /tmp/i2.txt
+          diff /tmp/i1.txt /tmp/i2.txt || { echo "BUILD NON DETERMINISTICA"; exit 1; }
+          echo "impronta stabile: $(cat /tmp/i1.txt)"
+
+      - name: Impronta coerente nei quattro punti
+        run: node strumenti/controlla-impronta.mjs
+
+      - name: Nessuna collisione fra nomi globali
+        run: node strumenti/controlla-globali.mjs
+
+      - name: Backlog coerente con la matrice
+        run: node strumenti/backlog.mjs
+
+      - name: Unit test
+        run: node tests/runner.js --solo unit
+
+      - name: Integration test
+        run: node tests/runner.js --solo integration
+
+      - name: Test di avvio
+        run: node tests/avvio.test.js
+
+  # ───────────────────────────────────────────────────────────────────────
+  # 2. PUBBLICA — genera la configurazione, monta l'artefatto, lo controlla
+  # ───────────────────────────────────────────────────────────────────────
+  pubblica:
+    name: Costruisci e pubblica
+    needs: controlli
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Dipendenze
+        run: npm ci || npm install
+
+      - name: Genera la configurazione Firebase
+        # I quattro valori sono la configurazione PUBBLICA della web app:
+        # finiscono comunque nell'artefatto servito al browser. Stanno nei
+        # Secrets perché non devono stare in git, non perché siano segreti.
+        #
+        # Il generatore si INTERROMPE da sé se:
+        #   - una variabile PT_* ha un nome che contiene SECRET, PRIVATE_KEY,
+        #     SERVICE_ACCOUNT, CLIENT_SECRET, PASSWORD o TOKEN (exit 3);
+        #   - l'ambiente è `produzione` e apiKey o projectId sono vuoti
+        #     (exit 4), quindi secrets non impostati fanno FALLIRE la
+        #     pubblicazione invece di produrre un sito mezzo configurato;
+        #   - l'ambiente è `produzione` e PT_APPCHECK_DEBUG_TOKEN è
+        #     valorizzata (exit 4).
+        #
+        # Non stampa i valori: della chiave mostra i primi otto caratteri e
+        # la lunghezza. GitHub maschera comunque i Secrets nei registri, ma
+        # non si costruisce una difesa su una sola riga.
+        run: node strumenti/genera-config-firebase.mjs --ambiente "${{ inputs.ambiente }}"
+        env:
+          PT_FIREBASE_API_KEY: ${{ secrets.PT_FIREBASE_API_KEY }}
+          PT_FIREBASE_AUTH_DOMAIN: ${{ secrets.PT_FIREBASE_AUTH_DOMAIN }}
+          PT_FIREBASE_PROJECT_ID: ${{ secrets.PT_FIREBASE_PROJECT_ID }}
+          PT_FIREBASE_APP_ID: ${{ secrets.PT_FIREBASE_APP_ID }}
+          # App Check resta spento finché non è una decisione presa: una Site
+          # Key qui non lo attiverebbe comunque, e l'enforcement va acceso
+          # DOPO, altrimenti si sommano due cause di rifiuto indistinguibili.
+          PT_APPCHECK_SITE_KEY: ""
+
+      - name: Build
+        run: node strumenti/build.mjs
+
+      - name: Impronta coerente nei quattro punti
+        run: node strumenti/controlla-impronta.mjs
+
+      - name: Monta l'artefatto con i soli file serviti
+        # L'elenco dei file del sito lo dichiara il build, che è lo stesso
+        # che calcola l'impronta: una seconda copia dell'elenco divergerebbe.
+        run: |
+          rm -rf _sito && mkdir -p _sito
+          node strumenti/build.mjs --elenco | while IFS= read -r f; do
+            mkdir -p "_sito/$(dirname "$f")"
+            cp "$f" "_sito/$f"
+          done
+          echo "file nell'artefatto: $(find _sito -type f | wc -l)"
+
+      - name: Controlla l'artefatto prima di pubblicarlo
+        # Ultima difesa, e guarda i file per quello che sono, non che cosa
+        # git ne pensa: nessun .env, nessun debug token valorizzato, nessuna
+        # chiave privata, nessuna cartella di sviluppo, e l'ambiente
+        # dichiarato deve essere quello richiesto. Non stampa valori.
+        run: node strumenti/controlla-artefatto.mjs _sito --ambiente "${{ inputs.ambiente }}"
+
+      - name: Prepara Pages
+        uses: actions/configure-pages@v5
+
+      - name: Carica l'artefatto
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _sito
+
+      - name: Pubblica
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Riepilogo
+        if: always()
+        run: |
+          {
+            echo "## Pubblicazione"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Ambiente | \`${{ inputs.ambiente }}\` |"
+            echo "| Impronta | \`$(node strumenti/build.mjs --solo-impronta)\` |"
+            echo "| File pubblicati | $(find _sito -type f | wc -l) |"
+            echo "| URL | ${{ steps.deploy.outputs.page_url }} |"
+            echo ""
+            if [ "${{ inputs.ambiente }}" = "non-configurato" ]; then
+              echo "L'Account risulta **non disponibile**, e il pannello lo dichiara."
+              echo "È uno stato dichiarato, non un guasto."
+            else
+              echo "L'Account è configurato. Da verificare sul sito pubblicato:"
+              echo "registrazione, accesso, salvataggio e cancellazione."
+              echo "Le Security Rules NON sono toccate da questo flusso."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

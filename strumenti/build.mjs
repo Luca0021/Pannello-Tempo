@@ -19,7 +19,20 @@
  * Uso:
  *   node strumenti/build.mjs                 stampiglia
  *   node strumenti/build.mjs --solo-impronta stampa l'impronta e non scrive
+ *   node strumenti/build.mjs --elenco        stampa i file SERVITI, uno per riga
  *   node strumenti/build.mjs --base <hash>   registra la build di partenza
+ *
+ * `--elenco` esiste per la pubblicazione: l'elenco dei file che il browser
+ * carica è già definito qui sotto, e ricopiarlo altrove creerebbe la solita
+ * seconda copia che diverge. Con questo, il flusso di pubblicazione monta un
+ * artefatto che contiene SOLO il sito.
+ *
+ * Non è cosmesi. Pubblicando la cartella così com'è — che è ciò che fa
+ * GitHub Pages quando serve direttamente dal ramo — finiscono in rete anche
+ * `tests/`, `strumenti/`, `package.json`, `.env.example` e le regole
+ * Firestore. Nessuno di quei file contiene segreti, ma nessuno di essi
+ * serve a chi apre il pannello, e ogni file pubblicato in più è superficie
+ * che qualcuno dovrà giustificare.
  */
 
 import { createHash } from 'node:crypto';
@@ -74,6 +87,14 @@ const argomenti = process.argv.slice(2);
 const soloImpronta = argomenti.includes('--solo-impronta');
 const iBase = argomenti.indexOf('--base');
 const base = iBase >= 0 ? (argomenti[iBase + 1] || '') : '';
+
+if (argomenti.includes('--elenco')) {
+  /* I quattro file stampigliati fanno parte del sito: sono esclusi
+     dall'IMPRONTA — altrimenti stampigliarli la cambierebbe, all'infinito —
+     ma vanno serviti come tutti gli altri. */
+  for (const f of elenca(RADICE).sort()) console.log(f);
+  process.exit(0);
+}
 
 const { hash, quanti } = impronta();
 const sorgenti = hash.slice(0, 12);

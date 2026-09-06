@@ -396,14 +396,64 @@ le regole con dati realistici prima di pubblicarle in produzione.
 generata durante il deploy:
 
 1. i quattro valori stanno nei **segreti** del repository GitHub
-   (*Settings → Secrets and variables → Actions*);
-2. il workflow li mette nell'ambiente e lancia il generatore con
+   (*Settings → Secrets and variables → Actions*):
+   `PT_FIREBASE_API_KEY`, `PT_FIREBASE_AUTH_DOMAIN`, `PT_FIREBASE_PROJECT_ID`,
+   `PT_FIREBASE_APP_ID`;
+2. il flusso li mette nell'ambiente e lancia il generatore con
    `--ambiente produzione`;
 3. il risultato entra nell'artefatto pubblicato su Pages;
 4. **non** viene committato.
 
 Così il repository non contiene la configurazione di produzione — che è la
 regola che ci siamo dati — e il sito pubblicato sì.
+
+> ### Fino a poco fa questa procedura descriveva qualcosa che non esisteva
+>
+> Il flusso che la esegue non c'era. `verifica.yml` esegue **soltanto
+> collaudi** e non pubblica niente; il sito era — ed è tuttora — pubblicato
+> da `pages-build-deployment`, il flusso automatico di GitHub che serve
+> Pages **direttamente dal ramo**. Servendo il ramo, pubblica
+> `js/config-firebase.js` come sta in git: `non-configurato`. Verificato
+> sull'artefatto vero, non dedotto.
+>
+> Ora il flusso esiste: **`.github/workflows/pubblica.yml`**. Ma non è
+> ancora attivo, e serve un'azione che solo il proprietario può fare:
+>
+> **Settings → Pages → Source: da «Deploy from a branch» a «GitHub
+> Actions».**
+>
+> Finché non è fatto, `pubblica.yml` fallisce in modo esplicito e il sito
+> resta quello di adesso. Il file non cambia nulla da solo: cambiare COME
+> viene pubblicato un sito è una decisione, non una riga di YAML.
+
+### Che cosa fa `pubblica.yml`, in ordine
+
+Si avvia **solo a mano** (`workflow_dispatch`), mai su `push`, e chiede di
+digitare `pubblica` nel campo di conferma: un click sbagliato nella lista dei
+flussi non deve poter cambiare ciò che vedono gli utenti.
+
+| Passo | Che cosa garantisce |
+|---|---|
+| controlli | segreti, doppia build deterministica, coerenza dell'impronta, collisioni globali, backlog, unit, integrazione, avvio. Non si pubblica ciò che non è stato verificato |
+| generazione | il generatore si interrompe se i secret mancano (`produzione` senza apiKey → exit 4), se una variabile `PT_*` ha un nome da segreto (exit 3), o se un debug token è presente in produzione (exit 4). **Secret non impostati fanno fallire la pubblicazione**, invece di produrre un sito mezzo configurato |
+| artefatto | contiene **solo i file serviti**, dichiarati da `build.mjs --elenco` — la stessa fonte che calcola l'impronta. Oggi Pages dal ramo pubblica anche `tests/`, `strumenti/`, `package.json`, `.env.example` e le regole Firestore: nessuno di quei file è un segreto, nessuno serve a chi apre il pannello |
+| controllo dell'artefatto | `controlla-artefatto.mjs` guarda i file per quello che sono, non che cosa git ne pensa: nessun `.env`, nessun debug token **valorizzato**, nessuna chiave privata, nessuna cartella di sviluppo, e l'ambiente dichiarato deve essere quello richiesto |
+| pubblicazione | `upload-pages-artifact` + `deploy-pages` |
+
+Nessun valore viene stampato: il generatore mostra i primi otto caratteri
+della chiave e la sua lunghezza, la guardia dice «presente (39 caratteri)» e
+mai il contenuto. GitHub maschera comunque i Secrets, ma una difesa non si
+costruisce su una riga sola.
+
+`pubblica.yml` **non tocca le Security Rules** e non esegue alcun comando
+Firebase: quelle si pubblicano dalla console o con
+`firebase deploy --only firestore:rules`, ed è un'operazione separata di
+proposito (§7).
+
+**Rollback:** rimettere *Source* su «Deploy from a branch», oppure
+rieseguire il flusso con ambiente `non-configurato`. In entrambi i casi il
+sito torna a dichiarare che l'account non è disponibile — che è uno stato
+dichiarato e sicuro, non un guasto.
 
 Se apri `js/config-firebase.js` nel repository e trovi valori reali, qualcuno
 ha eseguito il generatore in locale e ha committato: va rimosso dalla
