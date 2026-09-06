@@ -30,8 +30,8 @@
         "firebase/firestore.rules",
         "js/sync.js"
       ],
-      "verifica": "ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, tre esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza rifiutava le scritture di un client con l'orologio avanti di pochi millisecondi, a intermittenza",
-      "manca": ""
+      "verifica": "ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza rifiutava le scritture di un client con l'orologio avanti di pochi millisecondi, a intermittenza. VERIFICATO ANCHE SUL PROGETTO REALE, con esito diverso e importante: 8 sonde su 8 sono negate, comprese le 4 che le regole del repository permettono al proprietario. Sul progetto ci sono le regole predefinite «production mode»: nessun dato è esposto, ma le regole di questo repository NON sono quelle in vigore",
+      "manca": "l'isolamento verificato con le regole del repository IN VIGORE sul progetto reale: vedi SEC-010. Oggi l'isolamento in produzione è totale perché è negato tutto, non perché queste regole funzionino"
     },
     {
       "id": "SEC-003",
@@ -96,8 +96,19 @@
         "js/appcheck.js",
         "js/config-firebase.js"
       ],
-      "verifica": "predisposto, non attivo: appCheckSiteKey vuota",
-      "manca": "chiave reCAPTCHA, attivazione, e la verifica che il traffico legittimo non venga bloccato"
+      "verifica": "VERIFICATO sul progetto reale che l'enforcement NON è applicato: registrazione e accesso via API REST sono riusciti senza fornire alcun token di App Check. `appCheckSiteKey` è vuota perché nessuna Site Key è stata fornita. Non è una deduzione dal codice: è la risposta del servizio",
+      "manca": "chiave reCAPTCHA, attivazione, enforcement, e la verifica che il traffico legittimo non venga bloccato. Nota: l'enforcement va attivato DOPO aver pubblicato le regole, altrimenti si sommano due cause di rifiuto e diventa difficile capire quale sia"
+    },
+    {
+      "id": "SEC-010",
+      "titolo": "pubblicare le regole di sicurezza sul progetto reale",
+      "stato": "NON INIZIATO",
+      "dove": [
+        "firebase/firestore.rules",
+        ".github/workflows/verifica.yml"
+      ],
+      "verifica": "MISURATO sul progetto reale con 8 sonde autenticate e non autenticate: 0 operazioni permesse su 8, comprese le 4 che le regole del repository concedono al proprietario. Nessuna operazione che dovrebbe essere negata risulta permessa, quindi non c'è esposizione: sul progetto ci sono le regole predefinite «production mode», che negano tutto. Conseguenza misurata, non supposta: l'accesso riesce e il salvataggio viene rifiutato con PERMISSION_DENIED, quindi la sincronizzazione non funziona per NESSUN utente",
+      "manca": "`firebase deploy --only firestore:rules` sul progetto, che richiede un accesso autenticato alla console e non è stato eseguito; poi la riesecuzione delle sonde per confermare che il proprietario scriva e che l'isolamento valga con QUESTE regole. Nel flusso di lavoro non esiste alcun passo che pubblichi le regole, quindi oggi non le pubblicherebbe nemmeno un push su main"
     },
     {
       "id": "PRV-001",
@@ -119,8 +130,8 @@
         "js/privacy.js",
         "js/distruttive.js"
       ],
-      "verifica": "tests/e2e/cancellazione.spec.js ESEGUITO: 10 prove su 10, exit 0, con risposte finte",
-      "manca": "una cancellazione vista avvenire su un servizio Firebase reale: il progetto non è raggiungibile da qui"
+      "verifica": "tests/e2e/cancellazione.spec.js ESEGUITO: 10 prove su 10, exit 0, con risposte finte. Sul servizio REALE è stata vista avvenire la cancellazione dell'ACCOUNT: tre account di prova creati e cancellati via accounts:delete con esito HTTP 200, e la controprova eseguita ogni volta — l'accesso successivo con le stesse credenziali viene rifiutato. Nessun residuo lasciato sul progetto",
+      "manca": "la cancellazione del DOCUMENTO vista avvenire sul servizio reale: non è osservabile finché le regole pubblicate negano ogni scrittura, perché il documento non si può nemmeno creare. Sbloccata da SEC-010"
     },
     {
       "id": "PRV-003",
@@ -204,8 +215,8 @@
         "js/sync.js",
         "js/config-firebase.js"
       ],
-      "verifica": "eseguita nel browser: nessun selettore di fornitore, nessuna configurazione richiesta, terminologia verificata su 23.303 caratteri",
-      "manca": "il percorso account non è eseguibile finché FIREBASE_CONFIG è vuoto: l'interfaccia lo dichiara"
+      "verifica": "eseguita nel browser: nessun selettore di fornitore, nessuna configurazione richiesta, terminologia verificata su 23.303 caratteri. Completata in questa tornata: i MESSAGGI D'ERRORE erano l'ultimo posto in cui l'architettura precedente sopravviveva — 13 campi su 33 contenevano gergo vietato e istruzioni per una console che l'utente non possiede, e il consiglio per il rifiuto delle scritture indicava perfino il percorso sbagliato. La guardia sulla terminologia non li aveva mai letti perché cerca nel DOM renderizzato, e un messaggio d'errore è sullo schermo solo quando l'errore capita. Ora sono in lingua comune e li verifica tests/unit/messaggi-errore.test.js, 10 prove su 10",
+      "manca": "il percorso account completo su servizio reale: l'accesso funziona, il salvataggio no, per SEC-010"
     },
     {
       "id": "MIG-001",

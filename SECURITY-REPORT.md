@@ -20,15 +20,22 @@ raccontate dove sono utili: dentro la sezione del ticket che riguardano.
 | Ticket | Stato | Come |
 |---|---|---|
 | SEC-001 credenziali fuori dal disco | **COMPLETATO** | eseguito nel browser su sei meccanismi di persistenza, con controprova |
-| SEC-002 isolamento fra utenti | **COMPLETATO** | 14 prove su 14 sull'emulatore, tre esecuzioni consecutive pulite. Ha trovato un difetto vero |
+| SEC-002 isolamento fra utenti | **COMPLETATO** | 14 prove su 14 sull'emulatore, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero. Ma vedi SEC-010: queste regole non sono in vigore sul progetto reale |
 | SEC-003 Content Security Policy | **PARZIALE** | provata in un browser vero: **era rotta**; corretta, resta un costo dichiarato |
 | SEC-004 normalizzazione dei testi | **COMPLETATO** | eseguito **dopo** aver scoperto che non scattava |
 | SEC-005 limiti dell'importazione di backup | **COMPLETATO** | idem |
 | SEC-006 limiti dell'importazione ICS | **COMPLETATO** | idem |
 | SEC-008 limiti e ritmo delle chiamate | **COMPLETATO** per la parte applicativa | otto meccanismi eseguiti |
-| SEC-009 App Check | **PARZIALE** | predisposto, non attivo |
+| SEC-009 App Check | **PARZIALE** | predisposto, non attivo — e l'assenza di enforcement è ora **misurata**, non dedotta |
+| SEC-010 regole pubblicate sul progetto reale | **NON INIZIATO** | **misurato**: il progetto nega 8 operazioni su 8. Le regole di questo repository non sono mai state in vigore |
 
 `SEC-007` non compare: non è stato toccato da questo lavoro.
+
+**Il risultato più importante di questa tornata è SEC-010**, e non è un
+ticket nuovo perché è stato inventato: è un ticket nuovo perché la verifica
+contro il progetto reale ha mostrato una cosa che nessuna lettura del codice
+poteva mostrare, e che nessun collaudo sull'emulatore poteva contraddire. Le
+regole sono scritte bene, sono provate a fondo, e non governano niente.
 
 ---
 
@@ -236,15 +243,52 @@ verrebbe comunque rifiutato, e non potrebbe vincere per sempre i confronti
 
 Dopo la correzione, tre esecuzioni consecutive pulite.
 
-### Che cosa questo NON dimostra
+### Che cosa questo NON dimostra — e che ora è stato misurato
 
 L'emulatore usa lo stesso file di regole, ma **non è lo stesso servizio**, e
 soprattutto le regole che governano il progetto reale sono quelle
-**pubblicate** su di esso, non quelle nel repository. Finché nessuno esegue
-`firebase deploy --only firestore:rules`, il progetto reale può avere regole
-diverse — comprese quelle predefinite, che scadono e poi negano tutto.
+**pubblicate** su di esso, non quelle nel repository.
+
+Nelle consegne precedenti qui c'era una possibilità: «il progetto reale
+**può** avere regole diverse, comprese quelle predefinite, che negano tutto».
+Non è più una possibilità. **È stato verificato, ed è così.**
+
+Otto sonde sul progetto `pannello-tempo`, autenticate e non, con la
+configurazione pubblica della Web App:
+
+| Operazione | Le regole di questo repository | Il progetto reale |
+|---|---|---|
+| scrittura **minima** (solo `payload`) del proprietario | permessa | **negata** |
+| lettura del proprio `datasets/current` | permessa | **negata** |
+| lettura del proprio `profile/main` | permessa | **negata** |
+| lettura del proprio percorso precedente | permessa | **negata** |
+| lettura senza autenticazione | negata | negata |
+| elenco della collezione `users`, autenticato e non | negato | negato |
+| scrittura in una collezione non prevista | negata | negata |
+
+**0 permesse su 8. 4 che questo repository concede al proprietario sono
+negate. 0 che dovrebbero essere negate risultano permesse.**
+
+La scrittura minima è stata provata proprio perché è il discriminante: sotto
+queste regole è permessa — ogni funzione di validazione è protetta da
+`!('campo' in request.resource.data)` — quindi il suo rifiuto esclude che si
+tratti di una validazione violata dal pannello. Il progetto ha le regole
+predefinite **«production mode»**.
+
+Due letture, entrambe vere, di segno opposto:
+
+- **non c'è alcuna esposizione.** Nessuna operazione che dovrebbe essere
+  negata risulta permessa. Non è aperto nulla, nemmeno per errore.
+- **le regole di questo repository non sono mai state in vigore.** Sono
+  verificate a fondo sull'emulatore e non hanno mai governato un dato reale.
+  L'isolamento fra utenti, in produzione, oggi vale per la ragione sbagliata:
+  è negato tutto.
+
+Si chiude con `firebase deploy --only firestore:rules`, che **non è stato
+eseguito**: modifica lo stato remoto del progetto e richiede un accesso
+autenticato alla console. È il ticket **SEC-010**.
 `DEPLOYMENT-REPORT.md` §2.5 mette la pubblicazione delle regole **prima**
-della pubblicazione del sito, ed è per questo.
+della pubblicazione del sito, ed è esattamente per questo.
 
 ### Che cosa c'è
 
@@ -430,10 +474,118 @@ chiudere né da rivendicare.
 `appCheckSiteKey` è vuota: senza chiave reCAPTCHA, App Check non è attivo, e
 la quota del progetto resta esposta all'uso automatizzato.
 
+**Ora non è più una deduzione dal codice.** Registrazione e accesso via API
+REST sul progetto reale sono riusciti **senza fornire alcun token di App
+Check**: l'enforcement non è applicato. È la risposta del servizio, non la
+lettura di un file. Vale la pena tenere separate le tre affermazioni, perché
+si confondono facilmente:
+
+- una Site Key presente non significa App Check attivo;
+- App Check inizializzato nel client non significa enforcement applicato;
+- l'enforcement applicato è l'unica delle tre che protegga qualcosa, e si
+  verifica solo provando a chiamare il servizio senza token — come è stato
+  fatto qui, con esito «accettato».
+
 Attivarlo richiede una chiave, la configurazione nella console Firebase, e
 soprattutto la verifica che **non blocchi il traffico legittimo** — che è la
 parte che va provata, non supposta. `FIREBASE-SETUP.md` §12 descrive le
 conseguenze di costo.
+
+**Sequenza consigliata: prima SEC-010, poi questo.** Con le regole che negano
+tutto, aggiungere l'enforcement di App Check somma due cause di rifiuto
+indistinguibili, e la diagnosi diventa molto più difficile di quanto sia
+adesso.
+
+---
+
+## SEC-010 — le regole non sono pubblicate, e la verifica l'ha scoperto
+
+**NON INIZIATO.** Il dettaglio della misura sta in «Che cosa questo NON
+dimostra», dentro SEC-002. Qui basta il fatto e la conseguenza.
+
+Il progetto `pannello-tempo` ha le regole predefinite «production mode».
+Authentication funziona: registrazione, accesso, rifiuto della password
+sbagliata e cancellazione dell'account sono stati eseguiti sul progetto vero.
+Firestore nega tutto.
+
+**È lo stato peggiore da diagnosticare senza questa verifica**: la parte
+visibile funziona. Un utente crea l'account, entra, vede «Account
+disponibile», lavora, e i dati non arrivano da nessuna parte. Senza aver
+provato, la segnalazione sarebbe arrivata come «l'account non sincronizza»
+e la prima ipotesi sarebbe stata cercare il difetto nel pannello — dove non
+c'è.
+
+Che cosa serve, in ordine:
+
+```bash
+firebase deploy --only firestore:rules --project pannello-tempo
+```
+
+poi rieseguire le sonde per confermare che il proprietario scriva e che
+l'isolamento valga con **queste** regole, e solo dopo pensare all'enforcement
+di App Check (SEC-009).
+
+**Non è stato eseguito**, e la ragione è la stessa per cui il resto di questo
+lavoro si può leggere: pubblicare le regole modifica lo stato remoto di un
+progetto reale e richiede un accesso autenticato alla console. È una
+decisione del proprietario, non un passo di un collaudo.
+
+Nota sul flusso di lavoro: `.github/workflows/verifica.yml` **non contiene
+alcun passo che pubblichi le regole**, e la scelta dell'ambiente offre
+`emulatore`, `non-configurato` e `staging` — non `produzione`. Quindi oggi le
+regole non verrebbero pubblicate nemmeno da un push su `main`. Non è una
+dimenticanza da correggere di nascosto: è una decisione da prendere, perché
+un flusso di lavoro che pubblica regole di sicurezza va progettato con
+attenzione a chi può avviarlo.
+
+---
+
+## Il controllo dei segreti mentiva sul proprio nome
+
+Non è un rischio residuo, è un difetto trovato ed è già corretto, ma va
+raccontato qui perché riguarda uno strumento di sicurezza.
+
+`strumenti/controlla-segreti.mjs` annunciava «SEGRETI TROVATI NELL'ALBERO
+**VERSIONATO**» camminando sul filesystem con un elenco di cartelle da
+saltare scritto a mano, senza chiedere niente a git. Creare il `.env` che
+`.env.example` dice di creare — «Copia questo file in `.env` e compilalo» —
+faceva fallire il **primo** passo di `npm run verifica`.
+
+Due danni, e il secondo è peggiore del primo:
+
+1. la pipeline si fermava su una configurazione **corretta**, e le due vie
+   d'uscita più comode erano aggiungere `.env` alle eccezioni o mettere
+   `|| true` sul comando. Un controllo che grida al lupo viene disattivato, e
+   allora non protegge più niente;
+2. il consiglio stampato era **falso**: «vanno revocati sul servizio che li
+   ha emessi, e poi rimossi dalla cronologia», per un file che nella
+   cronologia non è mai entrato. Qualcuno avrebbe revocato una chiave senza
+   motivo e cercato a lungo qualcosa che non c'era.
+
+Ora l'insieme dei file da controllare lo dichiara git:
+
+```
+git ls-files --cached --others --exclude-standard
+```
+
+cioè ciò che è già versionato **più** ciò che entrerebbe al prossimo commit —
+esattamente la domanda a cui lo strumento vuole rispondere. I file ignorati
+vengono letti comunque e riportati a parte, senza far fallire nulla: un
+segreto in un `.env` locale è normale e va detto in un tono normale.
+
+Verificato in **entrambe** le direzioni, perché un controllo di sicurezza
+allentato va provato anche nel verso che conta:
+
+- con `.env` presente: exit 0, con la nota «ignorato da git, non verrà
+  committato»;
+- con un file **non** ignorato che contiene una chiave finta: exit 1, come
+  prima.
+
+Se git non è disponibile, o se la cartella non è la radice del repository,
+l'insieme di git non viene usato e si esamina tutto: meglio un falso allarme
+che un buco. Il caso da evitare era il silenzio — se i percorsi di git e
+quelli del filesystem non combaciassero, ogni file risulterebbe «ignorato» e
+lo strumento passerebbe senza aver controllato niente.
 
 ---
 
@@ -441,19 +593,28 @@ conseguenze di costo.
 
 In ordine di gravità.
 
-1. **Le regole sono verificate sull'emulatore, non sul progetto
-   reale.** SEC-002 è chiuso perché le 14 prove girano e passano, ma
-   l'emulatore non è il servizio, e soprattutto le regole che governano il
-   progetto vero sono quelle **pubblicate** su di esso. Finché nessuno
-   esegue `firebase deploy --only firestore:rules`, il progetto può avere
-   regole diverse da quelle di questo repository.
-2. **La cancellazione remota non è stata vista avvenire.** Il passo di
-   verifica esiste e con risposte finte funziona; contro un servizio reale
-   no. `PRIVACY.md` e `TEST-REPORT.md` §5.
-3. **Il percorso account non è mai stato eseguito end-to-end.**
-   Registrazione, accesso, prima sincronizzazione, conflitto, disconnessione:
-   tutto scritto, niente provato contro Firebase.
-4. **App Check non è attivo**: la quota è esposta all'uso automatizzato.
+1. **Le regole di questo repository non sono in vigore sul progetto reale, e
+   ora lo sappiamo.** SEC-002 è chiuso perché le 14 prove girano e passano
+   sull'emulatore, che era il criterio del ticket. Ma il progetto vero ha le
+   regole predefinite: 0 operazioni permesse su 8 sonde, comprese le 4 che
+   queste regole concedono al proprietario. Conseguenza pratica già in atto:
+   **un utente si registra, entra, e non riesce a salvare**. Non c'è
+   esposizione di dati — non è aperto niente — ma la funzione «account» è
+   visibile e inutilizzabile. Si chiude con SEC-010.
+2. **La cancellazione del documento remoto non è stata vista avvenire.** Il
+   passo di verifica esiste e con risposte finte funziona; sul servizio reale
+   il documento non si può nemmeno creare, quindi non c'è niente da
+   cancellare. La cancellazione dell'**account**, invece, è stata verificata
+   sul servizio vero, con la controprova: dopo la cancellazione l'accesso con
+   le stesse credenziali viene rifiutato. `PRIVACY.md` e `TEST-REPORT.md` §1.
+3. **Il percorso account è eseguito a metà, e la metà che manca è quella che
+   conta.** Registrazione, accesso, password errata e cancellazione
+   dell'account: **eseguiti sul progetto reale e verificati**. Prima
+   sincronizzazione, conflitto e fusione: non eseguibili, perché il
+   salvataggio viene rifiutato dalle regole pubblicate.
+4. **App Check non è attivo, e l'assenza di enforcement è misurata**: il
+   servizio ha accettato registrazione e accesso senza alcun token. La quota
+   è esposta all'uso automatizzato.
 5. **`style-src` ammette `'unsafe-inline'`** per gli attributi `style`: chi
    riuscisse a iniettare HTML potrebbe iniettare CSS. Si chiude togliendo i
    141 stili inline.
@@ -470,8 +631,15 @@ In ordine di gravità.
 
 ## Che cosa questo rapporto non dice
 
-Non dice «il pannello è sicuro». Dice che otto controlli sono stati eseguiti
-e che quattro non lo sono, e distingue le due cose.
+Non dice «il pannello è sicuro». Dice quali controlli sono stati eseguiti e
+quali no, e distingue le due cose.
+
+Soprattutto non dice «i dati degli utenti sono protetti dalle regole di
+questo repository». Quelle regole sono scritte con cura, provate con 14
+asserzioni e hanno già rivelato un difetto vero — e **non governano nessun
+dato reale**, perché nessuno le ha pubblicate. Le due affermazioni «le regole
+sono corrette» e «le regole proteggono i dati» sono separate da un comando
+che non è stato eseguito.
 
 La lezione di SEC-004/005/006 vale per tutto il resto del documento: **un
 controllo che esiste nel codice e non è mai stato eseguito è una
@@ -479,3 +647,8 @@ supposizione ragionevole, non un fatto.** Cinque dei difetti trovati in
 questo lavoro erano in codice che a leggerlo sembrava corretto — e uno di
 quei cinque disattivava, in silenzio, tre ticket di sicurezza che
 risultavano chiusi.
+
+SEC-010 aggiunge un secondo corollario, che l'emulatore non poteva insegnare:
+**un controllo eseguito contro una copia fedele del servizio non dice nulla
+sul servizio.** Le 14 prove sull'emulatore erano verdi mentre il progetto
+vero negava tutto, e nessuna delle due cose contraddiceva l'altra.

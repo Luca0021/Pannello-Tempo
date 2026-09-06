@@ -12,14 +12,84 @@ era a rischio.
 
 **Non pubblicata.** Vedi `DEPLOYMENT-REPORT.md` §7.
 
+### Il progetto Firebase reale è stato verificato, e le regole non sono pubblicate
+
+Con la configurazione pubblica della Web App, tenuta in un `.env` locale
+escluso da git, il percorso account è stato provato **sul progetto vero** con
+le API REST. Utenti di prova su `example.com` — dominio riservato IANA, non
+di nessuna persona — dati sintetici, e tutti gli account cancellati con la
+controprova. Piano Firebase invariato, **Blaze non attivato**, nessuna
+impostazione della console modificata.
+
+**Authentication funziona.** Registrazione, accesso, rifiuto della password
+sbagliata e cancellazione dell'account: eseguiti e verificati.
+
+**Firestore nega tutto.** Otto sonde, autenticate e non: **0 operazioni
+permesse su 8**, comprese le quattro che le regole di questo repository
+concedono al proprietario; **0** operazioni che dovrebbero essere negate
+risultano permesse. Il progetto ha le regole predefinite «production mode».
+
+Le due conseguenze vanno dette insieme, perché hanno segno opposto:
+
+- **nessun dato è esposto**: non è aperto niente, nemmeno per errore;
+- **la sincronizzazione non funziona per nessun utente**: si entra e non si
+  salva. È lo stato peggiore da diagnosticare, perché la parte visibile
+  funziona.
+
+Si chiude con `firebase deploy --only firestore:rules`, che **non è stato
+eseguito**: modifica lo stato remoto di un progetto reale. Nuovo ticket
+**SEC-010**. Nel flusso di lavoro non esiste alcun passo che pubblichi le
+regole, quindi oggi non lo farebbe nemmeno un push su `main`.
+
+Verificare per davvero ha fatto emergere quattro difetti in più, tre dei
+quali **solo** perché il progetto rifiuta le scritture: quel rifiuto è la
+condizione reale del pannello oggi, quindi il messaggio che mostra in quel
+momento è il messaggio che l'utente legge.
+
+- **I messaggi d'errore mandavano l'utente in una console che non è sua.**
+  13 campi su 33 contenevano gergo vietato dall'interfaccia consumer — nomi
+  di servizi, «apiKey», «chiave API» — e istruzioni del tipo «Console →
+  Impostazioni → …». Erano l'ultimo posto in cui sopravviveva
+  l'architettura precedente, quella in cui l'utente possedeva il progetto e
+  incollava la chiave a mano. La guardia sulla terminologia non li aveva mai
+  letti, perché cerca nel DOM **renderizzato** e un messaggio d'errore è
+  sullo schermo solo quando l'errore capita.
+- **Il consiglio per il rifiuto delle scritture indicava il percorso
+  sbagliato**: `pannello/{uid}`, che è il percorso delle versioni precedenti
+  e in sola lettura. Chi l'avesse seguito alla lettera avrebbe aperto le
+  regole sul percorso sbagliato e si sarebbe ritrovato la sincronizzazione
+  ancora rotta. Era l'ultima delle tre copie divergenti delle regole.
+- **`fbWrite` buttava via il corpo della risposta**, che è l'unico posto
+  dove il servizio scrive il motivo del rifiuto. La voce specifica della
+  tabella non poteva quindi corrispondere su una scrittura, e usciva il
+  messaggio generico — che parlava dei permessi di un token di un altro
+  servizio di sincronizzazione. Asimmetria che lo rendeva invisibile alla
+  lettura: la **lettura** conserva il corpo, quindi lo stesso rifiuto dava un
+  messaggio corretto in un verso e fuorviante nell'altro.
+- **Il controllo dei segreti non chiedeva niente a git.** Annunciava
+  «albero versionato» camminando sul filesystem, e falliva su un `.env`
+  ignorato — cioè su una configurazione corretta, fatta seguendo
+  `.env.example`. Peggio del falso allarme era il consiglio: «revocare la
+  chiave e rimuoverla dalla cronologia», per un file mai committato. Ora
+  l'insieme dei file lo dichiara `git ls-files`, e i file ignorati sono
+  riportati a parte senza far fallire nulla. Verificato in entrambe le
+  direzioni: passa con `.env` presente, e continua a fallire su un file non
+  ignorato che contiene una chiave.
+
+Il primo e il secondo sono ora tenuti fermi da
+`tests/unit/messaggi-errore.test.js`, che legge l'elenco delle espressioni
+vietate **da** `tests/ui/terminologia.spec.js` invece di copiarlo: due copie
+di una regola significano che almeno una è sbagliata, ed è la lezione già
+pagata con le tre copie divergenti delle Security Rules.
+
 ### I collaudi sono stati eseguiti, e hanno trovato nove difetti
 
 Fino a questa build i collaudi erano dichiarati «predisposti». Non lo
 erano: `package.json` conteneva `"type": "module"`, che rende modulo ES
 ogni file `.js`, e tutti i collaudi usano `require()`. **Nessuno di loro
 poteva partire.** Tolta quella chiave — i sei strumenti hanno estensione
-`.mjs` e non ne hanno bisogno — sono state eseguite **246 asserzioni**,
-tutte verdi, più le 14 prove delle regole Firestore sull'emulatore.
+`.mjs` e non ne hanno bisogno — sono state eseguite **256 asserzioni**,
+tutte verdi, comprese le 14 prove delle regole Firestore sull'emulatore.
 
 Difetti trovati soltanto eseguendo:
 

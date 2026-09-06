@@ -132,6 +132,26 @@ dichiara.
 regole nega tutto, il che è sicuro ma rompe l'app; con regole sbagliate
 espone i dati.
 
+> ### Questo passo NON è stato eseguito sul progetto `pannello-tempo`
+>
+> Non è un avvertimento generico: è lo stato **misurato** del progetto.
+> Otto sonde, autenticate e non, sul progetto reale: **0 operazioni
+> permesse su 8**, comprese le quattro che le regole di questo repository
+> concedono al proprietario. Nessuna operazione che dovrebbe essere negata
+> risulta permessa, quindi **non c'è alcuna esposizione** — ci sono le
+> regole predefinite «production mode», che negano tutto.
+>
+> La frase qui sopra, «è sicuro ma rompe l'app», descrive esattamente la
+> situazione attuale: Authentication funziona (registrazione, accesso,
+> rifiuto della password errata e cancellazione dell'account sono stati
+> verificati sul progetto vero), e il salvataggio viene rifiutato con
+> `PERMISSION_DENIED`. Un utente si registra, entra, e i suoi dati non
+> arrivano da nessuna parte.
+>
+> Finché il comando qui sotto non viene eseguito, la funzione «account» è
+> visibile e inutilizzabile. È il ticket **SEC-010**; il dettaglio delle
+> sonde sta in `SECURITY-REPORT.md` e `TEST-REPORT.md` §1.
+
 ```bash
 npm i -g firebase-tools
 firebase login
@@ -317,6 +337,27 @@ superato**, e la pipeline non deve poterli confondere.
 cp .env.example .env          # e compila
 node strumenti/genera-config-firebase.mjs --ambiente emulatore
 ```
+
+> **`.env` resta fuori dal repository, e questo è verificato, non promesso.**
+> È coperto da `.gitignore` (righe `.env` e `.env.*`, con `!.env.example` per
+> tenere dentro il modello). Controlli fatti dopo averlo creato:
+>
+> ```bash
+> git check-ignore -v .env                    # → .gitignore:4:.env
+> git status --porcelain --untracked-files=all | grep '\.env'   # → nulla
+> ```
+>
+> Il secondo è quello che conta: `--untracked-files=all` elenca anche i file
+> mai aggiunti, e `.env` non compare nemmeno lì.
+>
+> **`npm run segreti` lo tollera, e non per un'eccezione.** Lo strumento
+> chiede a git quali file sono versionati (`git ls-files --cached --others
+> --exclude-standard`) e riporta i file ignorati a parte, senza far fallire
+> nulla. Prima camminava sul filesystem e falliva su un `.env` corretto,
+> consigliando di revocare una chiave che non era mai stata pubblicata: vedi
+> `SECURITY-REPORT.md`, «Il controllo dei segreti mentiva sul proprio nome».
+> Se un giorno `.env` comparisse fra i segreti **veri**, vorrebbe dire che ha
+> smesso di essere ignorato — ed è il momento di preoccuparsi.
 
 Con `--ambiente emulatore` il pannello parla con l'emulatore locale, non col
 progetto vero: gli endpoint passano tutti da `js/config-firebase.js`, in un

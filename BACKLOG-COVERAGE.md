@@ -37,15 +37,15 @@ lavoro erano in codice che a leggerlo sembrava corretto.
 | MOB | 2 | 0 | 2 | 0 |
 | PRV | 4 | 3 | 1 | 0 |
 | ROU | 2 | 2 | 0 | 0 |
-| SEC | 8 | 6 | 2 | 0 |
+| SEC | 9 | 6 | 2 | 1 |
 | SYN | 6 | 6 | 0 | 0 |
 | TST | 5 | 2 | 3 | 0 |
 | UI | 2 | 1 | 1 | 0 |
-| **totale** | **41** | **30** | **10** | **1** |
+| **totale** | **42** | **30** | **10** | **2** |
 
 **Non esiste un solo ticket il cui stato dipenda da una prova che non è
 girata.** Dove la prova non è girata, lo stato è PARZIALE. È il motivo per
-cui quindici righe non sono verdi pur avendo il codice al suo posto.
+cui dodici righe non sono verdi pur avendo il codice al suo posto.
 
 ---
 
@@ -70,7 +70,7 @@ si applica e i service worker non si registrano.
 | **SYN-003** | coda delle modifiche offline | `js/coda.js` | eseguita nel browser |
 | **SYN-004** | versione per record e fusione senza perdite | `js/versioni.js`, `js/conflitti.js` | eseguita nel browser: modifica segnata, voce non toccata non segnata, cancellazione con lapide. Ha fatto emergere il difetto peggiore del programma: `aggiornaVersioni()` passava un istante dove l'implementazione viva aspetta un dataset, e OGNI modifica salvata dal percorso normale non risultava da sincronizzare |
 | **SYN-005** | cambio account senza contaminazione | `js/account.js` | eseguita nel browser: uscita senza residui su sei meccanismi |
-| **SYN-006** | sincronizzazione utilizzabile senza competenze tecniche | `js/features/settings-ui.js`, `js/sync.js`, `js/config-firebase.js` | eseguita nel browser: nessun selettore di fornitore, nessuna configurazione richiesta, terminologia verificata su 23.303 caratteri |
+| **SYN-006** | sincronizzazione utilizzabile senza competenze tecniche | `js/features/settings-ui.js`, `js/sync.js`, `js/config-firebase.js` | eseguita nel browser: nessun selettore di fornitore, nessuna configurazione richiesta, terminologia verificata su 23.303 caratteri. Completata in questa tornata: i MESSAGGI D'ERRORE erano l'ultimo posto in cui l'architettura precedente sopravviveva — 13 campi su 33 contenevano gergo vietato e istruzioni per una console che l'utente non possiede, e il consiglio per il rifiuto delle scritture indicava perfino il percorso sbagliato. La guardia sulla terminologia non li aveva mai letti perché cerca nel DOM renderizzato, e un messaggio d'errore è sullo schermo solo quando l'errore capita. Ora sono in lingua comune e li verifica tests/unit/messaggi-errore.test.js, 10 prove su 10 |
 | **MIG-001** | migrazione dei dati da Gist | `js/sync-provider.js`, `js/migrations.js` | 17 casi eseguiti nel browser, compresi sette contenuti diversi e il token dimenticato dopo un errore |
 | **CAL-001** | esportazione ICS | `js/calendar.js`, `js/events.js`, `js/features/settings-ui.js` | eseguita nel browser, con la data registrata |
 | **CAL-002** | importazione ICS | `js/ics-import.js`, `js/sicurezza.js`, `js/features/settings-ui.js` | eseguita nel browser |
@@ -85,19 +85,36 @@ si applica e i service worker non si registrano.
 
 ## PARZIALE
 
-Il codice c'è. La verifica no, e nei quindici casi qui sotto il motivo è
-sempre lo stesso: **in questo ambiente non ci sono Node, npm, Java né
-Python** (verificato, non supposto). Senza di quelli non girano l'Emulator
-Firebase, Playwright, i runner delle prove unitarie e la regressione visiva.
+Il codice c'è. La verifica no — ma il motivo **non è più quello scritto qui
+per diverse consegne**, e vale la pena dirlo perché era l'alibi di tutto il
+resto.
+
+Diceva: «in questo ambiente non ci sono Node, npm, Java né Python
+(verificato, non supposto)». Adesso ci sono. Node 20.20.2 e Temurin JRE 11
+sono stati installati, e con loro sono girati i runner delle prove unitarie,
+Playwright su Edge di sistema e l'Emulator Firestore. Delle quindici righe
+che quella frase giustificava ne restano dieci, e ognuna ha ora un motivo
+proprio e specifico invece di un motivo comune:
+
+- **una gamba di browser mancante** (Firefox non si scarica su questa rete);
+- **hardware o persone che non si possono automatizzare** (dispositivo
+  fisico, lettore di schermo);
+- **la pipeline mai avviata**, che è il criterio letterale di due ticket;
+- **scatti di riferimento da approvare a mano**, che è il punto della
+  regressione visiva;
+- **le regole di sicurezza non pubblicate sul progetto reale** (SEC-010),
+  che è ciò che blocca il percorso account dal funzionare davvero.
+
+Nessuno di questi si risolve installando qualcosa.
 
 Che cosa serve per ognuno, con precisione:
 
 | Ticket | Titolo | Dove | Che cosa manca per chiuderlo |
 |---|---|---|---|
-| **SEC-002** | isolamento dei dati fra utenti | `firebase/firestore.rules`, `js/sync.js` | ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, tre esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza rifiutava le scritture di un client con l'orologio avanti di pochi millisecondi, a intermittenza |
+| **SEC-002** | isolamento dei dati fra utenti | `firebase/firestore.rules`, `js/sync.js` | ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza rifiutava le scritture di un client con l'orologio avanti di pochi millisecondi, a intermittenza. VERIFICATO ANCHE SUL PROGETTO REALE, con esito diverso e importante: 8 sonde su 8 sono negate, comprese le 4 che le regole del repository permettono al proprietario. Sul progetto ci sono le regole predefinite «production mode»: nessun dato è esposto, ma le regole di questo repository NON sono quelle in vigore |
 | **SEC-003** | Content Security Policy | `index.html`, `js/boot.js` | il passo CSP verde IN PIPELINE: la pipeline non è mai stata eseguita |
-| **SEC-009** | App Check | `js/appcheck.js`, `js/config-firebase.js` | chiave reCAPTCHA, attivazione, e la verifica che il traffico legittimo non venga bloccato |
-| **PRV-002** | cancellazione completa e verificata | `js/privacy.js`, `js/distruttive.js` | una cancellazione vista avvenire su un servizio Firebase reale: il progetto non è raggiungibile da qui |
+| **SEC-009** | App Check | `js/appcheck.js`, `js/config-firebase.js` | chiave reCAPTCHA, attivazione, enforcement, e la verifica che il traffico legittimo non venga bloccato. Nota: l'enforcement va attivato DOPO aver pubblicato le regole, altrimenti si sommano due cause di rifiuto e diventa difficile capire quale sia |
+| **PRV-002** | cancellazione completa e verificata | `js/privacy.js`, `js/distruttive.js` | la cancellazione del DOCUMENTO vista avvenire sul servizio reale: non è osservabile finché le regole pubblicate negano ogni scrittura, perché il documento non si può nemmeno creare. Sbloccata da SEC-010 |
 | **UI-006** | indicatore Lavoro/Vita nelle righe delle attività | `css/tokens.css`, `css/components.css`, `js/tasks.js` | le 56 prove rimanenti di ui006.spec.js, che su questa macchina non arrivano in fondo, e la regressione visiva verde con riferimenti APPROVATI a mano |
 | **A11Y-004** | tastiera e fuoco sempre visibile | `css/accessibility.css`, `css/tokens.css` | una prova con un lettore di schermo reale: axe trova circa un terzo dei problemi |
 | **A11Y-005** | casella di completamento nativa e con un nome | `css/components.css`, `js/tasks.js` | ESEGUITA con Playwright e axe-core: 22 prove su 22, exit 0. Comprende i nomi accessibili di tutti i campi, i label associati, le didascalie con il nome sul comando e i gruppi di pulsanti |
@@ -118,6 +135,7 @@ elenca le prove scritte e non eseguite.
 | Ticket | Titolo | Perché |
 |---|---|---|
 | **CAL-003** | integrazione automatica del calendario | `CALENDAR-SYNC.md` | richiede OAuth e un servizio che custodisca i refresh token. Senza server non è realizzabile senza promettere una custodia che non esiste: CALENDAR-SYNC.md §6 |
+| **SEC-010** | pubblicare le regole di sicurezza sul progetto reale | `firebase/firestore.rules`, `.github/workflows/verifica.yml` | `firebase deploy --only firestore:rules` sul progetto, che richiede un accesso autenticato alla console e non è stato eseguito; poi la riesecuzione delle sonde per confermare che il proprietario scriva e che l'isolamento valga con QUESTE regole. Nel flusso di lavoro non esiste alcun passo che pubblichi le regole, quindi oggi non le pubblicherebbe nemmeno un push su main |
 
 ---
 
