@@ -478,7 +478,15 @@ test.describe('A11Y · contrasto misurato, non stimato', () => {
   /* Il prezzo dell'eccezione di sopra: se i blocchi dell'agenda sono
      esentati dalla misura, devono almeno essere nominati e raggiungibili.
      Senza queste due asserzioni l'eccezione diventerebbe il posto dove
-     nascondere i difetti dell'agenda. */
+     nascondere i difetti dell'agenda.
+
+     AGGIORNAMENTO (UI-007) — l'eccezione copre ora molto meno di prima.
+     Quando questa prova è stata scritta un blocco da mezz'ora era alto
+     18px; con la scala portata a 52px/ora ne misura 24, cioè il minimo
+     pieno. L'esenzione vale soltanto per le durate SOTTO la mezz'ora, dove
+     il minimo di AGBLK_MIN vince sulla durata. Che i blocchi arrivino a 24
+     lo verifica tests/ui/impaginazione.spec.js; qui resta il controllo che
+     conta se l'eccezione si applica: nome e tastiera. */
   test('2.5.8 · i blocchi dell\'agenda, esentati per altezza, restano usabili', async ({ page }) => {
     await page.evaluate(() => { if (typeof vaiA === 'function') vaiA('agenda'); render(); });
     await page.waitForTimeout(300);

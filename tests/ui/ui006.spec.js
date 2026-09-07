@@ -249,7 +249,16 @@ const MISURE = () => {
     return !fondi(p.parentElement).every(bg => ratio(c.a < 1 ? over(c, bg) : c, bg) >= 3);
   }).length;
 
-  /* 13 — bersagli sotto 24x24 */
+  /* 13 — bersagli piccoli in ENTRAMBE le dimensioni.
+     Attenzione a che cosa misura, perché il nome che aveva prima diceva di
+     più: `width < 24 && height < 24` intercetta soltanto ciò che è piccolo
+     nelle due dimensioni, e lascia passare un pulsante di 112x18 — cioè
+     esattamente i comandi-testo che il censimento di UI-007 ha poi trovato
+     alti 18-22px. Il controllo sull'ALTEZZA dei comandi autonomi sta in
+     tests/ui/impaginazione.spec.js, dove può essere applicato senza colpire
+     i bersagli di testo in linea dentro le righe (eccezione «inline» di
+     WCAG 2.5.8). Qui la condizione resta com'è, ma l'etichetta dice il
+     vero. */
   const bersagliPiccoli = [...app.querySelectorAll('button,a[href],input,select,textarea,[role="button"],[role="checkbox"]')]
     .filter(visibile)
     .filter(e => { const r = e.getBoundingClientRect(); return r.width < 24 && r.height < 24; })
@@ -298,7 +307,7 @@ function verifica(m) {
   expect(m.scrollWidth, '10 — nessuno scorrimento orizzontale').toBeLessThanOrEqual(m.clientWidth + 1);
   expect(m.contrasto, '11 — contrasto dei testi 4,5:1').toEqual([]);
   expect(m.puntiSotto3, '12 — contrasto del punto d\'area 3:1').toBe(0);
-  expect(m.bersagliPiccoli, '13 — nessun bersaglio sotto 24x24').toEqual([]);
+  expect(m.bersagliPiccoli, '13 — nessun bersaglio minuscolo in entrambe le dimensioni (l\'altezza dei comandi autonomi è in impaginazione.spec.js)').toEqual([]);
   expect(m.badgeInLista, '14a — il badge compare in una lista normale').not.toBe('');
   expect(m.badgeInGruppo, '14b — il badge NON si ripete in una lista raggruppata').toBe('');
 }

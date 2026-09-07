@@ -197,6 +197,13 @@ jobs:
           # playwright.config.js.
           PT_APPROVA_SCATTI: ${{ inputs.aggiorna_riferimenti_visivi && '1' || '' }}
 
+      - name: Impaginazione (UI-007)
+        # Le regole misurabili dell'impaginazione: una colonna per i titoli,
+        # 24px di bersaglio, 12px di testo informativo, un titolo di primo
+        # livello per schermata, e i blocchi dell'agenda che non tagliano il
+        # proprio nome. Sono numeri, non gusto: vedi UI-LAYOUT-REPORT.md.
+        run: npx playwright test tests/ui/impaginazione.spec.js --project=${{ matrix.browser }}
+
       - name: Sentinelle dei segreti
         run: npx playwright test tests/security/sentinelle.test.js --project=${{ matrix.browser }}
 
