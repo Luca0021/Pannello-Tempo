@@ -239,9 +239,57 @@ function providerRegistrato(id, adattatore){
   PROVIDER[id] = adattatore;      /* punto di innesto per un provider nuovo */
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   DIFETTO CORRETTO — LA SINCRONIZZAZIONE NON HA MAI POTUTO FUNZIONARE.
+
+   Questa funzione restituiva `{ rev, payload }`. Ma il contratto che il
+   DOMINIO implementa è un'altra cosa: `readRemote()` deve risolvere col
+   TESTO del documento. Lo si legge in tutti e quattro i suoi chiamanti in
+   js/sync.js, che fanno `remoteRevOf(txt)` — e `remoteRevOf` comincia con
+   `txt.trim()` — oppure `txt.trim()` direttamente:
+
+     sync.js:540  verificaCollegamento()   txt.trim()
+     sync.js:588  pushNow()                remoteRevOf(txt)
+     sync.js:628                           remoteRevOf(txt)
+     sync.js:693                           remoteRevOf(txt)
+
+   Entrambi gli adattatori vivi passano già del testo: `fbRead()` risolve
+   con `d.fields.payload.stringValue`, e `gistRead()` con `r.testo`.
+   Incartandolo in un oggetto, `txt.trim` diventava `undefined` e ogni
+   chiamata moriva con un TypeError.
+
+   CONSEGUENZA, e non è piccola: in `pushNow` quel TypeError finiva nel
+   `.catch` finale, che lo traduceva in `sync.err = «Errore imprevisto»` e
+   in stato «errore». **La scrittura non partiva mai.** Il pannello
+   dichiarava un errore generico invece di salvare, e lo faceva a ogni
+   tentativo, per chiunque. Anche `verificaCollegamento()` — la diagnostica
+   che dovrebbe dire all'utente dove si rompe — si rompeva allo stesso
+   punto.
+
+   PERCHÉ NESSUNO L'AVEVA VISTO. Le prove unitarie e d'integrazione
+   esercitano gli adattatori direttamente, non attraverso `readRemote()`;
+   il collaudo della cancellazione usa risposte finte; le regole Firestore
+   sono state verificate con chiamate REST scritte a mano, che non passano
+   da qui. Nessuna prova aveva mai eseguito `pushNow` contro un servizio,
+   vero o finto. È emerso alla prima verifica funzionale dell'artefatto di
+   produzione contro Firebase reale.
+
+   Ora la funzione fa ciò che il nome promette: normalizza a TESTO. Il ramo
+   che accettava `{ rev, payload }` resta, perché un adattatore futuro
+   potrebbe restituire quella forma — ma ne estrae il testo invece di
+   propagare l'oggetto. La `rev` non si perde: sta dentro il payload
+   serializzato, ed è là che `remoteRevOf` la cerca.
+   ───────────────────────────────────────────────────────────────────────── */
 function normalizzaLettura(r){
-  if (!r) return { rev: 0, payload: null };
-  return { rev: r.rev || 0, payload: r.payload !== undefined ? r.payload : r };
+  if (r === null || r === undefined) return "";
+  if (typeof r === "string") return r;
+  /* un adattatore che restituisce { rev, payload }: si prende il payload */
+  if (r.payload !== undefined) {
+    if (r.payload === null) return "";
+    return typeof r.payload === "string" ? r.payload : JSON.stringify(r.payload);
+  }
+  /* qualunque altro oggetto: serializzato, così `remoteRevOf` può leggerlo */
+  return JSON.stringify(r);
 }
 function normalizzaErrore(e){
   if (e && e.titolo && e.causa) return Promise.reject(e);
