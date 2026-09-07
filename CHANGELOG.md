@@ -14,6 +14,27 @@ era a rischio.
 `f915fb62fff8`, **con configurazione Firebase generata dai Secrets**: sul
 sito l'Account è disponibile e funziona.
 
+### `.barrabasso`: quattordici righe di stile per una barra che non esiste
+
+La barra fissa in basso del telefono è stata sostituita da `.navprim.basso`
+(NAV-001), ma il suo stile è rimasto: **sei regole, quattordici righe**, in
+`css/mobile.css`. Nessun modulo scriveva più quella classe nel markup, e
+ogni utente le scaricava lo stesso a ogni visita.
+
+Prima di toglierle, `.barrabasso` è stato ricontato **in un browser**, non
+solo con una ricerca nei sorgenti: dieci viste — Oggi, Agenda, Riepilogo,
+Nuovo, Filtri, settimana, onboarding, chiusura di giornata, revisione
+settimanale, guida — per due larghezze, cercando sia gli elementi con quella
+classe sia la stringa nell'HTML dell'intero documento, che intercetta anche
+un uso in un attributo. **Zero su venti combinazioni**, con il controllo che
+le sei regole fossero davvero nei fogli caricati — altrimenti «zero» avrebbe
+potuto voler dire soltanto che il CSS non era arrivato.
+
+Costa una cosa, e va detta: il CSS entra nell'impronta della build, quindi
+questa rimozione cambia il nome della cache e **fa riscaricare lo scheletro
+a tutti**. È il prezzo di qualunque modifica a un file servito, non di
+questa in particolare.
+
 ### L'impaginazione, misurata: cinque difetti e due allarmi che erano miei
 
 Censimento in un browser vero su **26 condizioni** — sei larghezze da 320 a

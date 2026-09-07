@@ -248,7 +248,7 @@ difetto.**
 | comandi con lo **stesso nome accessibile** ripetuto: «Ripianifica» ×3, «Anticipa di 15 minuti» ×8 | 12 nomi ripetuti | sono comandi **per riga**: la ripetizione è la struttura, non un doppione. Il contesto lo dà la riga che li contiene. Resta vero che il nome non nomina l'attività, ed è un miglioramento possibile — ma è un intervento sui nomi accessibili, non sull'impaginazione |
 | la **navigazione primaria disegnata due volte** (in alto e in basso) | 2 nel DOM | mai visibili insieme: a ogni larghezza misurata una delle due è nascosta. NAV-001 funziona come dichiarato |
 | il contenuto principale comincia a **354px** su 800 (desktop) e a **330** su 812 (telefono) | 44% e 41% | sopra non c'è spazio sprecato: 129px di testata e strumenti, e una fascia con data, contatore e anello che **è** informazione di primo livello. Il massimo vuoto misurato è 20px, cioè il passo della griglia |
-| `.barrabasso` — 27 righe di CSS per una barra che nessun modulo disegna più | 0 occorrenze nel markup | è **codice morto** servito a ogni utente, e va rimosso; ma non è un difetto di impaginazione e non entra in un commit che ne corregge uno |
+| `.barrabasso` — lo stile di una barra che nessun modulo disegna più | 6 regole, 14 righe; 0 occorrenze nel markup | è **codice morto** servito a ogni utente: non è un difetto di impaginazione e non entrava in un commit che ne corregge uno. **Rimosso poi in un commit suo**, dopo averlo ricontato in un browser su dieci viste per due larghezze — zero su venti combinazioni |
 
 ---
 
