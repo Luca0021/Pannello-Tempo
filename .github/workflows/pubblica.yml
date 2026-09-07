@@ -119,6 +119,35 @@ jobs:
           diff /tmp/i1.txt /tmp/i2.txt || { echo "BUILD NON DETERMINISTICA"; exit 1; }
           echo "impronta stabile: $(cat /tmp/i1.txt)"
 
+      - name: Due GENERAZIONI consecutive danno la stessa impronta
+        # La doppia build qui sopra non basta, e la differenza è sottile: genera
+        # la configurazione UNA volta e poi costruisce due volte. Se è il
+        # GENERATORE a introdurre qualcosa di variabile — com'era, con l'ora di
+        # generazione dentro il file — quel controllo non se ne accorge, perché
+        # confronta due build della stessa configurazione.
+        #
+        # Conseguenza misurata prima della correzione: due pubblicazioni a
+        # codice identico davano `f629521abdd8` e `373c53c2a5ce`. Impronta
+        # diversa significa cache diversa, e cache diversa significa che ogni
+        # utente riscarica lo scheletro per niente.
+        #
+        # Questo passo genera DUE volte, a qualche secondo di distanza, e
+        # pretende la stessa impronta.
+        run: |
+          node strumenti/genera-config-firebase.mjs --ambiente non-configurato
+          node strumenti/build.mjs --solo-impronta > /tmp/g1.txt
+          sleep 2
+          node strumenti/genera-config-firebase.mjs --ambiente non-configurato
+          node strumenti/build.mjs --solo-impronta > /tmp/g2.txt
+          diff /tmp/g1.txt /tmp/g2.txt || {
+            echo "IL GENERATORE INTRODUCE QUALCOSA DI VARIABILE:";
+            echo "  prima: $(cat /tmp/g1.txt)";
+            echo "  dopo:  $(cat /tmp/g2.txt)";
+            echo "Ogni pubblicazione cambierebbe il nome della cache a codice invariato.";
+            exit 1;
+          }
+          echo "impronta stabile fra due generazioni: $(cat /tmp/g1.txt)"
+
       - name: Impronta coerente nei quattro punti
         run: node strumenti/controlla-impronta.mjs
 

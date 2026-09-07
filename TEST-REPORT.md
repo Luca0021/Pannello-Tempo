@@ -311,6 +311,27 @@ che l'utente legge davvero.
 | 15 | **Il confronto visivo faceva fallire anche le asserzioni strutturali**, e con esse i quattro passi successivi del lavoro in pipeline | `tests/ui/ui006.spec.js` | la pipeline: 7 controlli reali non eseguiti su entrambi i browser |
 | 16 | **Un input del flusso di lavoro non faceva niente**: `PW_UPDATE_SNAPSHOTS` non è una variabile che Playwright legga | `.github/workflows/verifica.yml` | lettura, mentre si correggeva il n. 15 |
 | 17 | **La sincronizzazione non ha mai potuto funzionare.** `normalizzaLettura()` restituiva `{rev, payload}` dove il dominio aspetta il TESTO del documento: `txt.trim()` era `undefined`, il TypeError finiva nel `.catch` di `pushNow`, e **la scrittura non partiva mai** — per chiunque, a ogni tentativo | `js/sync-provider.js` | la prima verifica **funzionale** dell'artefatto di produzione contro Firebase reale |
+| 18 | **Ogni pubblicazione avrebbe fatto riscaricare lo scheletro a tutti.** Il generatore scriveva nel file l'ora di generazione, e `js/config-firebase.js` entra nell'impronta: due pubblicazioni a codice identico davano `f629521abdd8` e `373c53c2a5ce` | `strumenti/genera-config-firebase.mjs` | due generazioni consecutive, confrontate prima di pubblicare per la prima volta |
+
+Il numero **18** vale una nota di metodo, perché non l'ha trovato una prova:
+l'ho sospettato leggendo il generatore mentre preparavo la pubblicazione, e
+poi **verificato invece di supporlo**. Impronta diversa significa nome della
+cache diverso, e nome della cache diverso significa che ogni utente
+riscarica l'intero scheletro — esattamente il danno che l'intestazione di
+`build.mjs` dichiara di volere evitare.
+
+Il passo «Doppia build deterministica» non poteva coglierlo, e la ragione è
+sottile: genera la configurazione **una volta** e poi costruisce due volte,
+quindi confronta due build della stessa configurazione. Se è il generatore a
+introdurre qualcosa di variabile, quel controllo non se ne accorge. Ora
+`pubblica.yml` ha un passo in più — «Due GENERAZIONI consecutive danno la
+stessa impronta» — che genera due volte a due secondi di distanza e pretende
+lo stesso risultato.
+
+Dopo la correzione l'impronta dell'artefatto di produzione è
+**deterministica e prevedibile**: `6d749ffe5ab4`, due volte su due. È anche
+il valore che il sito deve mostrare dopo la pubblicazione, quindi diventa una
+verifica e non solo un dato.
 
 Il numero **17** è il difetto più grave trovato in tutto questo lavoro, e
 merita di essere raccontato per intero, perché la ragione per cui è

@@ -121,11 +121,32 @@ if (!testa || !coda) {
   process.exit(5);
 }
 
+/* DIFETTO CORRETTO — qui c'era anche `Generato: <ora ISO>`, e ha una
+   conseguenza che si vede solo pubblicando due volte.
+
+   `js/config-firebase.js` ENTRA nell'impronta della build: non è fra le
+   esclusioni di build.mjs, e giustamente, perché è un file che il browser
+   carica. Ma con l'ora dentro, due pubblicazioni a codice IDENTICO
+   producevano impronte diverse — verificato: `f629521abdd8` contro
+   `373c53c2a5ce` a sei secondi di distanza.
+
+   Impronta diversa significa nome della cache diverso, e nome della cache
+   diverso significa che ogni utente riscarica l'intero scheletro. È
+   esattamente il danno che l'intestazione di build.mjs dichiara di volere
+   evitare: «l'impronta cambierebbe anche quando il sito è identico, e i
+   service worker degli utenti riscaricherebbero tutto per niente».
+
+   L'informazione non si perde: `build.json` ha già il campo `costruito`,
+   che dice quando la build è stata fatta, ed è il posto giusto. Qui
+   servivano l'ambiente e l'avvertenza di non modificare a mano — entrambi
+   restano. */
 const blocco =
 `var FIREBASE_CONFIG = {
   /* GENERATO da strumenti/genera-config-firebase.mjs — non modificare a mano.
      Ambiente: ${ambiente}
-     Generato: ${new Date().toISOString()} */
+     Quando: vedi il campo «costruito» di build.json. Qui NON va l'ora:
+     questo file entra nell'impronta, e un'ora che cambia a ogni
+     pubblicazione farebbe riscaricare lo scheletro a tutti per niente. */
   ambiente: ${JSON.stringify(cfg.ambiente)},
 
   apiKey:     ${JSON.stringify(cfg.apiKey)},
