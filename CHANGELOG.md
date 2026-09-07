@@ -14,6 +14,58 @@ era a rischio.
 `f915fb62fff8`, **con configurazione Firebase generata dai Secrets**: sul
 sito l'Account è disponibile e funziona.
 
+### L'impaginazione, misurata: cinque difetti e due allarmi che erano miei
+
+Censimento in un browser vero su **26 condizioni** — sei larghezze da 320 a
+1920 più zoom 200%, due temi, cinque sezioni — con dodici misure per
+condizione. Nove di quelle misure non trovano niente, ed è un risultato:
+zero scorrimenti orizzontali, zero sovrapposizioni, zero contrasti sotto
+soglia nei due temi, zero vuoti ingiustificati.
+
+Le cinque che trovavano qualcosa:
+
+1. **un blocco da mezz'ora tagliava il proprio nome.** Alto 18px con un
+   contenuto di 23 e `overflow:hidden`: il testo non sbordava, spariva a
+   metà glifo. Cinque blocchi su otto. La scala dell'agenda passa da 38 a
+   52px per ora, così la mezz'ora vale 26px e il nome entra. La scheda **non**
+   diventa più alta: `.agscroll` ha un'altezza massima, quindi cambia quanto
+   si scorre dentro il riquadro, non quanto occupa nella pagina;
+2. **la maniglia di ridimensionamento copriva il 72% di quei blocchi.** Era
+   alta 13px fisse: in un blocco da 18 restavano 5px per il gesto che uno
+   voleva fare, e toccare l'attività iniziava un trascinamento. Ora è una
+   frazione dell'altezza. Nessun errore, nessun controllo rosso: due
+   rettangoli da confrontare, e si vede solo misurando;
+3. **i titoli di sezione stavano su quattro colonne diverse** — 138, 140, 141
+   e 120px — perché il bordo d'accento sta fuori dal riempimento e sposta a
+   destra tutto il contenuto della scheda. Due pixel non si leggono come una
+   scelta: si leggono come una colonna che non tiene. Ora è una sola;
+4. **cinque comandi autonomi erano sotto il bersaglio minimo** di 24×24
+   (WCAG 2.5.8): «Ripristina» e i suoi simili a 18-19px, il pulsante che apre
+   una sezione a 20, quello che riporta l'agenda all'ora attuale a 22.
+   `mobile.css` alzava già cinque altre classi per il dito: queste erano
+   rimaste fuori dall'elenco;
+5. **sei classi di testo informativo sotto i 12px**, fino a 10px sull'etichetta
+   «adesso» — che dice qual è la cosa più urgente della riga. Ora la soglia è
+   12px per il testo che porta un valore, con **due eccezioni dichiarate**:
+   le etichette in maiuscoletto che nominano un posto invece di riportare un
+   dato.
+
+Più la vista **Riepilogo**, che non esponeva alcun titolo di primo livello:
+sostituisce l'intero pannello, quindi la testata con l'`h1` della data non
+c'è e la struttura cominciava da un `h2`.
+
+**E due allarmi che erano miei, non del pannello.** Il numero al centro
+dell'anello dichiara 11px e sullo schermo ne misura 15,5: dentro un SVG il
+`font-size` è in unità del viewBox e va scalato. E la barra degli strumenti,
+che a 320px mostra un collegamento su otto, **scorre di proposito** — con la
+sfumatura che lo segnala e il commento che la spiega in `css/base.css`; era
+il mio rilevatore a leggere la proprietà sbagliata. Un difetto va confrontato
+con le intenzioni scritte prima di chiamarlo difetto.
+
+10 prove nuove e 63 asserzioni in `tests/ui/impaginazione.spec.js`, un passo apposta nella
+pipeline, e il racconto completo con le misure prima e dopo in
+`UI-LAYOUT-REPORT.md`. → UI-007
+
 ### Il pannello pubblicato è utilizzabile: provato sul sito, non sull'artefatto
 
 `Pubblica` numero 1, ramo `main`, commit `f5212f1`, ambiente `produzione`:

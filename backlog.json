@@ -298,6 +298,18 @@
       "manca": "la regressione visiva verde con riferimenti APPROVATI a mano: vedi TST-006"
     },
     {
+      "id": "UI-007",
+      "titolo": "impaginazione: colonna dei titoli, bersagli, agenda leggibile",
+      "stato": "COMPLETATO",
+      "dove": [
+        "css/components.css",
+        "css/mobile.css",
+        "tests/ui/impaginazione.spec.js"
+      ],
+      "verifica": "CENSIMENTO eseguito in un browser vero su 26 condizioni — sei larghezze da 320 a 1920 più zoom 200%, due temi, cinque sezioni — misurando scorrimento orizzontale, sporgenze, testo tagliato, bersagli, dimensioni del testo, contrasto, gerarchia dei titoli, comandi duplicati, allineamenti e vuoti. Cinque difetti veri trovati e corretti, ognuno con la misura prima e dopo: blocchi dell'agenda da mezz'ora alti 18px con contenuto 23px e testo tagliato (ora 24 e 24, zero tagliati); maniglia di ridimensionamento alta 13px fisse che in quei blocchi copriva il 72% della superficie (ora una frazione dell'altezza); titoli di sezione su quattro colonne diverse — 138, 140, 141 e 120px — perché l'accento sul bordo sinistro sta fuori dal riempimento (ora una sola colonna a parità di riempimento); comandi autonomi alti 18-22px sotto il minimo di 24x24 di WCAG 2.5.8 (ora tutti a 24); sei classi di testo informativo sotto i 12px, fino a 10px sull'etichetta «adesso» (ora 12, con due eccezioni dichiarate). Più la vista Riepilogo, che non esponeva alcun titolo di primo livello. Le 10 prove (63 asserzioni) di tests/ui/impaginazione.spec.js sono state eseguite e sono verdi, e hanno trovato otto difetti in più del censimento, e le suite esistenti — terminologia, UI-006, sentinelle, cancellazione, piattaforma, accessibilità — sono state rieseguite come regressione",
+      "manca": "due allarmi del censimento sono stati esaminati e NON corretti, con la ragione scritta in UI-LAYOUT-REPORT.md: la striscia degli strumenti che scorre di proposito, e i bersagli di testo in linea dentro le righe, per i quali WCAG 2.5.8 prevede l'eccezione «inline» e che non si possono ingrandire senza rifare la riga"
+    },
+    {
       "id": "ARC-001",
       "titolo": "un modulo per area invece di file monolitici",
       "stato": "COMPLETATO",

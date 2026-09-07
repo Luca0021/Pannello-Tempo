@@ -211,6 +211,7 @@ Non contiene **nessuna** configurazione di un progetto reale: `BUILD.md` §6.
 | `ACCESSIBILITY-REPORT.md` | i numeri, per condizione, e gli otto falsi allarmi |
 | `GLOBAL-COLLISIONS.md` | le due collisioni che hanno prodotto difetti reali |
 | `UI-BEFORE-AFTER.md` | l'indicatore Lavoro/Vita, prima e dopo |
+| `UI-LAYOUT-REPORT.md` | l'impaginazione misurata su 26 condizioni: i cinque difetti veri, i due allarmi che erano miei (UI-007) |
 | `TEST-REPORT.md` | eseguito, scritto-non-eseguito, non scritto |
 | `DEPLOYMENT-REPORT.md` | come si pubblica, e come si torna indietro |
 | `RUN-CI.md` | come si avvia la pipeline e che cosa restituire |

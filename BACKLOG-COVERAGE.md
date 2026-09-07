@@ -40,8 +40,8 @@ lavoro erano in codice che a leggerlo sembrava corretto.
 | SEC | 9 | 8 | 1 | 0 |
 | SYN | 6 | 6 | 0 | 0 |
 | TST | 5 | 4 | 1 | 0 |
-| UI | 2 | 1 | 1 | 0 |
-| **totale** | **42** | **35** | **6** | **1** |
+| UI | 3 | 2 | 1 | 0 |
+| **totale** | **43** | **36** | **6** | **1** |
 
 **Non esiste un solo ticket il cui stato dipenda da una prova che non è
 girata.** Dove la prova non è girata, lo stato è PARZIALE. È il motivo per
@@ -80,6 +80,7 @@ si applica e i service worker non si registrano.
 | **CAL-002** | importazione ICS | `js/ics-import.js`, `js/sicurezza.js`, `js/features/settings-ui.js` | eseguita nel browser |
 | **CPY-002** | terminologia consumer | `js/features/settings-ui.js`, `js/sync.js` | eseguita nel browser: 21 modelli su tutto il testo visibile, compresi aria-label, placeholder e title |
 | **UI-002** | quanto rumore nello sfondo | `css/tokens.css`, `js/features/settings-ui.js` | eseguita nel browser |
+| **UI-007** | impaginazione: colonna dei titoli, bersagli, agenda leggibile | `css/components.css`, `css/mobile.css`, `tests/ui/impaginazione.spec.js` | CENSIMENTO in un browser vero su 26 condizioni — sei larghezze da 320 a 1920 più zoom 200%, due temi, cinque sezioni. Cinque difetti veri corretti con la misura prima e dopo: blocchi d'agenda da mezz'ora alti 18px con contenuto 23 e testo tagliato (ora 24 e 24); maniglia alta 13px fisse che ne copriva il 72%; titoli di sezione su quattro colonne diverse per colpa dell'accento fuori dal riempimento (ora una sola); comandi autonomi a 18-22px sotto il minimo di WCAG 2.5.8 (ora 24); sei classi di testo informativo sotto i 12px, fino a 10 (ora 12, con due eccezioni dichiarate). Più il titolo di primo livello che mancava nel Riepilogo. 10 prove nuove e 63 asserzioni verdi, e le suite esistenti rieseguite come regressione. Due allarmi esaminati e NON corretti, con la ragione: vedi `UI-LAYOUT-REPORT.md` §3 e §4 |
 | **ARC-001** | un modulo per area invece di file monolitici | `js/features/` | moduli allineati fra ORDINE.txt, index.html e sw.js |
 | **ARC-003** | aggiornamento per zone invece dell'intera pagina | `js/rendering.js`, `js/render.js` | eseguita nel browser; ha fatto emergere il difetto della proprietà checked |
 | **ROU-001** | ambito di modifica delle ricorrenze | `js/serie.js`, `js/events.js` | eseguita nel browser |
