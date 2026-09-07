@@ -36,13 +36,13 @@
     {
       "id": "SEC-003",
       "titolo": "Content Security Policy",
-      "stato": "PARZIALE",
+      "stato": "COMPLETATO",
       "dove": [
         "index.html",
         "js/boot.js"
       ],
-      "verifica": "le tre prove CSP di tests/e2e/piattaforma.spec.js sono state ESEGUITE in locale e passano, agenda compresa; il collaudo dell'accessibilità ha inoltre confermato che `style-src-elem` è applicato davvero, bloccando un addStyleTag",
-      "manca": "il passo CSP verde IN PIPELINE. La pipeline è stata eseguita, ma quel passo è stato SALTATO: veniva dopo UI-006, che è fallito. Le tre prove CSP passano in locale"
+      "verifica": "le tre prove CSP di tests/e2e/piattaforma.spec.js sono state ESEGUITE in locale e passano, agenda compresa; il collaudo dell'accessibilità ha inoltre confermato che `style-src-elem` è applicato davvero, bloccando un addStyleTag. E ORA ANCHE IN PIPELINE: esecuzione «Verifica» numero 3, evento push, commit f5212f1, il passo «CSP, PWA, offline, responsive» è passato SU ENTRAMBI I BROWSER, chromium e firefox. Non è più un passo saltato dopo un fallimento a monte",
+      "manca": ""
     },
     {
       "id": "SEC-004",
@@ -294,7 +294,7 @@
         "css/components.css",
         "js/tasks.js"
       ],
-      "verifica": "le 61 prove di ui006.spec.js sono state ESEGUITE in locale, 61 su 61 verdi, dopo aver corretto il difetto di contrasto che la pipeline aveva trovato: la data scaduta in tema scuro stava a 3,73:1 contro 4,5:1, perché usava `--rust` (colore di superficie) invece di `--rust-testo`",
+      "verifica": "le 61 prove di ui006.spec.js sono state ESEGUITE in locale, 61 su 61 verdi, dopo aver corretto il difetto di contrasto che la pipeline aveva trovato: la data scaduta in tema scuro stava a 3,73:1 contro 4,5:1, perché usava `--rust` (colore di superficie) invece di `--rust-testo`. In pipeline, esecuzione numero 3 sul commit f5212f1, il passo «Indicatore Lavoro/Vita (UI-006)» è passato su chromium E su firefox: le asserzioni strutturali sono verdi in pipeline",
       "manca": "la regressione visiva verde con riferimenti APPROVATI a mano: vedi TST-006"
     },
     {
@@ -419,14 +419,14 @@
     {
       "id": "TST-005",
       "titolo": "prove end-to-end",
-      "stato": "PARZIALE",
+      "stato": "COMPLETATO",
       "dove": [
         "tests/e2e/cancellazione.spec.js",
         "tests/e2e/piattaforma.spec.js",
         "tests/security/sentinelle.test.js"
       ],
-      "verifica": "ESEGUITE su Chromium (canale Edge 152 di sistema) in locale: 130 prove fra e2e, terminologia, accessibilità, sentinelle e ui006. In pipeline, sul commit da24a58, il passo «Terminologia della UI consumer» è passato su chromium E SU FIREFOX: è la prima volta che la seconda gamba esegue qualcosa",
-      "manca": "le altre quattro suite su Firefox: sentinelle, cancellazione, CSP/PWA/offline/responsive e accessibilità sono state SALTATE dopo il fallimento di UI-006, su entrambi i browser. Un passo saltato non è un passo passato"
+      "verifica": "ESEGUITE su Chromium (canale Edge 152 di sistema) in locale: 130 prove fra e2e, terminologia, accessibilità, sentinelle e ui006. In pipeline, esecuzione «Verifica» numero 3 sul commit f5212f1, TUTTE le suite sono passate su chromium E su firefox: terminologia, UI-006, sentinelle, cancellazione, CSP/PWA/offline/responsive e accessibilità. Nessun passo saltato per fallimento a monte. Inoltre il flusso completo è stato provato SUL SITO PUBBLICO — registrazione, accesso, scrittura, rilettura, aggiornamento, isolamento, offline, riconnessione, cancellazione — con 23 controlli su 23",
+      "manca": "niente per il criterio di questo ticket. Resta però vero che il confronto visivo DENTRO la suite UI-006 viene saltato per assenza di riferimenti approvati: quello è TST-006, non questo"
     },
     {
       "id": "TST-006",
@@ -442,13 +442,13 @@
     {
       "id": "TST-007",
       "titolo": "pipeline di verifica",
-      "stato": "PARZIALE",
+      "stato": "COMPLETATO",
       "dove": [
         ".github/workflows/verifica.yml",
         "strumenti/"
       ],
-      "verifica": "ESEGUITA per la prima volta sul commit da24a58, evento push. Il lavoro «Build e collaudi locali» è passato per intero: 23 passi su 23, comprese la doppia build deterministica, la coerenza dell'impronta, le collisioni globali, unit, integrazione, avvio e le regole Firestore sull'Emulator. I due lavori in browser sono falliti al passo UI-006 e hanno lasciato NON ESEGUITI i quattro passi successivi",
-      "manca": "un'esecuzione VERDE. Le due cause del rosso sono state corrette — il contrasto della data scaduta, e il confronto visivo che faceva fallire anche le asserzioni strutturali — ma la correzione non è ancora stata provata in pipeline. YAML valido e correzione locale non significano pipeline verde"
+      "verifica": "VERDE: esecuzione numero 3, evento push, commit f5212f1, quattro lavori su quattro riusciti e zero passi falliti. «Build e collaudi locali» 23 passi su 23; «Collaudi in browser» completo su chromium E su firefox. L'unico passo saltato è «Fallisci se qualcosa è rosso» nel lavoro «Verdetto», e viene saltato PERCHÉ niente era rosso: è un cancello superato, non un controllo mancato. La prima esecuzione, sul commit da24a58, era rossa; le due cause sono state corrette e la correzione è stata provata in pipeline, non solo in locale",
+      "manca": "niente per il criterio di questo ticket. Va però ricordato che verde non significa copertura completa: il confronto visivo resta saltato per assenza di riferimenti approvati (TST-006), e il riepilogo della pipeline lo dichiara"
     },
     {
       "id": "MOB-001",

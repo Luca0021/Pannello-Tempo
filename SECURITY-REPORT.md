@@ -21,7 +21,7 @@ raccontate dove sono utili: dentro la sezione del ticket che riguardano.
 |---|---|---|
 | SEC-001 credenziali fuori dal disco | **COMPLETATO** | eseguito nel browser su sei meccanismi di persistenza, con controprova |
 | SEC-002 isolamento fra utenti | **COMPLETATO** | 14 prove su 14 sull'emulatore, quattro esecuzioni pulite. Ha trovato un difetto vero. **E ora verificato anche sul progetto reale**: sei rifiuti su sei |
-| SEC-003 Content Security Policy | **PARZIALE** | provata in un browser vero: **era rotta**; corretta, resta un costo dichiarato |
+| SEC-003 Content Security Policy | **COMPLETATO** | provata in un browser vero: **era rotta**; corretta, e ora verde **anche in pipeline** su entrambi i browser. Resta un costo dichiarato |
 | SEC-004 normalizzazione dei testi | **COMPLETATO** | eseguito **dopo** aver scoperto che non scattava |
 | SEC-005 limiti dell'importazione di backup | **COMPLETATO** | idem |
 | SEC-006 limiti dell'importazione ICS | **COMPLETATO** | idem |
@@ -398,8 +398,15 @@ collaudi scrivono.
 
 ## SEC-003 — la CSP era rotta, e le prove non lo vedevano
 
-**PARZIALE.** Il difetto è corretto; il costo della correzione è dichiarato
-e non ancora rimosso.
+**COMPLETATO.** Il difetto è corretto e la correzione è verificata **anche in
+pipeline**: esecuzione «Verifica» numero 3, commit `f5212f1`, il passo «CSP,
+PWA, offline, responsive» è passato su chromium **e su Firefox**. Era il
+criterio che teneva il ticket aperto: nell'esecuzione precedente quel passo
+era stato *saltato* dopo un fallimento a monte, e un passo saltato non è un
+passo passato.
+
+Il costo della correzione, invece, resta dichiarato e non rimosso: vedi
+«Costo dichiarato» più sotto.
 
 ### Che cosa è stato trovato
 

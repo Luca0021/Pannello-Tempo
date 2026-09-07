@@ -217,8 +217,9 @@ incontrato.
 Il passo fallito è «Indicatore Lavoro/Vita (UI-006)»; i quattro successivi —
 sentinelle, cancellazione, CSP/PWA/offline/responsive, accessibilità — sono
 stati **SALTATI**, perché GitHub Actions si ferma al primo passo rosso. **Un
-passo saltato non è un passo passato**: quei sette controlli non sono
-verificati in pipeline, e SEC-003 e TST-005 restano PARZIALE per questo.
+passo saltato non è un passo passato**: quei sette controlli non erano
+verificati in pipeline, ed era il motivo per cui SEC-003 e TST-005 restavano
+PARZIALE. Quel motivo è caduto con l'esecuzione numero 3: vedi §1-quater.
 
 Una buona notizia dentro il rosso: «Terminologia della UI consumer» è
 passato su chromium **e su Firefox**. È la prima volta che la seconda gamba
@@ -233,8 +234,8 @@ Due cause distinte, entrambe corrette:
    riferimenti approvati faceva fallire anche ciò che non c'entrava (n. 15).
 
 Dopo le correzioni, in locale: **ui006 61 prove su 61 verdi**, e nessuno
-scatto scritto da sé. Se la pipeline sarà verde lo dirà la pipeline: la
-correzione non è ancora stata provata là.
+scatto scritto da sé. Se la pipeline fosse verde lo avrebbe dovuto dire la
+pipeline, e lo ha detto: §1-quater.
 
 ---
 
@@ -279,6 +280,102 @@ dirlo perché due volte su tre avevano già puntato il dito sul prodotto:
 payload ha chiave `data`, non `dati`; e il primo giro andava offline
 *dopo* un ricarico, che azzera la sessione per progetto — quindi accusava
 il pannello di perdere una modifica che non aveva nessun posto dove andare.
+
+---
+
+## 1-quater. La pipeline verde, e il sito pubblicato
+
+### La pipeline
+
+Esecuzione **«Verifica» numero 3**, evento `push`, commit `f5212f1`.
+**Esito: success.** Quattro lavori su quattro, **zero passi falliti**.
+
+| Lavoro | Esito |
+|---|---|
+| Build e collaudi locali | **success**, 23 passi su 23 |
+| Collaudi in browser (chromium) | **success**, tutte le suite |
+| Collaudi in browser (firefox) | **success**, tutte le suite |
+| Verdetto | **success** |
+
+Le quattro suite che nell'esecuzione numero 1 erano state saltate —
+sentinelle, cancellazione, CSP/PWA/offline/responsive, accessibilità — sono
+passate **su entrambi i browser**. È la prima volta che Firefox esegue il
+collaudo per intero: in locale non si scarica su questa rete, e la pipeline
+è il solo posto dove quella gamba possa girare.
+
+Un solo passo risulta saltato in tutta l'esecuzione: «Fallisci se qualcosa è
+rosso», nel lavoro «Verdetto». È saltato **perché niente era rosso** — la
+sua condizione è `if: qualcosa è failure`. Un cancello superato ha lo stesso
+aspetto di un controllo mancato nell'elenco dei passi, e va letto per quello
+che è.
+
+**Verde non significa copertura completa.** Il confronto visivo resta
+saltato per assenza di riferimenti approvati, e il passo «Stato della
+regressione visiva» lo scrive nel riepilogo dell'esecuzione proprio perché
+non passi inosservato: vedi §3 e TST-006.
+
+### La pubblicazione
+
+Esecuzione **«Pubblica» numero 1**, `workflow_dispatch`, ramo `main`, commit
+`f5212f1`, ingressi `ambiente: produzione` e `conferma: pubblica`.
+**Esito: success**, 1 minuto e 7 secondi. **Una sola esecuzione.**
+
+I passi che rispondono a una domanda precisa:
+
+| Passo | Esito | Che cosa dimostra |
+|---|---|---|
+| Genera la configurazione Firebase | **ok** | i quattro Secrets **erano disponibili al lavoro**: il generatore esce con codice 4 se `apiKey` o `projectId` sono vuoti |
+| Due generazioni consecutive danno la stessa impronta | **ok** | il generatore non introduce niente di variabile: nessuna cache invalidata per niente |
+| Controlla l'artefatto prima di pubblicarlo | **ok** | nessun `.env`, nessun debug token valorizzato, nessuna cartella di sviluppo, ambiente coerente |
+| Pubblica | **ok** | il deploy su Pages è avvenuto |
+
+L'unico passo saltato è «Conferma esplicita», la guardia
+`if: inputs.conferma != 'pubblica'`: salta **perché la conferma era
+corretta**.
+
+Sui Secrets, per essere esatti: **non sono stati letti né si è tentato di
+leggerli.** L'API di GitHub risponde 401 anche solo per l'elenco dei nomi.
+La loro disponibilità è dimostrata dal passo di generazione riuscito, che
+dall'esterno è l'unica prova ottenibile.
+
+### Il sito pubblico, provato
+
+`https://luca0021.github.io/Pannello-Tempo/` — **23 controlli su 23,
+exit 0**, con le funzioni del pannello e non con chiamate REST scritte a
+mano, account e dati sintetici su `example.com`, nessun Admin SDK, nessun
+service account, nessun bypass delle regole.
+
+| Capacità | Esito |
+|---|---|
+| Impronta attesa | `f915fb62fff8`, `data-build` e `data-cache` coerenti |
+| Cinque file che non devono essere serviti | **404** tutti e cinque |
+| Account disponibile | **SÌ**, ambiente «produzione» |
+| Registrazione · Accesso · Uscita | **FUNZIONANTI** |
+| Persistenza della sessione | **come dichiarato**: non sopravvive al ricarico (SEC-001), e non lascia residui |
+| Sincronizzazione · Aggiornamento | **FUNZIONANTI** — scritto, riletto, due voci sul remoto |
+| Isolamento fra utenti | **FUNZIONANTE** — documento vuoto per il secondo utente, e **403** alla richiesta diretta del documento altrui |
+| Offline · Riconnessione | **FUNZIONANTI** — si apre dalla cache con la modifica intatta, e a rete tornata la voce arriva sul servizio |
+| Cancellazione account e dati | **FUNZIONANTE** — sette passi su sette, e l'accesso successivo è rifiutato |
+| Service worker e cache | registrato, attivo, in controllo; **una sola** cache `pt-f915fb62`, 74 voci |
+| Residui in `localStorage` | solo le due chiavi dell'app; nessun cookie |
+| 404 dal sito · errori critici in console | **0** e **0** |
+
+I due account sintetici sono stati cancellati dal pannello, ognuno con la
+controprova che l'accesso non funzioni più. Nessun residuo.
+
+### L'impronta non è confrontabile fra sistemi diversi
+
+Avevo previsto `6d749ffe5ab4` e il sito ha pubblicato `f915fb62fff8`. La
+previsione era sbagliata, e la causa è istruttiva.
+
+Ricalcolando l'impronta **scaricando i 76 file dal sito** viene esattamente
+`f915fb62fff8`, cioè il valore che `build.json` dichiara: la build pubblicata
+è coerente con il contenuto che serve. La differenza stava dalla mia parte:
+`css/components.css` sul disco Windows ha **CRLF** (1176 righe su 1177), e
+l'impronta è uno SHA-256 sul contenuto dei file. Normalizzando i fine riga a
+LF l'impronta locale diventa `f915fb62fff8`.
+
+Il sorgente è lo stesso; l'identità della build no. Vedi `BUILD.md` §2.
 
 ---
 
@@ -473,14 +570,15 @@ scrive nel riepilogo della pipeline.
 
 | Verifica | Stato | Perché |
 |---|---|---|
-| Seconda gamba su **Firefox** | **BLOCCATO** | su questa rete `npx playwright install` fallisce con «Download failure» per **tutti** i browser e perfino per ffmpeg (1 MB), mentre gli stessi CDN servono byte a una richiesta diretta. Aggirato per Chromium usando Edge 152 di sistema; per Firefox non esiste un'installazione di sistema |
+| Seconda gamba su **Firefox** | **BLOCCATO IN LOCALE, ESEGUITO IN PIPELINE** | su questa rete `npx playwright install` fallisce con «Download failure» per **tutti** i browser e perfino per ffmpeg (1 MB), mentre gli stessi CDN servono byte a una richiesta diretta. Aggirato per Chromium usando Edge 152 di sistema; per Firefox non esiste un'installazione di sistema. In pipeline invece si scarica, e nell'esecuzione numero 3 Firefox ha eseguito **tutte** le suite: è là che quella gamba gira |
 | **Authentication** su progetto reale | **PASSATO** | non più bloccato: la configurazione è arrivata. Registrazione, accesso, rifiuto della password errata e cancellazione dell'account eseguiti sul progetto vero. Vedi §1 |
 | **Firestore** su progetto reale | **PASSATO** | creazione, lettura, aggiornamento e cancellazione del proprietario, compresa la scrittura con `aggiornatoIl` = adesso, che è quella del pannello |
 | **Isolamento fra utenti** su progetto reale | **PASSATO** | non più solo sull'emulatore: lettura, creazione, aggiornamento e cancellazione da parte di un secondo utente tutte negate, più accesso anonimo, contenitore e percorso non previsto. Con la controprova che il documento resta intatto |
 | **Cancellazione remota del documento** | **PASSATO** | vista avvenire: 200, DELETE 200, poi 404. Più il percorso delle versioni precedenti. PRV-002 chiuso |
 | **App Check** | **NON ATTIVO**, e ora è misurato | `appCheckSiteKey` è vuota perché nessuna Site Key è stata fornita, e il servizio ha accettato registrazione e accesso via REST **senza alcun token di App Check**: l'enforcement non è applicato. Non è una deduzione dal codice, è la risposta del servizio |
 | **Regole pubblicate sul progetto** | **PASSATO** | pubblicate a mano dalla console dal proprietario, in due tornate: la prima era precedente di una riga, la seconda è il file corretto. Verificate interrogando il servizio, 20 controlli su 20. Il deploy da riga di comando non è stato eseguito — `firebase login:list` non riporta alcun account autorizzato, e l'accesso è una credenziale che solo il proprietario può fornire |
-| **GitHub Actions** | **NON ESEGUITO** | la pipeline non è mai stata avviata. YAML valido non significa pipeline eseguita |
+| **GitHub Actions** | **PASSATO** | non più bloccato. Tre esecuzioni di `Verifica`: la prima rossa, la terza **verde** su quattro lavori su quattro. E una di `Pubblica`, che ha messo in rete l'artefatto. Vedi §1-quater |
+| **Pubblicazione con configurazione dai Secrets** | **PASSATO** | `Pubblica` numero 1, ambiente `produzione`: la configurazione è generata nel lavoro e non entra in git, e la guardia sull'artefatto è passata. I quattro Secrets non sono stati letti: la loro disponibilità è dimostrata dal passo di generazione riuscito |
 | **Lettore di schermo reale** | **NON ESEGUITO** | non automatizzabile; axe trova circa un terzo dei problemi |
 | **Dispositivo fisico** | **NON ESEGUITO** | l'emulazione di viewport non è un telefono |
 

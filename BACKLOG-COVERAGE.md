@@ -37,15 +37,15 @@ lavoro erano in codice che a leggerlo sembrava corretto.
 | MOB | 2 | 0 | 2 | 0 |
 | PRV | 4 | 4 | 0 | 0 |
 | ROU | 2 | 2 | 0 | 0 |
-| SEC | 9 | 7 | 2 | 0 |
+| SEC | 9 | 8 | 1 | 0 |
 | SYN | 6 | 6 | 0 | 0 |
-| TST | 5 | 2 | 3 | 0 |
+| TST | 5 | 4 | 1 | 0 |
 | UI | 2 | 1 | 1 | 0 |
-| **totale** | **42** | **32** | **9** | **1** |
+| **totale** | **42** | **35** | **6** | **1** |
 
 **Non esiste un solo ticket il cui stato dipenda da una prova che non è
 girata.** Dove la prova non è girata, lo stato è PARZIALE. È il motivo per
-cui dieci righe non sono verdi pur avendo il codice al suo posto.
+cui sette righe non sono verdi pur avendo il codice al suo posto.
 
 ---
 
@@ -58,6 +58,8 @@ si applica e i service worker non si registrano.
 | Ticket | Titolo | Dove | Come è stato verificato |
 |---|---|---|---|
 | **SEC-001** | nessuna credenziale su disco | `js/sync.js`, `js/account.js` | eseguita nel browser: sei meccanismi di persistenza, più controprova con sentinelle |
+| **SEC-002** | isolamento dei dati fra utenti | `firebase/firestore.rules`, `js/sync.js` | ESEGUITA sull'emulatore Firestore: 14 prove su 14, falliti: 0. VERIFICATA POI SUL PROGETTO REALE con le regole in vigore: lettura, creazione, aggiornamento e cancellazione da parte di un secondo utente tutte negate; accesso non autenticato negato; contenitore `users/{uid}` negato; percorso non previsto negato. E infine DAL PANNELLO, con due sessioni di browser separate sull'artefatto di produzione: il secondo utente legge un documento vuoto, non quello del primo, e la richiesta diretta del documento altrui riceve 403 |
+| **SEC-003** | Content Security Policy | `index.html`, `js/boot.js` | le tre prove CSP di `tests/e2e/piattaforma.spec.js` passano in locale, agenda compresa, e il collaudo dell'accessibilità ha confermato che `style-src-elem` è applicato davvero bloccando un `addStyleTag`. E ORA ANCHE IN PIPELINE: esecuzione numero 3, commit f5212f1, il passo «CSP, PWA, offline, responsive» è passato su chromium E su firefox. Non è più un passo saltato dopo un fallimento a monte |
 | **SEC-004** | normalizzazione dei campi di testo | `js/sicurezza.js`, `tests/unit/limiti-e-versioni.test.js` | eseguita nel browser DOPO aver scoperto che non scattava: il troncamento dei titoli era disattivato da una collisione fra due `var LIMITI` globali. Ora tronca a 500 caratteri e rimuove i caratteri di controllo |
 | **SEC-005** | limiti dell'importazione di un backup | `js/sicurezza.js`, `tests/unit/limiti-e-versioni.test.js` | eseguita nel browser DOPO aver scoperto che nessun limite scattava (collisione fra due `var LIMITI` globali): ora 8 MB, 5000 voci, JSON non valido, array, file senza items e inquinamento del prototipo sono tutti respinti, e un backup valido passa con l'anteprima |
 | **SEC-006** | limiti dell'importazione ICS | `js/sicurezza.js`, `tests/unit/limiti-e-versioni.test.js` | eseguita nel browser DOPO la stessa scoperta: ora 4 MB e 500 eventi vengono respinti, e un calendario valido passa |
@@ -84,6 +86,12 @@ si applica e i service worker non si registrano.
 | **ROU-002** | routine distinte dai task ricorrenti | `js/routine.js`, `js/migrations.js` | eseguita nel browser; migrazione 4→5 verificata |
 | **A11Y-001** | gerarchia delle intestazioni | `js/render.js`, `js/features/` | eseguita nel browser |
 | **A11Y-002** | annunci per i lettori di schermo | `js/accessibility.js` | eseguita nel browser: la regione di annuncio esiste, è UNA sola (ce n'erano due con lo stesso id) e sopravvive al ridisegno |
+| **A11Y-005** | casella di completamento nativa e con un nome | `css/components.css`, `js/tasks.js` | ESEGUITA con Playwright e axe-core: 22 prove su 22, exit 0. Comprende i nomi accessibili di tutti i campi, i label associati, le didascalie con il nome sul comando e i gruppi di pulsanti |
+| **A11Y-006** | nessuna informazione dal solo colore | `css/components.css`, `js/tasks.js` | ESEGUITA: 22 prove su 22. Ha trovato due difetti veri — il pulsante di selezione a 1,39:1 e il testo «Adesso» a 4,38:1 — entrambi corretti e riverificati |
+| **TST-003** | prove unitarie | `tests/unit/migrazioni.test.js`, `tests/avvio.test.js`, `tests/runner.js` | ESEGUITE con Node 20.20.2: 29 asserzioni su 29, exit 0 (migrazioni 15, limiti e versioni 14). Prima non erano eseguibili affatto: `"type": "module"` in package.json rendeva ESM ogni file .js e i collaudi usano `require()` |
+| **TST-004** | prove d'integrazione | `tests/integration/gist-migrazione.test.js` | ESEGUITE con Node: 19 asserzioni su 19, exit 0 |
+| **TST-005** | prove end-to-end | `tests/e2e/cancellazione.spec.js`, `tests/e2e/piattaforma.spec.js`, `tests/security/sentinelle.test.js` | 130 prove in locale su Chromium (canale Edge di sistema). In pipeline, esecuzione numero 3 sul commit f5212f1, TUTTE le suite sono passate su chromium E su firefox: terminologia, UI-006, sentinelle, cancellazione, CSP/PWA/offline/responsive, accessibilità. Nessun passo saltato per un fallimento a monte. E il flusso completo — registrazione, accesso, scrittura, rilettura, aggiornamento, isolamento, offline, riconnessione, cancellazione — è stato provato SUL SITO PUBBLICO, 23 controlli su 23. Resta saltato il solo confronto visivo dentro UI-006, per assenza di riferimenti approvati: è TST-006 |
+| **TST-007** | pipeline di verifica | `.github/workflows/verifica.yml`, `strumenti/` | VERDE: esecuzione numero 3, evento push, commit f5212f1, quattro lavori su quattro riusciti, zero passi falliti. «Build e collaudi locali» 23 passi su 23; «Collaudi in browser» completo su entrambi i browser. L'unico passo saltato è «Fallisci se qualcosa è rosso», saltato PERCHÉ niente era rosso: è un cancello superato, non un controllo mancato. La prima esecuzione era rossa, e le sue due cause sono state corrette e riprovate in pipeline |
 
 ## PARZIALE
 
@@ -95,40 +103,38 @@ Diceva: «in questo ambiente non ci sono Node, npm, Java né Python
 (verificato, non supposto)». Adesso ci sono. Node 20.20.2 e Temurin JRE 11
 sono stati installati, e con loro sono girati i runner delle prove unitarie,
 Playwright su Edge di sistema e l'Emulator Firestore. Delle quindici righe
-che quella frase giustificava ne restano **nove**, e ognuna ha ora un motivo
+che quella frase giustificava ne restano **sei**, e ognuna ha ora un motivo
 proprio e specifico invece di un motivo comune:
 
-- **una gamba di browser mancante** (Firefox non si scarica su questa rete);
 - **hardware o persone che non si possono automatizzare** (dispositivo
   fisico, lettore di schermo);
-- **la pipeline mai avviata**, che è il criterio letterale di due ticket;
 - **scatti di riferimento da approvare a mano**, che è il punto della
   regressione visiva;
 - **App Check non attivo**, che richiede una chiave e una decisione di costo.
 
 Nessuno di questi si risolve installando qualcosa.
 
-Fra i motivi non c'è più «le regole non sono pubblicate sul progetto reale»:
-era la voce che bloccava il percorso account, ed è stata chiusa. Le regole
-sono pubblicate e **verificate sul servizio**, con 20 controlli su 20 —
-vedi SEC-010 fra i COMPLETATO.
+Due motivi sono spariti da questo elenco, e conviene dire quali perché
+erano quelli che bloccavano tutto il resto:
+
+- **«le regole non sono pubblicate sul progetto reale»** — chiuso. Le regole
+  sono pubblicate e **verificate interrogando il servizio**, 20 controlli su
+  20: vedi SEC-010;
+- **«la pipeline mai avviata» e «una gamba di browser mancante»** — chiusi
+  insieme. La pipeline è stata eseguita ed è **verde** (esecuzione numero 3,
+  commit f5212f1), e Firefox esegue in pipeline tutte le suite che qui non
+  si possono scaricare: vedi TST-007, TST-005 e SEC-003. Restava vero fino
+  alla consegna precedente che «un passo saltato non è un passo passato»;
+  adesso quei passi non sono più saltati.
 
 Che cosa serve per ognuno, con precisione:
 
 | Ticket | Titolo | Dove | Che cosa manca per chiuderlo |
 |---|---|---|---|
-| **SEC-002** | isolamento dei dati fra utenti | `firebase/firestore.rules`, `js/sync.js` | ESEGUITA sull'emulatore Firestore: 14 prove su 14, falliti: 0, quattro esecuzioni pulite. VERIFICATA POI SUL PROGETTO REALE con le regole in vigore: lettura, creazione, aggiornamento e cancellazione da parte di un secondo utente tutte negate; accesso non autenticato negato; contenitore users/{uid} negato; percorso non previsto negato. E infine DAL PANNELLO, con due sessioni di browser separate sull'artefatto di produzione: il secondo utente legge un documento vuoto, non quello del primo, e la richiesta diretta del documento altrui riceve 403 |
-| **SEC-003** | Content Security Policy | `index.html`, `js/boot.js` | il passo CSP verde IN PIPELINE. La pipeline è stata eseguita, ma quel passo è stato SALTATO: veniva dopo UI-006, che è fallito. Le tre prove CSP passano in locale |
 | **SEC-009** | App Check | `js/appcheck.js`, `js/config-firebase.js` | chiave reCAPTCHA, attivazione, enforcement, e la verifica che il traffico legittimo non venga bloccato. Nota: l'enforcement va attivato DOPO aver pubblicato le regole, altrimenti si sommano due cause di rifiuto e diventa difficile capire quale sia |
 | **UI-006** | indicatore Lavoro/Vita nelle righe delle attività | `css/tokens.css`, `css/components.css`, `js/tasks.js` | la regressione visiva verde con riferimenti APPROVATI a mano: vedi TST-006 |
 | **A11Y-004** | tastiera e fuoco sempre visibile | `css/accessibility.css`, `css/tokens.css` | una prova con un lettore di schermo reale: axe trova circa un terzo dei problemi |
-| **A11Y-005** | casella di completamento nativa e con un nome | `css/components.css`, `js/tasks.js` | ESEGUITA con Playwright e axe-core: 22 prove su 22, exit 0. Comprende i nomi accessibili di tutti i campi, i label associati, le didascalie con il nome sul comando e i gruppi di pulsanti |
-| **A11Y-006** | nessuna informazione dal solo colore | `css/components.css`, `js/tasks.js` | ESEGUITA: 22 prove su 22. Ha trovato due difetti veri — il pulsante di selezione a 1,39:1 e il testo «Adesso» a 4,38:1 — entrambi corretti e riverificati |
-| **TST-003** | prove unitarie | `tests/unit/migrazioni.test.js`, `tests/avvio.test.js`, `tests/runner.js` | ESEGUITE con Node 20.20.2: 29 asserzioni su 29, exit 0 (migrazioni 15, limiti e versioni 14). Prima non erano eseguibili affatto: `"type": "module"` in package.json rendeva ESM ogni file .js e i collaudi usano require() |
-| **TST-004** | prove d'integrazione | `tests/integration/gist-migrazione.test.js` | ESEGUITE con Node: 19 asserzioni su 19, exit 0 |
-| **TST-005** | prove end-to-end | `tests/e2e/cancellazione.spec.js`, `tests/e2e/piattaforma.spec.js`, `tests/security/sentinelle.test.js` | le altre quattro suite su Firefox: sentinelle, cancellazione, CSP/PWA/offline/responsive e accessibilità sono state SALTATE dopo il fallimento di UI-006, su entrambi i browser. Un passo saltato non è un passo passato |
 | **TST-006** | regressione visiva | `tests/ui/ui006.spec.js`, `playwright.config.js` | i riferimenti approvati. Ce ne sono 19 sul disco, non tracciati e non guardati, e sono per Windows: in pipeline il suffisso è `linux`, quindi non varrebbero comunque. Servono una revisione a mano e un commit apposta. Finché non succede la pipeline può essere verde con ZERO copertura visiva, e strumenti/stato-regressione-visiva.mjs lo scrive nel riepilogo perché non passi inosservato |
-| **TST-007** | pipeline di verifica | `.github/workflows/verifica.yml`, `strumenti/` | un'esecuzione VERDE. Le due cause del rosso sono state corrette — il contrasto della data scaduta, e il confronto visivo che faceva fallire anche le asserzioni strutturali — ma la correzione non è ancora stata provata in pipeline. YAML valido e correzione locale non significano pipeline verde |
 | **MOB-001** | installabile e utilizzabile offline | `sw.js`, `manifest.webmanifest`, `offline.html` | una prova su un dispositivo fisico |
 | **MOB-002** | utilizzabile su schermo piccolo | `css/mobile.css`, `css/components.css` | una prova su un dispositivo fisico: l'emulazione non è un telefono |
 

@@ -175,9 +175,20 @@ difetto è nella prova o nel prodotto.
 
 ## 9. Che cosa aspettarsi la prima volta
 
-Non che passi tutto. Le prove in browser non sono mai girate: è probabile
-che due o tre falliscano per attese troppo brevi o per selettori che si
-aspettano dati diversi da quelli che trovano.
+Non che passi tutto — e infatti la prima esecuzione è stata rossa. È andata
+com'era prevedibile, e vale la pena averla in mano come esempio:
+
+| Esecuzione | Commit | Esito |
+|---|---|---|
+| 1 | `da24a58` | **failure** al passo UI-006, con i quattro passi successivi **saltati** su entrambi i browser |
+| 2 | `655cbb6` | success |
+| 3 | `f5212f1` | **success**, quattro lavori su quattro, zero passi falliti |
+
+Le due cause del rosso erano una per tipo, e la distinzione è quella che
+conta: **un difetto vero** (la data scaduta a 3,73:1 in tema scuro) e **un
+difetto di impianto del collaudo** (il confronto visivo e le asserzioni
+strutturali nella stessa prova, così l'assenza di riferimenti approvati
+faceva fallire anche ciò che non c'entrava).
 
 **Quello che conta è la natura dei fallimenti.**
 
@@ -192,11 +203,27 @@ un'iterazione. Se invece:
 quelli sono difetti veri del pannello, ed è esattamente per trovarli che la
 pipeline esiste.
 
-## 10. Finché non gira
+## 10. Che cosa la pipeline verde ha chiuso, e che cosa no
 
-Restano **PARZIALE**, e non vanno dichiarati altrimenti: SEC-002, SEC-003,
-SEC-009, PRV-002, UI-006, TST-003, TST-004, TST-005, TST-006, TST-007,
-MOB-001, MOB-002, A11Y-004, A11Y-005, A11Y-006.
+Prima che girasse restavano PARZIALE quindici ticket. La pipeline verde
+(esecuzione numero 3) ne ha chiusi tre — **SEC-003**, **TST-005**,
+**TST-007** — e gli altri erano già stati chiusi da esecuzioni locali o dal
+progetto reale.
+
+Restano **PARZIALE**, e non vanno dichiarati altrimenti:
+
+| Ticket | Perché la pipeline non lo chiude |
+|---|---|
+| **TST-006** | il confronto visivo gira solo contro riferimenti **approvati**, cioè versionati. Non ce ne sono, quindi la comparazione è saltata: una pipeline verde con **zero** copertura visiva |
+| **UI-006** | dipende da TST-006: le 14 asserzioni strutturali sono verdi in pipeline, il confronto visivo no |
+| **SEC-009** | App Check richiede una chiave e una decisione di costo, non un'esecuzione |
+| **A11Y-004** | serve un lettore di schermo reale: axe trova circa un terzo dei problemi |
+| **MOB-001**, **MOB-002** | serve un dispositivo fisico. L'emulazione non è un telefono |
+
+**Un passo verde non è una copertura, ed è la lezione di questa tornata.**
+Il passo «Stato della regressione visiva» esiste per scrivere nel riepilogo
+quante comparazioni sono state saltate, così che «verde» non possa
+nascondere «nessuna».
 
 `TEST-REPORT.md` elenca, per ognuno, che cosa è stato eseguito davvero e
 che cosa no.
