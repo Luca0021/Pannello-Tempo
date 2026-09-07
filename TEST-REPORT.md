@@ -238,7 +238,51 @@ correzione non è ancora stata provata là.
 
 ---
 
-## 2. I sedici difetti trovati eseguendo
+## 1-ter. L'artefatto di produzione, provato contro Firebase reale
+
+`pubblica.yml` costruisce un artefatto. La domanda che il flusso da solo non
+risolve è se quell'artefatto sia **usabile**. È stato costruito in locale con
+gli stessi passi del flusso — configurazione generata dai valori di `.env`,
+build, montaggio dei soli file serviti, guardia — servito a un browser vero,
+e provato contro il progetto Firebase reale **usando le funzioni del
+pannello**, non chiamate REST scritte a mano.
+
+**17 controlli su 17, exit 0.**
+
+| Capacità | Esito |
+|---|---|
+| Account disponibile | **FUNZIONANTE** — `accountDisponibile()` vero, ambiente «produzione» |
+| Registrazione | **FUNZIONANTE** — dal pannello, sessione attiva |
+| Accesso | **FUNZIONANTE** — e i dati remoti si ritrovano |
+| Uscita dall'account | **FUNZIONANTE** — nessun residuo su disco, sentinelle vuote |
+| Persistenza della sessione | **FUNZIONANTE come dichiarato**: la sessione **non** sopravvive al ricarico. È la scelta di SEC-001 |
+| Sincronizzazione | **FUNZIONANTE** — scritta su Firestore e riletta |
+| Aggiornamento dei dati | **FUNZIONANTE** — due voci nel documento remoto |
+| Isolamento fra utenti | **FUNZIONANTE** — il secondo utente legge un documento vuoto, e la richiesta diretta del documento altrui riceve 403 |
+| Utilizzo offline | **FUNZIONANTE** — si apre dalla cache, e la modifica offline è ancora là |
+| Modifica offline non perduta | **FUNZIONANTE** — resta da inviare, con un errore che ha un titolo |
+| Riconnessione | **FUNZIONANTE** — tornata la rete, la voce fatta offline arriva sul servizio |
+| Cancellazione account e dati | **FUNZIONANTE** — sette passi su sette, esito «completo», e l'account non permette più l'accesso |
+| Nessun file del sito manca | **FUNZIONANTE** — 0 404 dal sito |
+| Nessun errore critico in console | **FUNZIONANTE** — 0, con rete |
+
+Account sintetici su `example.com`, dati sintetici, entrambi cancellati con
+la controprova. Nessun Admin SDK, nessun service account, nessun bypass
+delle regole: il pannello ha parlato col servizio come lo farebbe sul
+telefono di chiunque.
+
+Questa verifica ha trovato il difetto n. 17, che è il più grave del lotto.
+
+**Tre difetti erano nel mio banco di prova, non nel prodotto**, e vale
+dirlo perché due volte su tre avevano già puntato il dito sul prodotto:
+`pushNow()` non restituisce una promessa (attendevo troppo presto); il
+payload ha chiave `data`, non `dati`; e il primo giro andava offline
+*dopo* un ricarico, che azzera la sessione per progetto — quindi accusava
+il pannello di perdere una modifica che non aveva nessun posto dove andare.
+
+---
+
+## 2. I diciassette difetti trovati eseguendo
 
 Nessuno di questi si vede leggendo il codice.
 
@@ -266,6 +310,44 @@ che l'utente legge davvero.
 | 14 | **La data scaduta era la scritta meno leggibile del pannello**: 3,73:1 in tema scuro contro il minimo di 4,5:1, perché uno stile inline usava `--rust` — un colore di **superficie** — invece di `--rust-testo` | `js/features/task-list-ui.js` | la **pipeline**, su entrambi i browser, sopravvissuto al retry |
 | 15 | **Il confronto visivo faceva fallire anche le asserzioni strutturali**, e con esse i quattro passi successivi del lavoro in pipeline | `tests/ui/ui006.spec.js` | la pipeline: 7 controlli reali non eseguiti su entrambi i browser |
 | 16 | **Un input del flusso di lavoro non faceva niente**: `PW_UPDATE_SNAPSHOTS` non è una variabile che Playwright legga | `.github/workflows/verifica.yml` | lettura, mentre si correggeva il n. 15 |
+| 17 | **La sincronizzazione non ha mai potuto funzionare.** `normalizzaLettura()` restituiva `{rev, payload}` dove il dominio aspetta il TESTO del documento: `txt.trim()` era `undefined`, il TypeError finiva nel `.catch` di `pushNow`, e **la scrittura non partiva mai** — per chiunque, a ogni tentativo | `js/sync-provider.js` | la prima verifica **funzionale** dell'artefatto di produzione contro Firebase reale |
+
+Il numero **17** è il difetto più grave trovato in tutto questo lavoro, e
+merita di essere raccontato per intero, perché la ragione per cui è
+sopravvissuto è più istruttiva del difetto stesso.
+
+Il contratto è dichiarato da quattro chiamanti in `js/sync.js` —
+`verificaCollegamento()` fa `txt.trim()`, e `pushNow()` più altri due fanno
+`remoteRevOf(txt)`, che comincia con `txt.trim()`. Entrambi gli adattatori
+vivi passano già del testo: `fbRead()` risolve con
+`d.fields.payload.stringValue`, `gistRead()` con `r.testo`. In mezzo,
+`normalizzaLettura` incartava quel testo in un oggetto.
+
+Conseguenza: `pushNow` moriva su un TypeError che il suo `.catch` traduceva
+in `sync.err = «Errore imprevisto»` e stato «errore». Il pannello mostrava
+un errore generico invece di salvare. Anche `verificaCollegamento()` — la
+diagnostica che dovrebbe dire all'utente **dove** si rompe la
+sincronizzazione — si rompeva allo stesso punto.
+
+**Perché nessuna prova l'aveva visto.** Nessuna di quelle che c'erano era
+sbagliata; mancava quella giusta:
+
+| Che cosa provava | Perché non toccava questo |
+|---|---|
+| unit e integrazione | esercitano gli **adattatori** (`fbRead`, `gistRead`) direttamente, non il percorso del dominio che li usa |
+| cancellazione e2e | risposte finte, e non passa da `pushNow` |
+| Security Rules, 20 controlli su 20 | chiamate **REST scritte a mano**, che non attraversano il codice del pannello |
+| suite in browser | non hanno un servizio con cui parlare |
+
+È per questo che «SEC-010 chiuso, 20 su 20» conviveva senza contraddizione
+con una sincronizzazione che non ha mai scritto niente: le due cose
+misuravano oggetti diversi. Il servizio rispondeva correttamente a chi lo
+interrogava bene; il pannello non arrivava a interrogarlo.
+
+Ora c'è `tests/unit/sincronizzazione.test.js`, 9 prove, che fa girare
+`pushNow` contro un servizio finto e verifica che una PATCH parta davvero,
+sul percorso giusto, con `dirty` che torna falso. **Controprova**:
+rimettendo la versione rotta, il collaudo passa da 9 verdi a 8 rosse su 9.
 
 Il numero **14** merita due righe, perché la diagnosi giusta è arrivata dopo
 una sbagliata. Dal messaggio del collaudo — «rapporto 3.73, testo "mar 1

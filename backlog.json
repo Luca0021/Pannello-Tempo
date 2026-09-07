@@ -30,7 +30,7 @@
         "firebase/firestore.rules",
         "js/sync.js"
       ],
-      "verifica": "ESEGUITA sull'emulatore Firestore: tests/security/regole.test.js, 14 prove su 14, falliti: 0, quattro esecuzioni consecutive pulite. Ha trovato un difetto vero delle regole — `aggiornatoIl <= request.time` senza tolleranza. VERIFICATA POI SUL PROGETTO REALE con le regole del repository IN VIGORE: lettura, creazione, aggiornamento e cancellazione da parte di un secondo utente tutte negate; accesso non autenticato negato; contenitore users/{uid} negato; percorso non previsto negato; e la controprova che il documento del proprietario resta intatto dopo i tentativi altrui. L'isolamento non è più verificato soltanto su una copia fedele del servizio: è verificato sul servizio",
+      "verifica": "ESEGUITA sull'emulatore Firestore: 14 prove su 14, falliti: 0, quattro esecuzioni pulite. VERIFICATA POI SUL PROGETTO REALE con le regole in vigore: lettura, creazione, aggiornamento e cancellazione da parte di un secondo utente tutte negate; accesso non autenticato negato; contenitore users/{uid} negato; percorso non previsto negato. E infine DAL PANNELLO, con due sessioni di browser separate sull'artefatto di produzione: il secondo utente legge un documento vuoto, non quello del primo, e la richiesta diretta del documento altrui riceve 403",
       "manca": ""
     },
     {
@@ -130,7 +130,7 @@
         "js/privacy.js",
         "js/distruttive.js"
       ],
-      "verifica": "ESEGUITA SUL SERVIZIO REALE, non più con risposte finte. Sul progetto pannello-tempo: documento creato (HTTP 200), riletto col payload corretto, cancellato (HTTP 200), e la rilettura successiva risponde 404 NOT_FOUND — la cancellazione è stata VISTA avvenire. Cancellato anche il percorso delle versioni precedenti, come fa il pannello: lasciarne uno significherebbe dire «cancellato» con una copia ancora leggibile. Verificata inoltre la cancellazione dell'ACCOUNT su cinque account di prova, ognuna con la controprova: l'accesso successivo con le stesse credenziali viene rifiutato. Nessun residuo lasciato sul progetto. In locale restano verdi le 10 prove di tests/e2e/cancellazione.spec.js",
+      "verifica": "ESEGUITA SUL SERVIZIO REALE. Prima con chiamate REST diritte: documento creato, riletto, cancellato, e la rilettura successiva risponde 404. Poi — ed è la verifica che conta — attraverso `cancellaTutto({cloud, account, locali})`, cioè il percorso del pannello: tutti e sette i passi riusciti (cloud, verifica, account, coda, credenziali, locali, backup), esito «completo», e la controprova che l'account cancellato non permette più l'accesso. Nessun residuo lasciato sul progetto",
       "manca": ""
     },
     {
@@ -172,7 +172,7 @@
         "js/coda.js",
         "js/features/settings-ui.js"
       ],
-      "verifica": "eseguita nel browser: sei stati espliciti, mai una sola icona",
+      "verifica": "eseguita nel browser: sei stati espliciti, mai una sola icona. PRECISAZIONE dopo la verifica funzionale: fino al commit `dcb8cae` lo stato «sincronizzato» era di fatto irraggiungibile, perché `pushNow` moriva su un difetto di contratto fra dominio e adattatore. La LEGGIBILITÀ degli stati era verificata; il loro RAGGIUNGIMENTO no. Ora il percorso completo è stato eseguito contro Firebase reale",
       "manca": ""
     },
     {
@@ -193,8 +193,8 @@
         "js/versioni.js",
         "js/conflitti.js"
       ],
-      "verifica": "eseguita nel browser: modifica segnata, voce non toccata non segnata, cancellazione con lapide. Ha fatto emergere il difetto peggiore del programma: `aggiornaVersioni()` passava un istante dove l'implementazione viva aspetta un dataset, e OGNI modifica salvata dal percorso normale non risultava da sincronizzare",
-      "manca": "il trasporto resta un documento unico, e js/versioni.js contiene una generazione precedente in gran parte senza chiamanti: ARCHITECTURE.md §3"
+      "verifica": "eseguita nel browser: modifica segnata, voce non toccata non segnata, cancellazione con lapide. Ha fatto emergere il difetto peggiore del programma: `aggiornaVersioni()` passava un istante dove l'implementazione viva aspetta un dataset, e OGNI modifica salvata dal percorso normale non risultava da sincronizzare. PRECISAZIONE dopo la verifica funzionale: come per SYN-002, versioni e fusione erano verificate sui dati LOCALI, ma il percorso che li porta sul servizio non era mai stato eseguito fino a `dcb8cae`. Adesso sì: scrittura, aggiornamento e rilettura dal pannello contro Firebase reale",
+      "manca": ""
     },
     {
       "id": "SYN-005",
@@ -215,8 +215,8 @@
         "js/sync.js",
         "js/config-firebase.js"
       ],
-      "verifica": "eseguita nel browser: nessun selettore di fornitore, nessuna configurazione richiesta, terminologia verificata su 23.303 caratteri. Completata in questa tornata: i MESSAGGI D'ERRORE erano l'ultimo posto in cui l'architettura precedente sopravviveva — 13 campi su 33 contenevano gergo vietato e istruzioni per una console che l'utente non possiede, e il consiglio per il rifiuto delle scritture indicava perfino il percorso sbagliato. La guardia sulla terminologia non li aveva mai letti perché cerca nel DOM renderizzato, e un messaggio d'errore è sullo schermo solo quando l'errore capita. Ora sono in lingua comune e li verifica tests/unit/messaggi-errore.test.js, 10 prove su 10",
-      "manca": "il percorso account completo su servizio reale: l'accesso funziona, il salvataggio no, per SEC-010"
+      "verifica": "eseguita nel browser: nessun selettore di fornitore, nessuna configurazione richiesta, terminologia verificata su 23.303 caratteri. I MESSAGGI D'ERRORE sono stati riportati in lingua comune e li verifica tests/unit/messaggi-errore.test.js (10 prove). Verificato sull'ARTEFATTO DI PRODUZIONE servito a un browser vero, contro il progetto Firebase reale, usando le funzioni del pannello e non chiamate REST scritte a mano: 17 controlli su 17. Registrazione, accesso, uscita, sincronizzazione, aggiornamento, isolamento, offline, riconnessione e cancellazione: tutte funzionanti dal pannello",
+      "manca": ""
     },
     {
       "id": "MIG-001",

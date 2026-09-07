@@ -14,6 +14,51 @@ era a rischio.
 configurazione Firebase**: sul sito l'Account risulta non disponibile e il
 pannello lo dichiara.
 
+### La sincronizzazione non ha mai potuto funzionare
+
+È il difetto più grave di tutto il lavoro, e per trovarlo è servito mettere
+il codice del pannello e un servizio Firebase nella stessa stanza — cosa che
+non era mai stata fatta.
+
+`normalizzaLettura()` restituiva `{ rev, payload }`. Ma il contratto che il
+dominio implementa è un'altra cosa: `readRemote()` deve risolvere col
+**testo** del documento, e lo si legge in tutti e quattro i suoi chiamanti,
+che fanno `txt.trim()` o `remoteRevOf(txt)`. Entrambi gli adattatori vivi
+passano già del testo; incartarlo in un oggetto rendeva `txt.trim`
+`undefined`.
+
+In `pushNow` quel TypeError finiva nel `.catch` finale, che lo traduceva in
+«Errore imprevisto» e stato «errore». **La scrittura non partiva mai**: non
+per una configurazione, non per un utente, ma per chiunque e a ogni
+tentativo. Anche `verificaCollegamento()` — la diagnostica che dovrebbe dire
+all'utente dove si rompe la sincronizzazione — si rompeva allo stesso punto.
+
+Nessuna prova l'aveva visto, e nessuna era sbagliata: unit e integrazione
+esercitano gli adattatori direttamente; la cancellazione usa risposte finte;
+le Security Rules sono state verificate con chiamate REST scritte a mano,
+che non attraversano il codice del pannello; le suite in browser non hanno un
+servizio con cui parlare. È per questo che «SEC-010 chiuso, 20 controlli su
+20» conviveva con una sincronizzazione che non scriveva niente: misuravano
+oggetti diversi.
+
+Ora c'è `tests/unit/sincronizzazione.test.js`, che fa girare `pushNow` contro
+un servizio finto e verifica che una PATCH parta davvero. Controprova:
+rimettendo la versione rotta, il collaudo passa da 9 verdi a 8 rosse su 9.
+
+### L'artefatto di produzione è stato provato, non solo costruito
+
+Costruito in locale con gli stessi passi di `pubblica.yml`, servito a un
+browser vero, provato contro il progetto Firebase reale **usando le funzioni
+del pannello**: **17 controlli su 17**. Registrazione, accesso, uscita,
+sincronizzazione, aggiornamento, isolamento fra due utenti, utilizzo offline,
+modifica offline che non si perde, riconnessione, cancellazione dell'account
+e dei dati. La persistenza della sessione risulta funzionante **come
+dichiarata**: non sopravvive al ricarico, perché il token non viene
+conservato (SEC-001).
+
+Account sintetici su `example.com`, cancellati con la controprova. Nessun
+Admin SDK, nessun service account, nessun bypass delle regole.
+
 ### La pipeline ha girato per la prima volta, ed è stata rossa
 
 Sul commit `da24a58`. Il lavoro locale è passato per intero — 23 passi su

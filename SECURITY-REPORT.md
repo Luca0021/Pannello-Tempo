@@ -694,6 +694,16 @@ questo lavoro erano in codice che a leggerlo sembrava corretto — e uno di
 quei cinque disattivava, in silenzio, tre ticket di sicurezza che
 risultavano chiusi.
 
+E un terzo, che nemmeno le sonde REST potevano insegnare: **verificare un
+servizio non verifica il programma che lo usa.** Le 20 sonde di SEC-010
+passavano tutte, con chiamate scritte a mano che parlavano correttamente col
+progetto. Nello stesso momento `pushNow()` del pannello moriva su un
+TypeError e non scriveva niente — vedi `TEST-REPORT.md`, difetto 17. Le due
+misure non si contraddicevano: una diceva «il servizio risponde a chi lo
+interroga bene», l'altra avrebbe dovuto dire «il pannello lo interroga
+bene», e nessuno l'aveva mai posta. Serve una prova che parta dal codice del
+prodotto e arrivi al servizio, e ora c'è.
+
 SEC-010 aggiunge un secondo corollario, che l'emulatore non poteva insegnare:
 **un controllo eseguito contro una copia fedele del servizio non dice nulla
 sul servizio.** Le 14 prove sull'emulatore erano verdi mentre il progetto
