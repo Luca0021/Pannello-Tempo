@@ -60,7 +60,10 @@ function bindDrag(){
       } else {
         var ne = snap(hourAt(yOf(drag.start + drag.dur) + dy));
         it.dur = Math.max(0.25, Math.min(24 - drag.start, ne - drag.start));
-        el.style.height = Math.max(yOf(it.start+it.dur)-yOf(it.start)-2,18)+"px";
+        /* lo stesso minimo che usa agenda-ui.js quando disegna: era 18 qui e
+           18 là, due copie dello stesso numero, e un blocco che cambiava
+           altezza fra il trascinamento e il ridisegno. Ora è in config.js */
+        el.style.height = Math.max(yOf(it.start+it.dur)-yOf(it.start)-2,AGBLK_MIN)+"px";
       }
     });
     function up(){

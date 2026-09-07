@@ -14,7 +14,32 @@ var KEY = "pannello-tempo:v1";
    schema è passato a 4: un backup migrato veniva subito riportato alla
    versione precedente da normalizeData(). Ora è un alias, non una copia. */
 var LINKS_V = 4;   /* aumentando questo numero i nuovi predefiniti raggiungono chi ha già dei dati */
-var HPX = 38, HPW = 22;
+/* HPX — quanti pixel vale un'ora nell'agenda del giorno.
+   HPW — gli stessi pixel nella vista settimanale, dove le colonne sono sette.
+
+   DIFETTO CORRETTO — era 38, e un blocco da mezz'ora ne riceveva 19: meno 2
+   di margine, 17, sotto il minimo di 18 imposto in agenda-ui.js. Misurato in
+   un browser: cinque blocchi su otto alti 18px con un contenuto alto 23px,
+   cioè il nome dell'attività TAGLIATO a metà glifo (`overflow:hidden`), e
+   sotto i 24x24 che servono a colpirli col dito.
+
+   Con 52 la mezz'ora vale 26px: 24 di blocco più il pixel di margine sopra e
+   sotto. Il testo entra, il bersaglio è a norma, e la scheda dell'agenda NON
+   diventa più alta perché `.agscroll` ha `max-height:440px`: cambia quanto si
+   scorre dentro il riquadro, non quanto occupa nella pagina. */
+var HPX = 52, HPW = 22;
+
+/* L'altezza minima di un blocco dell'agenda, in pixel. UNA definizione,
+   perché ce n'erano due: agenda-ui.js la usa quando disegna, drag.js quando
+   segui il bordo inferiore col dito. Erano due volte il numero 18 scritto a
+   mano, e correggerne uno solo avrebbe prodotto un blocco che cambia altezza
+   mentre lo si ridimensiona — il genere di divergenza fra copie che questo
+   repository ha già pagato altrove.
+
+   24 è il bersaglio minimo di WCAG 2.5.8, e insieme l'altezza che serve al
+   contenuto del blocco (nome a 13px più orario a 11px, dentro 3px di
+   riempimento sopra e sotto: 23). */
+var AGBLK_MIN = 24;
 
 var AREAS = { lavoro: { label: "Lavoro", color: "var(--pen)" },
               vita:   { label: "Vita",   color: "var(--sage)" } };

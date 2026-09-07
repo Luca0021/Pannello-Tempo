@@ -89,7 +89,17 @@
 .pt .prossima{display:flex;align-items:baseline;gap:8px;margin:9px 0 0;font-size:14px;
     color:var(--ink);cursor:pointer;}
 .pt .prossima b{font-family:var(--mono);font-size:12.5px;color:var(--pen);}
-.pt .prosslab{font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+/* ---------- UNA SOGLIA, E DOVE SI FERMA ----------
+   12px è il minimo per il testo che porta un'informazione: un orario, un
+   ritardo, lo stato di una voce. Era la scritta più piccola del pannello —
+   10px — e dice che l'appuntamento seguente è adesso, cioè la cosa più
+   urgente che ci sia in quella riga.
+
+   Restano a 11px `.eyebrow` («PANNELLO TEMPO») e `.proptit` («SE NON SAI DA
+   DOVE COMINCIARE»): sono etichette in maiuscoletto spaziato che NOMINANO un
+   posto, non riportano un valore. Ingrandirle sposterebbe peso visivo su
+   ciò che non va letto per primo, che è il difetto opposto. */
+.pt .prosslab{font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
     color:var(--brass-testo);border:1px solid var(--brass);border-radius:20px;padding:1px 7px;flex:none;}
 .pt .prossima:hover{color:var(--pen);}
 /* il colore dell'area accompagna ogni riga, non solo la casella */
@@ -171,8 +181,11 @@
 .pt .taskcont > .txt{overflow-wrap:anywhere;word-break:break-word;}
 
 /* ---------- UI-006: l'indicatore d'area fra i metadati ---------- */
+/* 12px, non 11,5: questo badge È il modo non-cromatico di sapere se una voce
+   è lavoro o vita (A11Y-006). Il testo che sostituisce un colore va letto
+   almeno quanto il colore si vede. */
 .pt .areachip{display:inline-flex;align-items:center;gap:5px;flex:none;
-  font-family:var(--sans);font-size:11.5px;font-weight:600;letter-spacing:.02em;
+  font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.02em;
   padding:1px 8px 1px 6px;border-radius:20px;
   border:1px solid var(--line2);background:var(--surface);color:var(--ink2);}
 .pt .areachip .areapunto{width:var(--area-indicator-size);height:var(--area-indicator-size);
@@ -241,8 +254,28 @@
 .pt h2 .segnale.rosso{background:var(--rust);}
 .pt h2 .segnale.ottone{background:var(--brass);}
 .pt .setcard h2 .segnale{box-shadow:none;}
-.pt .card{--cardpad:17px;background:var(--surface);border:1px solid var(--line);border-radius:12px;
+/* Il riempimento delle schede vive sulla RADICE, non sulla singola scheda:
+   `.alert` non è una `.card`, e con la variabile dichiarata là dentro non
+   poteva leggerla — restava con un riempimento scritto a mano, che è come
+   nasce lo scarto corretto qui sotto. */
+.pt{--cardpad:17px;}
+.pt .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;
     padding:19px var(--cardpad);margin-bottom:15px;box-shadow:var(--sh);}
+
+/* DIFETTO CORRETTO — i titoli di sezione stavano su QUATTRO colonne diverse.
+   Misurato su 1280px: 138px per una scheda normale, 140 per una con accento
+   da 3px, 141 per un avviso con accento da 4px, e 120 per le schede senza
+   riempimento. Su telefono: 37, 39, 43, 22.
+
+   La causa non è il caso: il bordo sinistro d'accento sta FUORI dal
+   riempimento, quindi ogni pixel di accento sposta a destra tutto il
+   contenuto della scheda. Due o tre pixel non si leggono come una scelta: si
+   leggono come una colonna che non tiene, e sono esattamente il genere di
+   difetto che si vede senza saper dire che cosa si è visto.
+
+   Qui il riempimento compensa l'accento, così il contenuto parte sempre a
+   1px + var(--cardpad) dal bordo della scheda, qualunque sia l'accento. */
+.pt .card.attivazione,.pt .card.accumulo{padding-left:calc(var(--cardpad) - 2px);}
 
 .pt .card.dup{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass) inset,var(--sh);}
 .pt .card.dup h2{color:var(--brass-testo);}
@@ -263,7 +296,9 @@
 .pt .oradesso{flex:none;order:2;display:inline-flex;align-items:center;gap:6px;
     font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;font-weight:600;
     color:var(--brass-testo);background:hsl(44 70% 95%);border:1px solid hsl(42 45% 74%);
-    border-radius:20px;padding:3px 11px 3px 8px;cursor:pointer;
+    /* era alta 22px: due pixel sotto il minimo, su un comando che riporta
+       l'agenda all'ora attuale */
+    border-radius:20px;padding:3px 11px 3px 8px;min-height:24px;cursor:pointer;
     transition:background .15s,border-color .15s;}
 .pt .oradesso::before{content:"";width:14px;height:14px;flex:none;background-color:var(--brass);
     --ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.9%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%228.6%22%2F%3E%3Cpath%20d%3D%22M12%207.2V12l3.3%202%22%2F%3E%3C%2Fsvg%3E");
@@ -289,7 +324,10 @@
    Fondo di attenzione, non blocco rosso pieno. */
 .pt .alert{background:var(--att-fondo);border:1px solid var(--att-bordo);
     border-left:4px solid var(--brass);
-    border-radius:12px;padding:16px 17px;margin-bottom:13px;
+    border-radius:12px;padding:16px var(--cardpad);margin-bottom:13px;
+    /* l'accento da 4px sta fuori dal riempimento: compensato, il titolo
+       resta nella stessa colonna di quelli delle schede */
+    padding-left:calc(var(--cardpad) - 3px);
     box-shadow:0 2px 5px rgba(0,0,0,.05);}
 .pt .alert h2{color:var(--att-testo);}
 .pt .alert h2::before{background:var(--att-testo);}
@@ -344,7 +382,7 @@
 .pt .liv-errore li{border-bottom-color:var(--err-riga);}
 .pt .alert li:last-child{border-bottom:none;}
 .pt .alert .box{border-color:var(--att-bordo)!important;background:var(--field)!important;}
-.pt .alert .late{font-family:var(--mono);font-size:11px;color:var(--att-debole);flex:none;padding-top:2px;}
+.pt .alert .late{font-family:var(--mono);font-size:12px;color:var(--att-debole);flex:none;padding-top:2px;}
 .pt .liv-info .late{color:var(--info-debole);}
 .pt .liv-errore .late{color:var(--err-debole);}
 .pt .alert .foot2{font-size:12px;color:var(--att-debole);margin:11px 0 0;}
@@ -370,14 +408,18 @@
 .pt .ag{position:relative;}
 .pt .hr{position:absolute;left:0;right:0;border-top:1px solid var(--line);}
 .pt .hr.dim{border-top-color:var(--track);}
-.pt .hr span{position:absolute;left:7px;top:2px;font-family:var(--mono);font-size:11px;
+.pt .hr span{position:absolute;left:7px;top:2px;font-family:var(--mono);font-size:12px;
     color:var(--muted);letter-spacing:.04em;}
 .pt .gap{position:absolute;left:0;right:0;border-top:1px dashed var(--line2);
     border-bottom:1px dashed var(--line2);display:flex;align-items:center;
-    justify-content:center;font-family:var(--mono);font-size:11px;letter-spacing:.12em;
+    justify-content:center;font-family:var(--mono);font-size:12px;letter-spacing:.12em;
     color:var(--muted);background:repeating-linear-gradient(135deg,
     transparent 0 6px,var(--track) 6px 7px);}
-.pt .tot .tiny{padding:3px 9px;font-size:11px;}
+/* La riga di totali dell'agenda rimpiccioliva i propri due comandi — la
+   fascia oraria e «vista compatta» — a 11px di testo e 23px di altezza. Su
+   telefono non si vedeva, perché `mobile.css` porta ogni `.tiny` a 34px: era
+   un difetto del solo desktop, come gli altri comandi di UI-007. */
+.pt .tot .tiny{padding:4px 9px;font-size:12px;}
 .pt .agarea{position:absolute;left:46px;right:7px;top:0;bottom:0;}
 .pt .agblk{position:absolute;border:none;border-radius:6px;color:#fff;cursor:grab;
     padding:3px 7px;text-align:left;overflow:hidden;font:inherit;font-size:12px;
@@ -404,9 +446,16 @@
 /* l'orario dentro il blocco: `opacity:.85` sul bianco lo portava a 3,95:1
    sul verde dell'area, appena sotto la soglia. È l'informazione più densa
    del blocco e va letta a colpo d'occhio. */
-.pt .agblk em{font-style:normal;font-family:var(--mono);font-size:11px;
+.pt .agblk em{font-style:normal;font-family:var(--mono);font-size:12px;
     font-variant-numeric:tabular-nums;letter-spacing:.01em;}
-.pt .grip{position:absolute;left:0;right:0;bottom:0;height:13px;cursor:ns-resize;
+/* DIFETTO CORRETTO — la maniglia per allungare un blocco era alta 13px fisse.
+   In un blocco da mezz'ora, alto 18px, ne copriva 13: il 72% della sua
+   superficie. Toccare il blocco significava quasi sempre iniziare un
+   ridimensionamento invece di aprire l'attività, e non c'era modo di
+   accorgersene leggendo il codice — l'ho visto misurando i due rettangoli.
+   Ora è una frazione dell'altezza, con un minimo perché resti afferrabile. */
+.pt .grip{position:absolute;left:0;right:0;bottom:0;height:30%;
+    min-height:6px;max-height:13px;cursor:ns-resize;
     touch-action:none;background:linear-gradient(transparent,rgba(0,0,0,.24));
     border-radius:0 0 5px 5px;}
 .pt .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
@@ -453,7 +502,7 @@
 
 .pt .wkgrid{position:relative;}
 .pt .wkhead{display:flex;padding-left:30px;margin-bottom:3px;gap:2px;}
-.pt .wkhead div{flex:1;text-align:center;font-family:var(--mono);font-size:11px;
+.pt .wkhead div{flex:1;text-align:center;font-family:var(--mono);font-size:12px;
     color:var(--muted);padding:5px 0;border-radius:6px;letter-spacing:.04em;}
 .pt .wkhead div[data-today="1"]{color:var(--surface);background:var(--ink);}
 .pt .wkarea{position:absolute;left:30px;right:2px;top:0;bottom:0;display:flex;}
@@ -651,7 +700,11 @@
 .pt .log i{width:7px;height:7px;border-radius:2px;display:block;background:var(--track);}
 .pt .log i[data-on="1"]{background:var(--sage);}
 .pt .log i[data-on="0"]{background:var(--rust);opacity:.6;}
-.pt .late2{flex:none;font-family:var(--mono);font-size:11px;color:var(--rust);padding-top:2px;}
+/* «in ritardo di 3h 30» non è una didascalia: è il dato che dice quanto sei
+   fuori tempo, e stava a 11px, cioè più piccolo di qualunque altro testo
+   della riga. 12px è il minimo che questo pannello si dà per il testo che
+   porta informazione. */
+.pt .late2{flex:none;font-family:var(--mono);font-size:12px;color:var(--rust);padding-top:2px;}
 .pt h2[data-act]{cursor:pointer;user-select:none;}
 .pt h2 .caret{flex:none;font-size:11px;color:var(--muted);font-weight:400;}
 
@@ -758,7 +811,7 @@
 .pt button.tiny.danger:hover{background:rgba(162,68,56,.1);border-color:var(--rust);color:var(--rust-testo);}
 .pt mark{background:rgba(190,140,54,.3);color:inherit;border-radius:3px;padding:0 2px;}
 .pt .digora.ora{color:var(--brass-testo);font-weight:700;}
-.pt .dignow{font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+.pt .dignow{font-family:var(--sans);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
     color:var(--brass-testo);border:1px solid var(--brass);border-radius:6px;padding:1px 6px;}
 
 /* ============ due livelli soli: tablet stretto e telefono ============ */
@@ -872,7 +925,9 @@
 .pt .avanzabar i{position:absolute;top:0;bottom:0;display:block;}
 .pt .avanzabar i.trascorso{left:0;background:var(--line2);}
 .pt .avanzabar i.adesso{width:2px;background:var(--rust);z-index:2;}
-.pt .avanzalab{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none;}
+/* gli estremi della striscia della giornata: sono le etichette dell'asse di
+   un grafico, cioè l'unico modo di leggerlo. Stavano a 11,5px. */
+.pt .avanzalab{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none;}
 /* ---------- stati vuoti con illustrazione leggera ---------- */
 .pt .vuoto-ill{display:flex;flex-direction:column;align-items:center;gap:10px;
   padding:22px 12px;text-align:center;}
@@ -896,7 +951,8 @@
 .pt ul.agelenco .acts{display:flex;gap:6px;align-items:center;}
 .pt li.agora-ora{display:flex;align-items:center;gap:9px;padding:3px 0;border:none;
   border-left-color:transparent;}
-.pt .agora-lab{flex:none;font-family:var(--mono);font-size:11px;color:var(--brass-testo);
+/* è l'ora corrente dentro l'elenco del telefono: un valore, quindi 12px */
+.pt .agora-lab{flex:none;font-family:var(--mono);font-size:12px;color:var(--brass-testo);
   min-width:44px;}
 /* HOM-002: «adesso» è una posizione nel tempo, non un errore */
 .pt .agora-linea{flex:1;height:1px;background:var(--brass);opacity:.65;}
@@ -1062,7 +1118,11 @@
    gratis fuoco, invio, barra spaziatrice e annuncio corretto. Prima erano
    <h2 role="button" tabindex="0">, che richiedeva di reimplementare a mano
    tutto ciò che il browser già sa fare. */
+/* `min-height` perché il bersaglio arrivi a 24px: era alto 20, ed è il
+   comando che apre e chiude una sezione intera. Il riempimento resta a zero
+   per non spostare il titolo dalla sua colonna. */
 .pt h2 > button.foldbtn{display:flex;align-items:center;gap:9px;flex:1;min-width:0;
+  min-height:24px;
   background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;
   text-align:left;cursor:pointer;}
 /* MOB-002 — il pulsante aveva `min-width:0`, ma i suoi FIGLI no: il titolo

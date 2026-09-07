@@ -183,7 +183,18 @@ function renderInner(){
          '<button class="tiny" data-act="search">chiudi</button></div>';
   if (S.digest) {
     var r = riepilogo();
-    h += '<div class="card oggi digcard"><h2 data-ico="riepilogo"><span>Riepilogo giornata</span>'+
+    /* DIFETTO CORRETTO — la vista Riepilogo non aveva alcun titolo di primo
+       livello: sostituisce l'intero pannello, quindi la testata con l'h1
+       della data non viene disegnata, e la struttura della pagina cominciava
+       da un h2. Chi naviga per titoli non trovava il livello da cui partire.
+
+       `aria-level` invece di cambiare il tag: l'aspetto dei titoli di sezione
+       pende da 41 regole scritte su `h2`, e spostare un tag per farne
+       coincidere una avrebbe portato più rischio del difetto che corregge.
+       Qui la gerarchia VISIVA è già giusta — questo È il titolo della
+       schermata — e manca solo che sia dichiarata. */
+    h += '<div class="card oggi digcard"><h2 data-ico="riepilogo" aria-level="1">'+
+         '<span>Riepilogo giornata</span>'+
          '<span class="cnt">'+r.fatti+'/'+r.oggi.length+'</span></h2>'+
          '<p class="digline"><b>'+esc(S.now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"}))+'</b> · '+
          dur2s(r.ore||0)+' pianificate'+

@@ -83,7 +83,13 @@ function dayHtml(){
          'data-sel="'+(S.editId === i.id?1:0)+'" data-late="'+(isLate(i)?1:0)+'" '+
          'data-prio="'+(prioIndex(i)>=0?1:0)+'" data-skip="'+(isSkipped(i)?1:0)+'" '+
          'title="'+esc(i.label)+' · '+fmt(i.start)+'–'+fmt(i.start+(i.dur||0.5))+'" '+
-         'style="top:'+(top+1)+'px;height:'+Math.max(bot-top-2,18)+'px;'+
+         /* Il minimo era 18px scritto qui a mano, e con esso il blocco da
+            mezz'ora tagliava il proprio testo: il contenuto ne chiede 23.
+            Ora è AGBLK_MIN in config.js, perché drag.js ne aveva una seconda
+            copia. Sotto la mezz'ora il minimo vince sulla durata e il blocco
+            sconfina nella fascia successiva: era già così a 18px, e con la
+            scala a 52 accade in meno casi. */
+         'style="top:'+(top+1)+'px;height:'+Math.max(bot-top-2,AGBLK_MIN)+'px;'+
          'left:'+(p.lane/p.lanes*100)+'%;width:'+((1/p.lanes)*100-1)+'%;background:'+AREAS[i.area].color+'">'+
          '<b>'+(prioIndex(i)>=0?"★ ":"")+esc(i.label)+'</b> '+
          '<em>'+fmt(i.start)+'·'+dur2s(i.dur||0.5)+(i.place?" ◎":"")+(safeUrl(i.link)?" ↗":"")+'</em>'+
