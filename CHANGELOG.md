@@ -10,9 +10,64 @@ era a rischio.
 
 ## Build candidata — schema 6
 
-**Pubblicata su GitHub Pages** (dal ramo, automaticamente), **senza
-configurazione Firebase**: sul sito l'Account risulta non disponibile e il
-pannello lo dichiara.
+**Pubblicata su GitHub Pages dal flusso `Pubblica`**, impronta
+`f915fb62fff8`, **con configurazione Firebase generata dai Secrets**: sul
+sito l'Account è disponibile e funziona.
+
+### Il pannello pubblicato è utilizzabile: provato sul sito, non sull'artefatto
+
+`Pubblica` numero 1, ramo `main`, commit `f5212f1`, ambiente `produzione`:
+success in 1 minuto e 7 secondi. Prima di questa esecuzione il sito veniva
+servito **dal ramo**, con due conseguenze misurate: finivano in rete
+`tests/`, `strumenti/`, `package.json` e le regole Firestore, e
+`js/config-firebase.js` era quello versionato, cioè `non-configurato` —
+l'Account risultava non disponibile **per tutti**.
+
+Adesso i nove file di sviluppo controllati rispondono **404**, e il flusso
+completo è stato provato **sul sito pubblico**: 23 controlli su 23, con le
+funzioni del pannello e non con chiamate REST scritte a mano. Registrazione,
+accesso, uscita, sessione che non sopravvive al ricarico come vuole SEC-001,
+scrittura e rilettura su Firestore, aggiornamento, isolamento fra utenti con
+403 sul documento altrui, apertura offline dalla cache con la modifica
+intatta, riconnessione che consegna la voce fatta offline, cancellazione
+dell'account in sette passi con l'accesso successivo rifiutato. Una sola
+cache, `pt-f915fb62`, 74 voci. Zero 404, zero errori critici in console.
+
+Account e dati sintetici su `example.com`, tutti rimossi con la controprova.
+
+### La pipeline è verde, e verde non significa coperto
+
+Esecuzione numero 3, commit `f5212f1`: quattro lavori su quattro, **zero
+passi falliti**. Le quattro suite che la prima esecuzione aveva lasciato
+saltate girano ora su chromium **e su Firefox**, che in locale non si
+scarica: la pipeline è il solo posto dove quella gamba possa girare.
+
+Si chiudono **SEC-003** (il passo CSP verde in pipeline era il criterio
+letterale), **TST-005** (tutte le suite su entrambi i browser) e **TST-007**
+(un'esecuzione verde).
+
+Resta però una cosa da dire, e sta nel riepilogo di ogni esecuzione: **il
+confronto visivo è saltato**, perché gira solo contro riferimenti approvati
+e non ce n'è nessuno. La pipeline è verde con zero copertura visiva. È
+esattamente ciò che `strumenti/stato-regressione-visiva.mjs` esiste per
+rendere impossibile ignorare.
+
+### L'impronta non è confrontabile fra sistemi diversi
+
+Avevo previsto che la build pubblicata avrebbe avuto impronta
+`6d749ffe5ab4`. Il sito ha pubblicato `f915fb62fff8`, e la previsione era
+sbagliata.
+
+Ricalcolando l'impronta **dai file scaricati dal sito** viene esattamente
+`f915fb62fff8`: la build pubblicata è coerente con ciò che serve. La
+differenza stava da questa parte — `css/components.css` sul disco Windows ha
+CRLF, e l'impronta è uno SHA-256 sul contenuto. Normalizzando i fine riga a
+LF l'impronta locale diventa `f915fb62fff8`, alla cifra.
+
+Il sorgente è lo stesso; l'identità della build no. `BUILD.md` §2 ora lo
+dice, con le due conseguenze pratiche: un'impronta locale diversa da quella
+pubblicata non è di per sé un allarme, e per confrontare la propria copia
+col sito si ricalcola l'impronta dai file serviti.
 
 ### La sincronizzazione non ha mai potuto funzionare
 
@@ -65,8 +120,8 @@ Sul commit `da24a58`. Il lavoro locale è passato per intero — 23 passi su
 23, regole Firestore sull'Emulator comprese — e i due lavori in browser sono
 falliti al passo UI-006, lasciando **saltati** i quattro successivi:
 sentinelle, cancellazione, CSP/PWA/offline/responsive, accessibilità. Un
-passo saltato non è un passo passato, e SEC-003 e TST-005 restano PARZIALE
-per questo.
+passo saltato non è un passo passato, ed era il motivo per cui SEC-003 e
+TST-005 restavano PARZIALE.
 
 Dentro il rosso, una prima volta: «Terminologia della UI consumer» è passato
 anche **su Firefox**.
@@ -438,9 +493,8 @@ Controprova 0 → 3 → 0. → `ACCESSIBILITY-REPORT.md`
   scheletro a tutti gli utenti per niente: allineato. → `BUILD.md`
 - **Controllo delle collisioni fra nomi globali** a ogni build: 590 nomi in
   un solo spazio, controllarli a occhio non è un piano.
-- **Pipeline GitHub Actions**: tre lavori, 34 passi, due browser,
-  `workflow_dispatch` con la scelta dell'ambiente. Mai avviata.
-  → `RUN-CI.md`
+- **Pipeline GitHub Actions**: tre lavori, 34 passi, due browser. Eseguita
+  tre volte: la prima rossa, la terza **verde**. → `RUN-CI.md`
 - **`backlog.json` è la fonte** degli stati dei ticket, e
   `BACKLOG-COVERAGE.md` si ricalcola da lì: i conteggi non si scrivono a
   mano da nessuna parte.
@@ -457,10 +511,19 @@ che in questo repository non sono mai esistiti.
 
 ### Quel che resta aperto
 
-Nove ticket sono **PARZIALE**, e non per pigrizia: richiedono Node, Java,
-Playwright, l'emulatore Firestore o un progetto Firebase reale, che in
-questo ambiente non ci sono. Circa 240 asserzioni sono scritte e **non
-eseguite**. → `TEST-REPORT.md`, `BACKLOG-COVERAGE.md`
+**Sei** ticket sono PARZIALE, e nessuno dei sei si risolve installando
+qualcosa. Il motivo comune di prima — «in questo ambiente non ci sono Node,
+Java, Playwright, l'emulatore né un progetto Firebase reale» — è caduto: ci
+sono, e sono girati. Restano quattro motivi propri:
+
+| | Ticket |
+|---|---|
+| riferimenti visivi da guardare e approvare a mano | TST-006, e UI-006 che ne dipende |
+| una chiave reCAPTCHA e una decisione di costo | SEC-009 |
+| un lettore di schermo reale | A11Y-004 |
+| un dispositivo fisico | MOB-001, MOB-002 |
+
+→ `TEST-REPORT.md`, `BACKLOG-COVERAGE.md`
 
 ---
 

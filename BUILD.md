@@ -97,6 +97,36 @@ confronto sarebbe inutile se ci fosse dentro un istante.
 Verificato a ogni fase di questo lavoro: due calcoli consecutivi, impronta
 identica.
 
+### Deterministico sulla stessa macchina, non fra macchine diverse
+
+L'impronta è uno SHA-256 sul **contenuto** dei file, e i fine riga sono
+contenuto. Su Windows git può estrarre i file con CRLF; su Linux li estrae
+con LF. Lo stesso commit, quindi, dà **due impronte diverse** sui due
+sistemi, a sorgente identico.
+
+Non è un'ipotesi: è stato misurato. La pipeline ha pubblicato
+`f915fb62fff8`; ricalcolando l'impronta su questo disco veniva
+`6d749ffe5ab4`. La differenza era `css/components.css`, che qui ha CRLF su
+1176 righe di 1177. Normalizzando i fine riga a LF, l'impronta locale
+diventa `f915fb62fff8` — la stessa, alla cifra.
+
+Due conseguenze pratiche:
+
+1. **l'impronta serve a confrontare due build dello stesso ambiente**, non a
+   confrontare la propria copia di lavoro con quella pubblicata. Per la
+   seconda domanda si ricalcola l'impronta **dai file serviti dal sito**, e
+   si confronta con `build.json`: se coincidono, la build pubblicata è
+   coerente con ciò che serve, che è l'unica cosa che interessa a chi la usa;
+2. **un'impronta locale diversa da quella pubblicata non è, da sola, un
+   allarme.** Prima di cercare una differenza di contenuto, va escluso il
+   fine riga. `strumenti/controlla-impronta.mjs` non se ne accorge e non
+   deve: confronta i quattro punti **fra loro**, e quelli restano coerenti
+   in ogni ambiente.
+
+I quattro valori stampigliati in un commit descrivono l'albero della
+macchina che ha eseguito il build. È il motivo per cui l'unica identità che
+conta per il pubblico è quella prodotta dalla pipeline.
+
 ## 3. I quattro punti
 
 La stessa identità compare in quattro posti, e devono coincidere.

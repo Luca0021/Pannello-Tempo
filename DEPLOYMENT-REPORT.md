@@ -48,6 +48,12 @@ Finché non lo sono, SEC-002, PRV-002 e A11Y-004/005/006 restano PARZIALE, e
 pubblicare significa pubblicare con quei rischi aperti — che è una scelta
 legittima, ma va fatta sapendo quali sono.
 
+Alla pubblicazione dell'impronta `f915fb62fff8` tutti e tre erano verdi
+(`Verifica` numero 3), su chromium e su Firefox. Va aggiunta però una
+lettura che il colore non dà: **verde non significa copertura completa.** Il
+confronto visivo era saltato per assenza di riferimenti approvati, e questo
+si legge nel riepilogo dell'esecuzione, non nel suo esito.
+
 ### 2.2 L'identità della build coincide nei quattro punti
 
 ```bash
@@ -108,13 +114,33 @@ precedenti. Regole prima, sito dopo.
 
 ## 3. Pubblicare
 
+**Il push non pubblica.** Dal momento in cui Pages ha come Source «GitHub
+Actions», un push su `main` avvia soltanto `Verifica`; il sito cambia solo
+quando qualcuno avvia `Pubblica` a mano.
+
 ```bash
-git push origin main
+git push origin main          # avvia Verifica, non pubblica
 ```
 
-Pages ricostruisce da sé. Il primo caricamento dopo il push serve `index.html`
-dalla rete, quindi la nuova identità arriva subito; i moduli seguono, perché
-sono **rete-prima** (`ARCHITECTURE.md` §6).
+Poi, dall'interfaccia di GitHub: **Actions → Pubblica → Run workflow**, con
+
+| Ingresso | Valore |
+|---|---|
+| `ambiente` | `produzione` (oppure `non-configurato` per tornare a un sito senza Account) |
+| `conferma` | `pubblica`, scritto a mano |
+
+Serve digitare la conferma perché un click sbagliato nella lista dei flussi
+non deve poter cambiare ciò che vedono gli utenti. Se il campo è diverso, il
+primo passo esce con 1 e non viene costruito niente.
+
+**Perché non parte da solo.** Un flusso che pubblica un sito con
+configurazione di produzione a ogni commit sposta una decisione — «questo è
+pronto per le persone» — dentro un automatismo, e chi lo eredita non sa più
+dove sia stata presa.
+
+Il primo caricamento dopo la pubblicazione serve `index.html` dalla rete,
+quindi la nuova identità arriva subito; i moduli seguono, perché sono
+**rete-prima** (`ARCHITECTURE.md` §6).
 
 ### Che cosa vede chi ha già il pannello aperto
 
@@ -141,6 +167,12 @@ locali non possono dare.
 
 Se il punto 4 fallisce, il pannello resta usabile online: non è un motivo per
 tornare indietro, è un difetto da correggere.
+
+**Eseguiti sul sito pubblicato, tutti e sei**, insieme alle altre diciassette
+prove di §7: l'agenda ha altezza, la console non ha errori critici, la cache
+è una sola (`pt-f915fb62`, 74 voci), il ricarico senza rete apre il pannello
+con la modifica offline intatta, `data-build` coincide con `build.json`, e
+`localStorage` contiene soltanto le due chiavi dell'app.
 
 ---
 
@@ -187,16 +219,39 @@ Non ha bisogno di deploy, e non ha bisogno di questo documento.
 
 | | |
 |---|---|
-| pubblicata | **no** |
-| commit | locale, sul ramo corrente |
-| push | **non eseguito** |
-| deploy | **non eseguito** |
-| configurazione Firebase | `non-configurato`: l'account è inattivo e l'interfaccia lo dichiara |
-| regole Firestore | scritte, **mai pubblicate né eseguite** |
-| pipeline | scritta, **mai avviata**: nessuna esecuzione da cui leggere un esito |
+| pubblicata | **sì** — `https://luca0021.github.io/Pannello-Tempo/` |
+| commit | `f5212f1`, ramo `main`, uguale a `origin/main` |
+| impronta pubblicata | `f915fb62fff8`, cache `pt-f915fb62`, 76 file nell'impronta |
+| deploy | `Pubblica` numero 1, `workflow_dispatch`, ambiente `produzione`: **success** |
+| configurazione Firebase | **generata dai Secrets nell'artefatto**; nel repository resta `non-configurato` |
+| regole Firestore | **pubblicate e verificate sul servizio**: 20 controlli su 20 (SEC-010) |
+| pipeline | **verde**: `Verifica` numero 3, quattro lavori su quattro, zero passi falliti |
+| App Check | **non attivo**, misurato interrogando il servizio (SEC-009) |
+| Blaze e fatturazione | **non toccati** |
 
-La checklist di §2 non è stata percorsa perché richiede Node, npm, Java e
-un progetto Firebase, che in questo ambiente non ci sono. I passi che si
-potevano fare senza — identità della build coerente nei quattro punti,
-determinismo dell'impronta, assenza di segreti, assenza di collisioni fra
-globali — sono stati fatti, e i risultati sono in `TEST-REPORT.md`.
+### Che cosa è stato verificato sul sito pubblico
+
+**23 controlli su 23, exit 0**, con le funzioni del pannello, account e dati
+sintetici su `example.com`, nessun Admin SDK e nessun bypass delle regole:
+registrazione, accesso, uscita, persistenza della sessione come dichiarata
+da SEC-001, scrittura e rilettura su Firestore, aggiornamento, isolamento
+fra utenti (403 alla richiesta del documento altrui), funzionamento offline,
+riconnessione, cancellazione dell'account con i sette passi. In più: una
+sola cache `pt-f915fb62` con 74 voci, `data-build` coerente con
+`data-cache`, nessuna credenziale in `localStorage`, nessun cookie, zero 404
+e zero errori critici in console. Il dettaglio è in `TEST-REPORT.md`
+§1-quater.
+
+I nove file che con la pubblicazione dal ramo finivano in rete — `.env`,
+`.env.example`, `tests/`, `strumenti/`, `firebase/firestore.rules`,
+`package.json`, `backlog.json`, `_collaudo.js`, i `.md` — rispondono ora
+**404**.
+
+### Che cosa resta aperto
+
+| | |
+|---|---|
+| regressione visiva | **zero copertura**: 19 riferimenti sul disco, non approvati e con suffisso Windows. Il riepilogo della pipeline lo dichiara (TST-006) |
+| App Check | predisposto, non attivo: serve una chiave e una decisione di costo (SEC-009) |
+| lettore di schermo, dispositivo fisico | non provati (A11Y-004, MOB-001, MOB-002) |
+| allineamento delle regole pubblicate | niente garantisce che il testo in vigore su Firebase resti uguale a `firebase/firestore.rules`: la pubblicazione delle regole è a mano, e va riverificata dopo ogni modifica |

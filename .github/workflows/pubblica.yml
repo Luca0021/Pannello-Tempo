@@ -4,21 +4,29 @@ name: Pubblica
 # PERCHÉ QUESTO FLUSSO ESISTE, E PERCHÉ NON PARTE DA SOLO
 # ─────────────────────────────────────────────────────────────────────────────
 #
-# Oggi il sito è pubblicato da GitHub Pages «direttamente dal ramo». Ha due
-# conseguenze, entrambe verificate sul sito vero:
+# Fino alla prima esecuzione di questo flusso il sito era pubblicato da
+# GitHub Pages «direttamente dal ramo». Aveva due conseguenze, entrambe
+# verificate sul sito vero:
 #
-#   1. viene servito il repository COSÌ COM'È, quindi finiscono in rete anche
+#   1. veniva servito il repository COSÌ COM'È, quindi finivano in rete anche
 #      `tests/`, `strumenti/`, `package.json`, `.env.example` e le regole
 #      Firestore. Nessuno di quei file contiene segreti, ma nessuno serve a
 #      chi apre il pannello;
-#   2. viene servito `js/config-firebase.js` come sta in git, cioè
-#      `non-configurato`. Sul sito pubblicato l'Account risulta NON
-#      DISPONIBILE — il pannello lo dichiara, il che è corretto, ma la
-#      sincronizzazione non esiste per nessuno.
+#   2. veniva servito `js/config-firebase.js` come sta in git, cioè
+#      `non-configurato`. Sul sito pubblicato l'Account risultava NON
+#      DISPONIBILE — il pannello lo dichiarava, il che è corretto, ma la
+#      sincronizzazione non esisteva per nessuno.
 #
 # Un artefatto si può invece costruire: contiene solo i file serviti, e la
 # configurazione viene generata al momento dai Secrets, senza entrare mai
 # nel repository.
+#
+# STATO: eseguito. Esecuzione numero 1, `workflow_dispatch`, ramo `main`,
+# commit `f5212f1`, ambiente `produzione`: success. I nove file di sviluppo
+# controllati rispondono ora 404, l'Account è disponibile, e il flusso
+# completo — registrazione, accesso, scrittura, rilettura, isolamento,
+# offline, riconnessione, cancellazione — è stato provato sul sito pubblico
+# con 23 controlli su 23. Vedi `DEPLOYMENT-REPORT.md` §7.
 #
 # ─────────────────────────────────────────────────────────────────────────────
 # NON SI AVVIA DA SOLO, ED È UNA SCELTA
@@ -38,7 +46,9 @@ name: Pubblica
 #
 # Settings → Pages → Source: da «Deploy from a branch» a «GitHub Actions».
 # Finché non è fatto, `deploy-pages` fallisce con un errore esplicito e il
-# sito resta quello di adesso: questo file non cambia nulla da solo.
+# sito resta quello di prima: questo file non cambia nulla da solo.
+# (Fatto dal proprietario, insieme ai quattro Repository Secrets, prima
+# dell'esecuzione numero 1.)
 #
 # È deliberato. La decisione di cambiare COME viene pubblicato un sito non è
 # una riga di YAML, ed è del proprietario.
