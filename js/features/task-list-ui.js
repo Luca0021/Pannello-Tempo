@@ -196,6 +196,11 @@ function sectionHtml(freq, title, ico, dentro){
          (dueToday===1?" voce cade oggi":" voci cadono oggi")+'"></span>' : '')+
        '<span class="cnt">'+done+'/'+all.length+'</span>'+
        '<span class="caret">'+(fold ? '▸' : '▾')+'</span>'+(dentro ? '</p>' : '</button></h2>');
+  /* Le voci di partenza vanno dichiarate dove si vedono, non nella guida:
+     è qui che un utente nuovo legge «0/9 da fare» e si chiede di chi siano
+     quelle nove cose. Una riga, una volta. Vedi primo-uso.js. */
+  if (freq === "today" && !dentro && typeof avvisoVociIniziali === "function")
+    h += avvisoVociIniziali(all);
   if (fold) {
     /* chiusa mostra due voci in anteprima: invita ad aprire invece di
        costringere a ricordare cosa c'è dentro */

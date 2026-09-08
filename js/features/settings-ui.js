@@ -123,8 +123,13 @@ function zonaImpostazioni(){
        }).join("")+'</select></div></div>'+
        '<p class="hint">La percentuale è calcolata sul <b>tempo pianificato registrato</b>: '+
        'le attività senza durata non entrano nel conteggio, a meno che tu non lo chieda.</p>'+
+       /* «Rivedi la presentazione» stava qui, in fondo alla scheda dei
+          rituali, fra la soglia del lavoro e i dati di esempio: un comando
+          che serve a IMPARARE il pannello, dentro la scheda che configura la
+          chiusura di giornata. È stato spostato in «Imparare il pannello»,
+          nella sezione Informazioni, insieme al tour, alle spiegazioni e
+          alla guida. Non duplicato: spostato. */
        '<div class="row"><button class="tiny" data-act="rv-apri">Vedi la settimana</button>'+
-       '<button class="tiny" data-act="onb-apri">Rivedi la presentazione</button>'+
        (ciSonoDemo() ? '<button class="tiny danger" data-act="demo-togli">Togli i dati di esempio</button>' : '')+
        '</div></div>';
 
@@ -569,6 +574,60 @@ function zonaImpostazioni(){
   }
 
   inSezione("info");
+  /* ─────────────────────────────────────────────────────────────────────────
+     IMPARARE IL PANNELLO — tutto in un posto solo
+
+     Prima questi comandi erano sparsi: «Rivedi la presentazione» in fondo
+     alla scheda dei rituali, la guida in un'altra scheda, e le spiegazioni
+     non esistevano. Chi non capisce qualcosa cerca in UN posto, e questo è
+     quel posto.
+
+     Le tre righe sono tre livelli, dal più guidato al più consultabile:
+     il tour mostra DOVE sono le cose, le spiegazioni dicono A COSA serve la
+     sezione che stai guardando, la guida risponde a una domanda precisa. */
+  SEZ.info += '<div class="card"><h2 data-ico="sereno"><span>Imparare il pannello</span></h2>'+
+    '<ul class="linklist">'+
+    '<li><span class="txt"><b>Presentazione guidata</b>'+
+    '<span class="sub">Cinque tappe sopra il pannello vero, con il riflettore su ciò di cui parla. '+
+    'Si chiude quando vuoi.</span></span>'+
+    '<span class="acts"><button class="tiny" data-act="tour-apri">Rivedila</button></span></li>'+
+    '<li><span class="txt"><b>Domande d\'ingresso</b>'+
+    '<span class="sub">Profilo, fascia oraria, prima priorità: le cinque domande del primo accesso. '+
+    'Niente è obbligatorio.</span></span>'+
+    '<span class="acts"><button class="tiny" data-act="onb-apri">Rifalle</button></span></li>'+
+    '<li><span class="txt"><b>Spiegazioni delle sezioni</b>'+
+    '<span class="sub">'+
+    (spiegazioniAttive()
+      ? (spiegazioniDaVedere() > 0
+          ? 'Attive: ne restano '+spiegazioniDaVedere()+' da vedere, una per volta, la prima volta che apri la sezione.'
+          : 'Attive, e le hai viste tutte. Riattivandole ricompaiono da capo.')
+      : 'Spente: nessun fumetto comparirà più.')+
+    '</span></span>'+
+    '<span class="acts">'+
+    (spiegazioniAttive()
+      ? '<button class="tiny" data-act="spieg-mai">Spegni</button>'
+      : '<button class="tiny pos" data-act="spieg-riattiva">Riattiva</button>')+
+    (spiegazioniAttive() && spiegazioniDaVedere() === 0
+      ? '<button class="tiny" data-act="spieg-riattiva">Rivedile</button>' : '')+
+    '</span></li>'+
+    '<li><span class="txt"><b>Modalità scoperta</b>'+
+    '<span class="sub">'+
+    (scopertaAttiva()
+      ? 'Accesa: le sezioni con qualcosa che non hai ancora provato portano un segno «Nuovo», '+
+        'e una scheda propone tre funzioni per volta.'
+      : 'Spenta: il pannello non aggiunge nulla. Accesa, segnala le funzioni che i tuoi dati '+
+        'dicono che non hai ancora usato.')+
+    '</span></span>'+
+    '<span class="acts">'+
+    (scopertaAttiva()
+      ? '<button class="tiny" data-act="scoperta-spegni">Spegni</button>'
+      : '<button class="tiny pos" data-act="scoperta-accendi">Accendi</button>')+
+    '</span></li>'+
+    '</ul>'+
+    '<p class="hint">Queste quattro scelte valgono su <b>questo dispositivo</b> e non '+
+    'viaggiano con i dati: su un altro telefono le spiegazioni ricompaiono, perché là '+
+    'non le hai ancora lette.</p></div>';
+
   /* la guida, raggiungibile da dentro il pannello */
   SEZ.info += '<div class="card"><h2 data-ico="appunti"><span>Guida</span></h2>'+
     '<p class="hint" style="margin-top:0">Come funziona il pannello, che cosa fa e '+
@@ -859,7 +918,11 @@ function zonaImpostazioni(){
     ];
     ORDINE_SEZ.forEach(function(s){
       if (!SEZ[s[0]]) return;            /* una sezione vuota non si annuncia */
-      h += '<p class="sezione">'+esc(s[1])+'<span>'+esc(s[2])+'</span></p>'+SEZ[s[0]];
+      /* l'identificativo serve a chi arriva da fuori: le domande rapide
+         della guida portano direttamente alla sezione di cui parlano, e
+         senza un'ancora l'utente si ritroverebbe in cima a otto sezioni */
+      h += '<p class="sezione" id="setsez-'+esc(s[0])+'">'+esc(s[1])+
+           '<span>'+esc(s[2])+'</span></p>'+SEZ[s[0]];
     });
   }
   return h;

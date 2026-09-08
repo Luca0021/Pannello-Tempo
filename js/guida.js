@@ -216,6 +216,83 @@ function sezioneGuida(id){
   return GUIDA_SEZIONI.filter(function(s){ return s.id === id; })[0] || null;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   LE DOMANDE RAPIDE
+   ─────────────────────────────────────────────────────────────────────────
+
+   Le quindici sezioni qui sopra spiegano come funziona il pannello. Sono
+   utili quando hai già una mappa in testa, e inservibili quando la domanda
+   è «e adesso?»: chi non capisce qualcosa non cerca la sezione giusta,
+   formula una domanda.
+
+   Perciò: domanda in prima persona, risposta in due righe, e — dove esiste
+   un posto in cui andare — un comando che **ci porta**. Non un rimando: un
+   pulsante che chiude la guida e apre la cosa di cui si parla. Una guida
+   che descrive un posto senza portarci lascia il lettore a cercarlo.
+
+   `vai.act` è un'azione già esistente del pannello, non una nuova strada:
+   la guida non sa fare niente che il pannello non sappia già fare. */
+var FAQ = [
+  { d:"Da dove comincio?",
+    r:"Scrivi in «Priorità di oggi» la cosa che vuoi aver fatto entro stasera. Una basta.",
+    vai:{ act:"vaioggi", testo:"Portami alle priorità" } },
+
+  { d:"Che cosa sono queste voci che non ho scritto io?",
+    r:"Una proposta di partenza — finestre per la posta, blocchi di concentrazione, "+
+      "un po' di vita. Cambiale, spegnile o cancellale: sono tue.",
+    vai:{ act:"vaioggi", testo:"Vedi le voci di oggi" } },
+
+  { d:"Ho scritto una cosa e non la trovo più.",
+    r:"Cerca: la ricerca copre task, note, passi e archivio, comprese le voci "+
+      "archiviate con «non serve più».",
+    vai:{ act:"search", testo:"Apri la ricerca" } },
+
+  { d:"Come faccio a dare un orario a una cosa?",
+    r:"Aprila e usa «Aggiungi orario», oppure tocca una fascia libera dell'agenda: "+
+      "nasce già a quell'ora.",
+    vai:{ act:"vaiagenda", testo:"Vai all'agenda" } },
+
+  { d:"Qual è la differenza fra routine e task ricorrente?",
+    r:"Che cosa succede se salti un giorno: la routine lascia perdere, il task "+
+      "ricorrente torna fra le cose da riprogrammare.",
+    vai:{ act:"guida-sez", v:"ripetizioni", testo:"Leggi la spiegazione lunga" } },
+
+  { d:"Il pannello dice che ho troppe cose. Che faccio?",
+    r:"Guarda «Da riprogrammare»: ogni voce ha cinque decisioni possibili, e "+
+      "«non serve più» archivia senza cancellare.",
+    vai:{ act:"vairitardi", testo:"Vedi cosa è rimasto indietro" } },
+
+  { d:"Voglio vedere meno cose.",
+    r:"Impostazioni → «Come vuoi usare il pannello»: il profilo accende un insieme "+
+      "di parti, e ogni parte si spegne da sola. Spegnere non cancella niente.",
+    vai:{ act:"vaimpostazioni", v:"uso", testo:"Apri le impostazioni" } },
+
+  { d:"I miei dati dove finiscono?",
+    r:"Sul dispositivo, e basta. Con un Account viaggiano anche sul servizio, "+
+      "cifrati in transito e a riposo, e li puoi cancellare del tutto.",
+    vai:{ act:"vaimpostazioni", v:"privacy", testo:"Vedi privacy e dati" } },
+
+  { d:"Funziona senza rete?",
+    r:"Sì, ed è il caso normale: le modifiche fatte offline restano in coda e "+
+      "partono da sole quando la rete torna.",
+    vai:{ act:"guida-sez", v:"sincronizzazione", testo:"Come funziona la sincronizzazione" } },
+
+  { d:"Come rivedo la presentazione iniziale?",
+    r:"Impostazioni → Informazioni → «Imparare il pannello»: da lì rilanci il tour, "+
+      "le domande d'ingresso e le spiegazioni delle sezioni.",
+    vai:{ act:"tour-apri", testo:"Rivedi la presentazione" } }
+];
+
+/* La ricerca della guida cerca la PAROLA INTERA (vedi la nota in
+   modals-ui.js), e deve trovare anche fra le domande: una guida con una
+   ricerca che ignora metà del proprio contenuto è peggio di una senza. */
+function faqTrovate(q){
+  if (!q) return FAQ;
+  return FAQ.filter(function(f){
+    return contieneParola(f.d + " " + f.r + " " + ((f.vai && f.vai.testo) || ""), q);
+  });
+}
+
 
 /* Aperta o no. Una funzione sola, perché il confronto sbagliato in un punto
    solo faceva coprire il pannello dalla guida in ogni disegno. */

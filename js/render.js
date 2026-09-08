@@ -145,7 +145,12 @@ function renderInner(){
     /* un collegamento assegnato a un'area compare solo mentre guardi quell'area */
     return S.filter === "tutto" || !l.area || l.area === S.filter;
   });
-  h += '<div class="toolsrow"><div class="tools">';
+  /* La striscia non aveva un nome. Per chi vede, il contesto lo dà la forma;
+     per chi naviga con un lettore di schermo era un gruppo di link senza
+     spiegazione, primo nella pagina — e sono link che PORTANO FUORI dal
+     pannello, quindi vale la pena dirlo prima che vengano seguiti. */
+  h += '<div class="toolsrow"><div class="tools" role="group" '+
+       'aria-label="Collegamenti ai tuoi strumenti, si aprono in una scheda nuova">';
   links.forEach(function(l){
     /* mentre riordini, la barra è un'anteprima dell'ordine: se restasse
        navigabile un tocco distratto ti porterebbe fuori dal pannello */
@@ -343,6 +348,34 @@ function renderInner(){
   var carico = caricoGiornata(plannedH);
   var pross = prossimaCosa();
   h += '<!--Z:hero-->';
+  /* ─────────────────────────────────────────────────────────────────────
+     LA PROMESSA, UNA VOLTA, IN CIMA
+
+     DIFETTO CORRETTO — misurato aprendo il pannello da utente nuovo: chi
+     SALTA l'ingresso guidato non trova, in nessun punto della home, una
+     frase che dica che cosa fa il prodotto. La promessa esisteva già come
+     testo (`PROMESSA` in promessa.js) e viveva in cinque posti — la
+     landing, il primo passo dell'ingresso, le informazioni, le modalità,
+     i piani — cioè in nessun posto che un utente nuovo guardi per primo.
+
+     Sta qui, si chiude, e non torna: `promessa:vista` fra le preferenze
+     locali. Costa una riga a chi arriva e zero a chi torna. */
+  /* Segue l'interruttore generale delle spiegazioni, e non solo il proprio
+     «già vista»: prima non lo faceva, e chi premeva «Non mostrarmele più»
+     si vedeva spegnere i fumetti di sezione e l'avviso sulle voci iniziali
+     — che quel controllo lo leggono — ma non questa riga. Tre avvisi della
+     stessa famiglia con tre regole diverse sono tre cose da capire: qui la
+     regola è una. */
+  if (typeof spiegazioniAttive === "function" && spiegazioniAttive() &&
+      !giaVisto("promessa:vista") && !S.digest && !S.menuNuovo)
+    h += '<div class="benvenuto" role="note">'+
+         '<p class="benvtx"><b>'+esc(promessaBreve())+'</b>'+
+         '<span>Scegli le poche cose che contano oggi, poi guarda se ci stanno nella giornata. '+
+         'I dati restano su questo dispositivo.</span></p>'+
+         '<div class="benvazioni">'+
+         '<button class="tiny pos" data-act="tour-apri">Fammi vedere come</button>'+
+         '<button class="link" data-act="benv-chiudi">Ho capito, chiudi</button>'+
+         '</div></div>';
   h += '<div class="hero"><div class="heromain"><h1>'+
        esc(maiuscolaIniziale(S.now.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"})))+'</h1>'+
        '<div class="metriche">'+
@@ -652,8 +685,14 @@ function renderInner(){
   /* invito all'installazione: compare dal secondo giorno, non al primo secondo */
   if (!cercando && pref("onboardingFatto") && (S.data.chiusure||[]).length + (S.data.items||[]).length > 2) {
     var invIns = invitoInstallazione();
+    /* La scheda era l'unica della home senza titolo: nella mappa delle
+       intestazioni compariva un buco, e chi naviga per titoli non poteva
+       sapere che cosa gli si stava proponendo. Il titolo dice la cosa
+       utile — che diventa un'app e funziona senza rete — invece di ripetere
+       il testo. */
     if (invIns)
-      h += '<div class="card terziaria"><p class="hint" style="margin:0">'+esc(invIns.testo)+
+      h += '<div class="card terziaria"><h2 data-ico="oggi"><span>Tienilo a portata di mano</span></h2>'+
+        '<p class="hint" style="margin:0">'+esc(invIns.testo)+
         (invIns.automatico ? ' <button class="tiny pos" data-act="installa">Installa</button>' : '')+
         ' <button class="tiny" data-act="installa-no">non ora</button></p></div>';
   }
@@ -892,6 +931,12 @@ function renderInner(){
        }).join("")+'</select><button class="add" data-act="capadd">Aggiungi</button></div></div>';
   }
 
+  /* «Da provare»: c'è SOLO con la modalità scoperta accesa, e a modalità
+     spenta `scopertaHtml()` restituisce stringa vuota. Sta qui, fra le
+     schede terziarie, perché è un invito e non un impegno: sopra le cose di
+     oggi sarebbe una funzione che chiede attenzione a chi ne ha già poca. */
+  if (typeof scopertaHtml === "function") h += scopertaHtml();
+
   /* aggiungi task */
   if (S.dup) {
     h += '<div class="card dup"><h2 data-ico="doppio"><span>Forse ce l\'hai già</span><span class="cnt">'+S.dup.matches.length+'</span></h2>'+
@@ -1091,6 +1136,13 @@ function renderInner(){
                 'data-on="'+((P.theme||"auto")===t2[0]?1:0)+'">'+t2[1]+'</button>';
        }).join("")+'<button class="link" data-act="reset">Ripristina</button></span></div>';
 
+  /* Il tour del primo accesso vive in una zona sua, ed è l'ULTIMA cosa
+     emessa: è un velo sopra la pagina, non una scheda dentro il flusso.
+     In una zona propria non viene riscritto ogni volta che una spunta
+     cambia una lista, e il riflettore non salta mentre lo si legge. */
+  h += '<!--Z:modali-->';
+  if (typeof tourHtml === "function") h += tourHtml();
+
   var root = document.getElementById("app");
   root.setAttribute("data-theme", P.theme || "auto");
   var scroller = document.getElementById("agscroll");
@@ -1171,6 +1223,12 @@ function renderInner(){
     else if (!S.scrolled) { ns.scrollTop = Math.max(0, yOf(nowH()) - 110); S.scrolled = true; }
   }
   bindDrag();
+  /* Spiegazioni di sezione, badge della scoperta e geometria del riflettore
+     si montano DOPO il disegno, come bindDrag: hanno bisogno del DOM vero e
+     dei rettangoli, che prima di qui non esistono. Guardie sul tipo perché
+     un modulo mancante non deve poter fermare il disegno della pagina. */
+  if (typeof montaPrimoUso === "function") montaPrimoUso();
+  if (typeof posizionaTour === "function") posizionaTour();
   if (S.inCima) { S.inCima = false; S.ancora = null; try { window.scrollTo(0, 0); } catch (e) {} }
   riporta();
   /* la sezione da cui era stato aperto non esiste più (chiusa, filtrata,

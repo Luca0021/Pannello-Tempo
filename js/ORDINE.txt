@@ -50,6 +50,9 @@ js/suggerimenti.js
 js/features/priorita-ui.js
 js/distruttive.js
 js/guida.js
+js/primo-uso.js
+js/tour.js
+js/scoperta.js
 js/features/settings-ui.js
 js/features/conflitti-ui.js
 js/navigazione.js

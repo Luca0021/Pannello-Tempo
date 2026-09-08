@@ -18,9 +18,15 @@ function zonaPriorita(){
     return Math.max(1, Math.min(3, ultima + 1 + (S.piuPriorita ? 1 : 0)));
   })();
   h += '<!--Z:priorita-->';
+  /* Il contatore dice «fatte su scelte», non «fatte su tre», e a prima
+     vista sembra una contraddizione con «Scegline fino a 3»: appena
+     arrivato si legge «0/1» sotto una frase che parla di tre. Il numero è
+     giusto — di priorità ne hai una riga aperta — e adesso lo dichiara,
+     invece di lasciarlo indovinare. */
   h += '<div class="card focus" data-sez="focus"><h2 data-ico="tre">'+
-       '<span>Priorità di oggi</span><span class="cnt">'+doneN+'/'+(setN||quanteVisibili)+'</span></h2>'+
-       '<p class="fsub">Scegline fino a 3.</p>';
+       '<span>Priorità di oggi</span><span class="cnt" title="Completate su priorità aperte '+
+       '(le righe compaiono una per volta, fino a tre)">'+doneN+'/'+(setN||quanteVisibili)+'</span></h2>'+
+       '<p class="fsub">Scegline fino a 3: la riga successiva compare quando hai scritto la prima.</p>';
   L.slice(0, quanteVisibili).forEach(function(e, n){
     var li = e.id ? itemById(e.id) : null;
     var done = li ? isOn(li) : (e.done && e.t.trim());

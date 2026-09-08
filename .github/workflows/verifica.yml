@@ -204,6 +204,15 @@ jobs:
         # proprio nome. Sono numeri, non gusto: vedi UI-LAYOUT-REPORT.md.
         run: npx playwright test tests/ui/impaginazione.spec.js --project=${{ matrix.browser }}
 
+      - name: Primo accesso (UI-008)
+        # Le quattro promesse del primo accesso che si possono rompere senza
+        # accorgersene: il tour compare UNA volta e non a chi è già dentro,
+        # si salta sempre, la modalità scoperta spenta non aggiunge un solo
+        # nodo, e la checklist non si prende meriti che non sono suoi.
+        # Verifica anche dove finiscono le preferenze: sul dispositivo, non
+        # nei dati sincronizzati. Vedi UX-PRIMO-ACCESSO.md.
+        run: npx playwright test tests/ui/primo-accesso.spec.js --project=${{ matrix.browser }}
+
       - name: Sentinelle dei segreti
         run: npx playwright test tests/security/sentinelle.test.js --project=${{ matrix.browser }}
 

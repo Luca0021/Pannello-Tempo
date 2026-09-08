@@ -79,13 +79,16 @@ bianco.
 | `priorities.js` | le tre cose del giorno |
 | `fascia.js`, `balance.js` | fasce orarie e bilanciamento Lavoro/Vita |
 | `daily-closing.js`, `weekly-review.js` | chiusura di giornata e revisione settimanale |
-| `onboarding.js` | i primi passi |
-| `attivazione.js` | la prima sincronizzazione: si decide, non avviene (SYN-006) |
+| `onboarding.js` | le cinque domande d'ingresso, e i dati di esempio |
+| `attivazione.js` | **la checklist di attivazione** (ONB-004): sette traguardi che si spuntano da soli. La riga qui diceva «la prima sincronizzazione: si decide, non avviene (SYN-006)», che è un altro modulo: corretto |
 | `templates.js` | modelli di giornata |
 | `actions.js` | azioni sui dati |
 | `accumulo.js`, `arretrati.js`, `suggerimenti.js` | accumulo, arretrati, suggerimenti |
 | `distruttive.js` | le tre azioni distruttive, ognuna con le proprie opzioni |
-| `guida.js` | la guida in linea |
+| `guida.js` | la guida in linea: quindici sezioni e undici domande rapide che portano alla funzione |
+| `primo-uso.js` | UI-008: che cosa ha già visto chi sta usando il pannello. Spiegazioni di sezione una per volta, la promessa in cima, l'avviso sulle voci di partenza. Ricorda **sul dispositivo**, non nei dati |
+| `tour.js` | UI-008: cinque tappe con il riflettore sulla UI vera, dopo l'ingresso portato a termine |
+| `scoperta.js` | UI-008: «Scopri funzionalità». Spenta non aggiunge un solo nodo; «non ancora usata» si deduce dai dati |
 
 ### Sincronizzazione e account
 
@@ -212,6 +215,7 @@ Non contiene **nessuna** configurazione di un progetto reale: `BUILD.md` §6.
 | `GLOBAL-COLLISIONS.md` | le due collisioni che hanno prodotto difetti reali |
 | `UI-BEFORE-AFTER.md` | l'indicatore Lavoro/Vita, prima e dopo |
 | `UI-LAYOUT-REPORT.md` | l'impaginazione misurata su 26 condizioni: i cinque difetti veri, i due allarmi che erano miei (UI-007) |
+| `UX-PRIMO-ACCESSO.md` | che cosa vede chi apre il pannello la prima volta, misurato; il tour, le spiegazioni, la scoperta e le domande rapide (UI-008) |
 | `TEST-REPORT.md` | eseguito, scritto-non-eseguito, non scritto |
 | `DEPLOYMENT-REPORT.md` | come si pubblica, e come si torna indietro |
 | `RUN-CI.md` | come si avvia la pipeline e che cosa restituire |

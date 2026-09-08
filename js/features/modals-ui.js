@@ -292,6 +292,34 @@ function schermataGuida(){
     (q ? '<button class="tiny" data-act="guida-azzera">Togli il filtro</button>' : '')+
     '</div>';
 
+  /* ─────────────────────────────────────────────────────────────────────────
+     LE DOMANDE RAPIDE, PRIMA DELLE SEZIONI
+
+     Chi apre una guida ha una domanda, non un indice: le quindici sezioni
+     servono a chi ha già una mappa in testa. Le domande stanno in cima,
+     ognuna con due righe di risposta e — dove esiste un posto in cui
+     andare — un comando che ci porta e chiude la guida.
+
+     `data-esce="1"` è ciò che la fa chiudere: senza, l'azione avverrebbe
+     sotto la guida, che resterebbe sopra a coprirla. */
+  var faq = faqTrovate(q);
+  if (faq.length) {
+    h += '<div class="card"><h2 data-ico="cerca"><span>Domande rapide</span>'+
+      '<span class="cnt">'+faq.length+'</span></h2><ul class="faq">';
+    faq.forEach(function(f){
+      h += '<li><p class="faqd">'+esc(f.d)+'</p>'+
+        '<p class="faqr">'+esc(f.r)+'</p>'+
+        (f.vai
+          ? '<button class="tiny" data-act="'+esc(f.vai.act)+'"'+
+            (f.vai.v ? ' data-v="'+esc(f.vai.v)+'"' : '')+
+            (f.vai.act === "guida-sez" ? '' : ' data-esce="1"')+
+            '>'+esc(f.vai.testo)+'</button>'
+          : '')+
+        '</li>';
+    });
+    h += '</ul></div>';
+  }
+
   var trovate = 0;
   GUIDA_SEZIONI.forEach(function(s){
     var voci = s.elenco ? s.elenco() : [];
@@ -321,8 +349,11 @@ function schermataGuida(){
     h += '</div>';
   });
 
-  if (!trovate)
-    h += '<div class="card"><p class="hint">Nessuna sezione parla di «'+
+  /* «niente trovato» va detto solo se non ha trovato NIENTE: prima contava
+     le sole sezioni, e con una domanda rapida corrispondente la guida
+     mostrava insieme la risposta e «nessuna sezione parla di…» */
+  if (!trovate && !faq.length)
+    h += '<div class="card"><p class="hint">Né le domande rapide né le sezioni parlano di «'+
          esc(S.guidaQuery||"")+'». Prova con una parola più generica.</p></div>';
 
   h += '<div class="schazioni"><button class="add" data-act="guida-chiudi">Torna al pannello</button>'+

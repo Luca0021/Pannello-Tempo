@@ -310,6 +310,19 @@
       "manca": "due allarmi del censimento sono stati esaminati e NON corretti, con la ragione scritta in UI-LAYOUT-REPORT.md: la striscia degli strumenti che scorre di proposito, e i bersagli di testo in linea dentro le righe, per i quali WCAG 2.5.8 prevede l'eccezione «inline» e che non si possono ingrandire senza rifare la riga"
     },
     {
+      "id": "UI-008",
+      "titolo": "primo accesso: tour, spiegazioni, scoperta, domande rapide",
+      "stato": "COMPLETATO",
+      "dove": [
+        "js/primo-uso.js",
+        "js/tour.js",
+        "js/scoperta.js",
+        "tests/ui/primo-accesso.spec.js"
+      ],
+      "verifica": "OSSERVAZIONE eseguita in un browser vero con localStorage vuoto, su desktop e telefono, in tre condizioni: l'ingresso guidato, la home di chi lo salta, la home con i dati di esempio. Ha trovato cinque difetti veri: il pannello non dice in nessun punto della home che cosa fa a chi salta l'ingresso; le diciassette voci di `seed()` non erano dichiarate e producevano «0/9 da fare» e «giornata piena» a un utente che non aveva scritto niente; la checklist di attivazione diceva «2 di 6» prima di qualunque azione, perché contava le voci iniziali come proprie; nessuna spiegazione contestuale, con 70 comandi su 119 senza nemmeno una didascalia; la guida organizzata per argomento invece che per domanda. Aggiunti un tour di cinque tappe con riflettore sulla UI vera (solo dopo l'ingresso portato a termine, saltabile con Esc, rilanciabile), le spiegazioni di sezione una per volta, la modalità scoperta che a interruttore spento non aggiunge un solo nodo, undici domande rapide con salto diretto alla funzione, la promessa in cima una volta sola e l'avviso sulle voci di partenza col conto della sezione. Corretto il conteggio dell'attivazione: da «2 di 6» regalato a «0 di 7» guadagnato, con il settimo traguardo che mancava. Le preferenze stanno in `P`, cioè sul dispositivo: nessun campo nuovo nel documento sincronizzato, nessuna migrazione, nessun dato utente toccato. ESEGUITE 17 prove e 80 asserzioni in tests/ui/primo-accesso.spec.js, tutte verdi, e l'intera suite in browser come regressione: 158 prove su 158, exit 0. Una revisione successiva, condotta misurando invece che rileggendo, ha trovato quattro difetti nel codice appena scritto e li ha corretti: il riquadro del tour si dichiarava modale mentre tre Tab portavano il fuoco fuori; il fuoco andava perduto premendo Ho capito; la modalita scoperta proponeva funzioni dentro parti spente, etichette comprese, perche il filtro era scritto a mano su due id; e i tre avvisi della stessa famiglia seguivano tre regole diverse. Ognuno con la propria asserzione",
+      "manca": "l'esito IN PIPELINE. Il passo «Primo accesso (UI-008)» è dichiarato in .github/workflows/verifica.yml su entrambi i browser, ma la pipeline si avvia con un push e il push non è stato fatto: dichiarato non è eseguito, e finché non c'è un'esecuzione da guardare quel passo non ha un esito. Restano fuori anche le spiegazioni delle sezioni che compaiono solo in modalità avanzata: vanno scritte guardandole"
+    },
+    {
       "id": "ARC-001",
       "titolo": "un modulo per area invece di file monolitici",
       "stato": "COMPLETATO",

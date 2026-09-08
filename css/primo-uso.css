@@ -1,0 +1,139 @@
+/* primo-uso.css — il tour con il riflettore, le spiegazioni di sezione,
+   i segni della modalità scoperta.
+
+   Tutto quello che sta qui dentro serve a chi apre il pannello le prime
+   volte, e deve sparire senza lasciare tracce quando non serve più. Nessuna
+   di queste regole tocca l'aspetto del pannello a riposo: i selettori sono
+   tutti su classi che esistono soltanto mentre una di queste cose è attiva.
+
+   I colori vengono dai token: nessuna tinta scritta a mano, così tema chiaro
+   e tema scuro seguono da soli. Le uniche eccezioni sono i due neri
+   translucidi del velo, che non sono colori dell'interfaccia ma ombra. */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   1. IL TOUR
+   ───────────────────────────────────────────────────────────────────────── */
+
+.pt .tour{position:fixed;inset:0;z-index:60;pointer-events:none;}
+
+/* Il riflettore. Il buio è UNA dichiarazione: un'ombra dal raggio enorme
+   attorno a un rettangolo trasparente oscura tutto ciò che gli sta fuori.
+   L'alternativa — quattro pannelli attorno al bersaglio — vuole quattro
+   calcoli che si disallineano al primo ridisegno.
+   `pointer-events:none` perché il pannello sotto resti leggibile per quello
+   che è: il tour racconta, non sequestra. */
+.pt .tourvelo{position:fixed;left:-9999px;top:-9999px;width:0;height:0;
+  border-radius:14px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(6,12,17,.62), inset 0 0 0 2px var(--brass);
+  transition:left .18s ease,top .18s ease,width .18s ease,height .18s ease;}
+/* la tappa di benvenuto non illumina niente: il velo copre tutto */
+.pt .tourvelo.pieno{left:0;top:0;width:100%;height:100%;border-radius:0;
+  box-shadow:none;background:rgba(6,12,17,.62);}
+
+.pt .tourcard{position:fixed;left:50%;transform:translateX(-50%);
+  width:min(430px,calc(100vw - 28px));
+  background:var(--surface);color:var(--ink);
+  border:1px solid var(--line2);border-radius:14px;
+  padding:17px 18px 15px;box-shadow:0 18px 44px -18px rgba(0,0,0,.6);
+  pointer-events:auto;}
+.pt .tourcard[data-ancora="centro"]{top:50%;transform:translate(-50%,-50%);}
+.pt .tourcard[data-ancora="basso"]{bottom:16px;top:auto;}
+.pt .tourconta{margin:0 0 4px;font-family:var(--mono);font-size:12px;
+  letter-spacing:.08em;color:var(--muted);text-transform:uppercase;}
+.pt .tourcard h2{margin:0 0 7px;font-size:18px;}
+/* il titolo del tour non porta l'icona né il righello dei titoli di sezione:
+   qui non stiamo aprendo una sezione, stiamo raccontandola */
+.pt .tourcard h2::before,.pt .tourcard h2::after{display:none;}
+.pt .tourtx{margin:0 0 12px;font-size:14px;line-height:1.5;color:var(--ink2);}
+
+/* l'avanzamento: cinque segmenti, non una percentuale. Cinque cose si
+   contano a occhio, una percentuale va letta. */
+.pt .tourbarra{display:flex;gap:4px;margin:0 0 13px;}
+.pt .tourbarra i{flex:1;height:4px;border-radius:2px;background:var(--track);}
+.pt .tourbarra i.fatto{background:var(--brass);}
+
+.pt .tourazioni{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.pt .tourazioni .add{order:1;}
+.pt .tourazioni .tiny{order:0;}
+.pt .tourazioni .link{order:2;margin-left:auto;}
+.pt .tourcard > .chiudi{position:absolute;top:9px;right:9px;}
+
+@media (max-width:640px){
+  /* su telefono il riquadro sta sempre in basso, dove arriva il pollice, e
+     non copre la barra di navigazione fissa */
+  .pt .tourcard,.pt .tourcard[data-ancora="sotto"],.pt .tourcard[data-ancora="sopra"]{
+    top:auto;bottom:calc(78px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);}
+  .pt .tourcard[data-ancora="centro"]{top:auto;transform:translateX(-50%);}
+  .pt .tourazioni .link{margin-left:0;flex-basis:100%;}
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2. LE SPIEGAZIONI DI SEZIONE
+   ─────────────────────────────────────────────────────────────────────────
+   Sta nel flusso, dentro la scheda che spiega: un fumetto posizionato in
+   pixel andrebbe fuori posto a ogni ridisegno e su telefono finirebbe fuori
+   schermo. Così invece funziona identico a 320px e con lo zoom al 200%. */
+
+.pt .spiegazione{margin:2px 0 13px;padding:11px 13px;border-radius:10px;
+  background:var(--info-fondo);border:1px solid var(--info-bordo);
+  border-left:3px solid var(--pen);}
+.pt .spiegtx{margin:0 0 9px;font-size:13px;line-height:1.5;color:var(--info-testo);}
+.pt .spiegtx b{display:block;font-weight:600;color:var(--ink);}
+.pt .spiegtx span{display:block;margin-top:2px;}
+.pt .spiegazioni-azioni{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+
+/* dentro il riquadro scuro delle priorità i colori dell'informazione
+   sparirebbero: là la spiegazione prende i colori di quel riquadro */
+.pt .focus .spiegazione{background:rgba(255,255,255,.07);border-color:var(--focusline);
+  border-left-color:var(--focus-accento);}
+.pt .focus .spiegtx{color:var(--focusmut);}
+.pt .focus .spiegtx b{color:var(--focusfg);}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   2-bis. LA PROMESSA IN CIMA, E LE VOCI DI PARTENZA
+   ─────────────────────────────────────────────────────────────────────────
+   Due righe che esistono solo le prime volte. La prima dice che cosa fa il
+   prodotto — prima non lo diceva nessuno, a chi salta l'ingresso. La
+   seconda dice di chi sono le voci che il pannello porta con sé. */
+
+.pt .benvenuto{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;
+  margin:0 0 16px;padding:13px 15px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--line2);
+  border-left:3px solid var(--brass);box-shadow:var(--sh);}
+.pt .benvtx{margin:0;flex:1 1 260px;min-width:0;font-size:13px;line-height:1.5;color:var(--ink2);}
+.pt .benvtx b{display:block;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:3px;}
+.pt .benvazioni{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.pt .hint.avviso.iniziali{display:block;}
+.pt .hint.avviso.iniziali .link{margin-left:6px;}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3. LE DOMANDE RAPIDE DELLA GUIDA
+   ─────────────────────────────────────────────────────────────────────────
+   Una domanda si legge come una domanda: in evidenza, con la risposta
+   sotto e il comando che ci porta in fondo. Niente accordion: aprire e
+   chiudere undici domande per leggerne due righe ciascuna è lavoro. */
+
+.pt ul.faq{margin:0;padding:0;list-style:none;}
+/* `display:block` non è decorativo: le regole generali di questo foglio
+   rendono ogni `li` una riga flessibile (`.pt li{flex-wrap:wrap}` e
+   compagnia), e domanda, risposta e comando finivano affiancati sulla
+   stessa riga — la domanda perdeva il suo peso e la risposta cominciava a
+   metà schermo. Qui la riga è un blocco: domanda sopra, risposta sotto,
+   comando in fondo. */
+.pt ul.faq li{display:block;padding:11px 0 13px;border-bottom:1px solid var(--line);}
+.pt ul.faq li:last-child{border-bottom:none;padding-bottom:2px;}
+.pt .faqd{margin:0 0 3px;font-size:14px;font-weight:600;color:var(--ink);}
+.pt .faqr{margin:0 0 8px;font-size:13px;line-height:1.5;color:var(--ink2);}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   4. LA MODALITÀ SCOPERTA
+   ─────────────────────────────────────────────────────────────────────────
+   Spenta la modalità queste classi non vengono emesse: qui non c'è nessuna
+   regola che nasconda qualcosa, perché non c'è niente da nascondere. */
+
+.pt .badge-nuovo{flex:none;order:2;display:inline-flex;align-items:center;
+  min-height:22px;padding:1px 9px;border-radius:20px;
+  font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.04em;
+  color:var(--att-pieno-testo);background:var(--att-pieno);}
+.pt .scoperte .correlata{color:var(--sage-testo);}
+.pt .scoperte li{align-items:flex-start;}

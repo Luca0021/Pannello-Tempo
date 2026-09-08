@@ -17,6 +17,9 @@ function shift(n, unit){
 /* Azioni dopo le quali la pagina cambia del tutto: ancorare sarebbe sbagliato. */
 var ANCORA_MAI = ["digest","search","vaioggi","vaiagenda","vairitardi","gotoday",
   "onb-avanti","onb-indietro","onb-salta","onb-fine","onb-demo","onb-apri","onb-fascia-salta",
+  /* il tour porta la vista sul proprio bersaglio: ancorare al pulsante
+     premuto la riporterebbe indietro subito dopo */
+  "tour-apri","tour-avanti","tour-indietro","tour-salta",
   "ch-apri","ch-avanti","ch-indietro","ch-salva","ch-annulla",
   "rv-apri","rv-chiudi","rv-salva","rv-rinvia","menunuovo",
   "nuovotask","nuovanota","nuovaroutine","profilo",
@@ -33,6 +36,15 @@ document.addEventListener("click", function(ev){
      facevano solo alcune azioni, e le altre facevano saltare la pagina: se
      una scheda sopra cambia altezza, tutto il resto scorre sotto il dito. */
   if (ANCORA_MAI.indexOf(act) < 0) ancoraA(el);
+  /* Un comando che porta ALTROVE mentre la guida è aperta deve prima
+     chiuderla: la guida copre il pannello, e l'azione avverrebbe sotto un
+     velo. Lo dichiara il comando stesso con `data-esce`, così la guida non
+     ha bisogno di conoscere l'elenco delle azioni che escono da lei. */
+  if (el.getAttribute("data-esce") === "1" &&
+      typeof guidaVisibile === "function" && guidaVisibile()) {
+    S.guidaAperta = null;
+    S.guidaQuery = "";
+  }
   var id = el.getAttribute("data-id");
   var v = el.getAttribute("data-v");
   var n = parseInt(el.getAttribute("data-n"), 10);
@@ -152,6 +164,16 @@ document.addEventListener("click", function(ev){
   else if (act === "guida-chiudi") { S.guidaAperta = null; S.guidaQuery = ""; render(); }
   else if (act === "guida-sez") { S.guidaAperta = (S.guidaAperta === v) ? "" : v; render(); }
   else if (act === "guida-azzera") { S.guidaQuery = ""; render(); }
+  /* Porta alle impostazioni, aperte, e alla sezione giusta: senza l'ancora
+     chi arriva da una domanda rapida si troverebbe in cima a otto sezioni
+     e dovrebbe cercare quella di cui aveva letto. */
+  else if (act === "vaimpostazioni") {
+    if (!P.fold) P.fold = {};
+    P.fold.settings = false;
+    savePrefs();
+    S.mirinoSez = v || "";
+    render();
+  }
   /* REC-005 — le tre risposte alla domanda sull'accumulo */
   else if (act === "acc-oggi" || act === "acc-archivia" || act === "acc-dopo") {
     var risp = act === "acc-oggi" ? "oggi" : act === "acc-archivia" ? "archivia" : "dopo";
@@ -714,7 +736,34 @@ document.addEventListener("click", function(ev){
     passoOnboarding(S.onboarding.passo + 1);
   }
   else if (act === "onb-salta") { saltaOnboarding(); }
-  else if (act === "onb-fine") { applicaScelteOnboarding(); chiudiOnboarding(); }
+  else if (act === "onb-fine") {
+    applicaScelteOnboarding();
+    chiudiOnboarding();
+    /* Qui, e in nessun altro punto automatico: il tour segue l'ingresso
+       PORTATO A TERMINE. Chi lo salta ha chiesto di entrare, e chi usa il
+       pannello da mesi non deve trovarselo addosso dopo un aggiornamento.
+       Vedi la nota in cima a tour.js. */
+    if (typeof tourDaMostrare === "function" && tourDaMostrare()) apriTour(1);
+  }
+  /* --- il tour del primo accesso --- */
+  else if (act === "tour-apri") { apriTour(1); }
+  else if (act === "tour-avanti") { tourAvanti(); }
+  else if (act === "tour-indietro") { tourIndietro(); }
+  else if (act === "tour-salta") { chiudiTour(false); }
+  /* --- le spiegazioni di sezione --- */
+  else if (act === "spieg-ok") { segnaVisto("spieg:" + v); render(); }
+  else if (act === "spieg-mai") {
+    spegniSpiegazioni();
+    toast("Le riattivi dalle impostazioni, in «Come si usa»", "info");
+    render();
+  }
+  else if (act === "spieg-riattiva") { accendiSpiegazioni(); toast("Spiegazioni riattivate", "ok"); render(); }
+  else if (act === "benv-chiudi") { segnaVisto("promessa:vista"); render(); }
+  else if (act === "iniziali-ok") { segnaVisto("iniziali:viste"); render(); }
+  /* --- la modalità scoperta --- */
+  else if (act === "scoperta-accendi") { accendiScoperta(); render(); }
+  else if (act === "scoperta-spegni") { spegniScoperta(); render(); }
+  else if (act === "scoperta-fatto") { nascondiScoperta(v); render(); }
   else if (act === "onb-demo") { caricaDemo(); passoOnboarding(2); }
   else if (act === "onb-apri") { apriOnboarding(1); }
   else if (act === "installa") {
@@ -1508,6 +1557,10 @@ document.addEventListener("input", function(ev){
 document.addEventListener("keydown", function(ev){
   var t = ev.target;
   if (ev.key === "Escape") {
+    /* il tour è la cosa più in alto sullo schermo: Esc chiude quella, prima
+       di qualunque altra. Chiuderlo NON è un errore da correggere: è una
+       preferenza, e vale come averlo visto */
+    if (S.tour) { chiudiTour(false); return; }
     if (S.revisione) { chiudiRevisione(); return; }
     if (S.chiusura) { chiudiChiusura(); return; }
     if (S.onboarding) { saltaOnboarding(); return; }
@@ -1520,6 +1573,16 @@ document.addEventListener("keydown", function(ev){
     if (S.stepsOpen) { S.stepsOpen = null; render(); return; }
     if (S.query) { S.query = ""; svuota("q"); render(); return; }
     if (S.searchOpen) { S.searchOpen = false; render(); return; }
+    return;
+  }
+  /* Mentre il tour è aperto le frecce lo sfogliano: è un percorso di cinque
+     tappe, e cercare il pulsante col dito ogni volta è la ragione per cui i
+     percorsi guidati si abbandonano a metà. Non intercetta niente quando il
+     fuoco è in un campo di testo. */
+  if (S.tour && (ev.key === "ArrowRight" || ev.key === "ArrowLeft") &&
+      !(t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName))) {
+    ev.preventDefault();
+    if (ev.key === "ArrowRight") tourAvanti(); else tourIndietro();
     return;
   }
   /* Invio o barra spaziatrice attivano gli elementi non nativi */
