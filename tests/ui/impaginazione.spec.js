@@ -205,6 +205,90 @@ for (const [nomeVp, vp] of Object.entries(VIEWPORT)) {
   }
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   LE INTESTAZIONI NON DIVENTANO UNA COLONNA DI LETTERE
+   ─────────────────────────────────────────────────────────────────────────
+
+   Questa prova nasce da cinque scatti fatti su un TELEFONO FISICO, ed è la
+   misura che mancava: le prove qui sopra controllano che non ci sia
+   scorrimento orizzontale, che i bersagli arrivino a 24px, che il testo non
+   scenda sotto i 12px e che i titoli stiano su una colonna. Nessuna di
+   queste si accorge di un titolo scritto **una lettera per riga**:
+   «Sincronizzazione» su sedici righe non sborda, non è troppo piccolo, non è
+   fuori colonna. È soltanto illeggibile.
+
+   Due ragioni per cui non era emerso prima:
+     1. la misura non esisteva — nessuno contava le righe di un titolo;
+     2. le intestazioni peggiori stanno DENTRO le impostazioni, che sono
+        chiuse per difetto: il censimento non le ha mai disegnate.
+
+   Perciò qui si aprono tutte le sezioni, e si conta. */
+test.describe('impaginazione · le intestazioni su schermo stretto', () => {
+  for (const largo of [320, 375, 393]) {
+    test(`a ${largo}px nessun titolo di sezione si spezza in colonna`, async ({ page }) => {
+      await page.setViewportSize({ width: largo, height: 812 });
+      await apri(page, 'chiaro');
+      await page.evaluate(() => {
+        /* tutte le sezioni aperte: i valori assenti valgono «chiusa» per
+           alcune chiavi, ed è il motivo per cui non si vedevano */
+        P.fold = {};
+        ['settings', 'setrit', 'setcal', 'setsync', 'setpausa', 'setind', 'setmod',
+         'setics', 'setpiano', 'setinfo', 'setpriv', 'setdati', 'setcopie',
+         'routine', 'guidasync'].forEach(k => { P.fold[k] = false; });
+        setImp('modo', 'avanzata');
+        savePrefs();
+        commit();
+      });
+      await page.waitForTimeout(400);
+
+      const m = await page.evaluate(() => {
+        function vis(el) {
+          const cs = getComputedStyle(el);
+          if (cs.visibility === 'hidden' || cs.display === 'none') return false;
+          const r = el.getBoundingClientRect();
+          return r.width >= 1 && r.height >= 1;
+        }
+        const app = document.getElementById('app');
+        const out = [];
+        for (const h2 of app.querySelectorAll('h2')) {
+          if (!vis(h2)) continue;
+          const bottone = h2.querySelector('button.foldbtn');
+          const titolo = (bottone || h2).querySelector('span');
+          if (!titolo) continue;
+          const tr = titolo.getBoundingClientRect();
+          const lh = parseFloat(getComputedStyle(titolo).lineHeight) ||
+                     parseFloat(getComputedStyle(titolo).fontSize) * 1.3;
+          out.push({
+            testo: (titolo.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 28),
+            righe: Math.max(1, Math.round(tr.height / lh)),
+            titoloW: Math.round(tr.width),
+            h2W: Math.round(h2.getBoundingClientRect().width),
+            quotaBottone: bottone
+              ? Math.round(bottone.getBoundingClientRect().width * 100 / h2.getBoundingClientRect().width)
+              : null
+          });
+        }
+        return out;
+      });
+
+      expect(m.length, 'ci devono essere intestazioni da misurare').toBeGreaterThan(10);
+
+      /* 13 — il difetto visto sul telefono: «La tua giornata» su tredici
+         righe, «Sincronizzazione» su sedici. Due righe sono un titolo
+         lungo che va a capo; tre o più sono una colonna di lettere. */
+      const acolonna = m.filter(x => x.righe >= 3);
+      expect(acolonna, '13 — nessun titolo di sezione su tre o più righe').toEqual([]);
+
+      /* 14 — la causa, non solo il sintomo: il titolo cliccabile delle
+         schede richiudibili si spartiva la riga in parti uguali con la
+         righetta decorativa, perché entrambi avevano `flex:1`, cioè base
+         zero. Misurato prima della correzione: 42% al titolo. */
+      const strette = m.filter(x => x.quotaBottone !== null && x.quotaBottone < 60);
+      expect(strette, '14 — al titolo di una scheda richiudibile almeno il 60% della riga').toEqual([]);
+    });
+  }
+});
+
 test.describe('impaginazione · agenda del giorno', () => {
   test.use({ viewport: VIEWPORT.desktop });
 

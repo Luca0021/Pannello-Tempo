@@ -320,6 +320,81 @@ ai comandi autonomi senza toccare i bersagli in linea.
 
 ---
 
+## 5-bis. Il telefono fisico, e i quattro difetti che l'emulazione non aveva visto
+
+Cinque scatti da un telefono vero — 1080×2340, 393px di larghezza CSS, tema
+scuro, il sito pubblicato — hanno mostrato una cosa che nessuna delle misure
+di questo documento poteva vedere: **i titoli delle schede richiudibili
+scritti una lettera per riga.**
+
+| Intestazione | prima | dopo |
+|---|---|---|
+| «Sincronizzazione» (contatore «Non collegata») | titolo **0px**, **16 righe** | 121px, **1 riga** |
+| «La tua giornata» (contatore «08:00–20:00») | 11px, **13 righe** | 110px, **1 riga** |
+| «Calendario e promemoria» (contatore «11 slot») | 38px, 6 righe (21 a 320px) | 185px, **1 riga** |
+| «Backup e ripristino» (contatore «17 voci») | 38px, 4 righe | 136px, **1 riga** |
+| «Da fare oggi · 8 set» | 66px, 3 righe | 137px, **1 riga** |
+| intestazioni su 3+ righe, a 393px | **8 su 28** | **0 su 28** |
+| quota della riga al titolo, schede richiudibili | **39-42%** | **90%** |
+
+### La causa, che è una coppia
+
+Non una regola: due, e ognuna da sola era innocua.
+
+1. `h2::after` — la righetta decorativa — ha `flex:1`, che significa
+   `1 1 0%`;
+2. `button.foldbtn` — il titolo cliccabile delle schede richiudibili — aveva
+   **anch'esso** `flex:1`.
+
+Due elementi flessibili con base zero e crescita uno **si dividono la riga
+in parti uguali**: misurato, 134px al titolo e 134px a un ornamento, su 319
+disponibili. Dentro quel 42% il contatore (`flex:none`, non spezzabile)
+prendeva il resto, e con «Non collegata» al titolo restavano **zero pixel**.
+A quel punto `overflow-wrap:anywhere` — messo per MOB-002, contro i titoli
+senza spazi — spezzava per lettera.
+
+**La controprova era nello stesso scatto:** le intestazioni NON richiudibili
+— «Guida», «Sfondo e rumore visivo», «Come vuoi usare il pannello» — stavano
+su una riga sola, perché il loro titolo è `flex:none` e la righetta prende
+solo ciò che avanza.
+
+### Le correzioni
+
+| | |
+|---|---|
+| `button.foldbtn` | `flex:1 1 auto`: chiede la larghezza del proprio contenuto, non metà riga |
+| `h2::after` | `flex:1 1 0` con `min-width:0`, e **assente sotto i 640px**: su un telefono ogni pixel appartiene al testo |
+| `button.foldbtn` su telefono | `flex-wrap:wrap`: il contatore scende sotto invece di schiacciare il titolo, e solo quando non ci sta |
+| `.wrap` su telefono | lo spazio per la barra fissa era **78px fissi** mentre la barra cresce con la safe area (`calc(6px + env(...))`). Ora lo spazio segue la stessa quantità. **Non verificabile in emulazione**: qui l'inset è zero, ed è per questo che il difetto era latente |
+| `.tourcard[data-ancora="basso"]` | la media query del telefono non nominava questa variante, e il selettore d'attributo della regola di base era più specifico: il riquadro del tour finiva a 16px dal fondo, **coprendo** la barra. Misurato: bordo inferiore a 796px su 812, cioè 52px dentro la barra. Ora a 734, dieci pixel sopra |
+| `.anteprima-chiusa` | si fermava a metà voce. `scroll-snap-type:y proximity` con l'aggancio sulle voci: si posa sul bordo di una riga, mai a metà. Misurato: scorrendo di 30px si ferma a 28, che è esattamente un bordo |
+
+**Nessun `word-break:break-all`**, e nessuna riduzione del testo: il difetto
+era la spartizione della larghezza, non la lunghezza delle parole.
+
+### La misura che mancava, e perché
+
+Le tredici prove di questo documento non potevano accorgersene: un titolo su
+sedici righe **non sborda**, non è sotto i 12px, non è fuori colonna e non
+ha un bersaglio piccolo. È soltanto illeggibile, e nessuna delle regole
+scritte qui parlava di leggibilità della singola parola.
+
+E c'era una seconda ragione, più banale: le intestazioni peggiori stanno
+**dentro le impostazioni**, che sono chiuse per difetto. Il censimento non
+le ha mai disegnate.
+
+Ora `tests/ui/impaginazione.spec.js` apre tutte le sezioni e conta, a 320,
+375 e 393px: nessun titolo su tre o più righe, e almeno il 60% della riga al
+titolo di una scheda richiudibile.
+
+**Controprova eseguita**, che è il motivo per cui questa prova vale: puntata
+al SITO PUBBLICATO — la stessa build degli scatti — **fallisce**, e riporta
+gli stessi numeri del telefono («Sincronizzazione» 16 righe,
+«Calendario e promemoria» 21, quota del titolo 39%). Il che dice anche
+un'altra cosa: **il difetto non è stato introdotto dal lavoro sul primo
+accesso.** È nella build in rete da prima, e ci è voluto un telefono vero
+per vederlo.
+
 ## 6. Che cosa questo documento non dice
 
 - **Non dice che l'impaginazione è finita.** Dice che nove misure su dodici

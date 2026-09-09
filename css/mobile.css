@@ -5,6 +5,20 @@
   .pt li > .acts{flex-basis:100%;justify-content:flex-start;padding-left:32px;margin:5px 0 0;}
   .pt .alert li{flex-wrap:wrap;}
   .pt .alert .acts{flex-basis:100%;justify-content:flex-start;padding-left:32px;margin-top:4px;}
+  /* ─────────────────────────────────────────────────────────────────────
+     LE INTESTAZIONI, SU SCHERMO STRETTO
+     ─────────────────────────────────────────────────────────────────────
+     Su un telefono ogni pixel dell'intestazione appartiene al testo. La
+     righetta decorativa di `h2::after` non c'è: la sua ragione d'essere è
+     riempire lo spazio che avanza, e qui non avanza niente. Con lei via, e
+     col pulsante che chiede la larghezza del proprio contenuto (vedi la
+     nota in components.css), il titolo torna su una o due righe.
+
+     Il contatore può andare a capo insieme al resto invece di schiacciare
+     il titolo: `flex-wrap` sul pulsante non lo sposta quando c'è posto —
+     scende solo quando altrimenti non ci starebbe. */
+  .pt h2::after{display:none;}
+  .pt h2 > button.foldbtn{flex-wrap:wrap;}
   /* bersagli più generosi per il dito */
   .pt button.tiny{min-height:34px;padding:7px 12px;}
   .pt .slot{min-height:30px;padding:5px 10px;}
@@ -60,8 +74,17 @@
   .pt .navprim.basso button::before{width:21px;height:21px;}
   .pt .toolsedit[data-act="digest"]{display:none;}
   .pt .fabmenu{bottom:calc(74px + env(safe-area-inset-bottom,0px));}
-  /* spazio perché l'ultima scheda non finisca sotto la barra */
-  .pt .wrap{padding-bottom:78px;}
+  /* Spazio perché l'ultima scheda non finisca sotto la barra.
+     DIFETTO CORRETTO — erano 78px fissi, mentre la barra CRESCE con la
+     safe area: il suo riempimento è `calc(6px + env(safe-area-inset-bottom))`.
+     Su un telefono senza inset i due numeri tornano — misurato, barra alta
+     68px e 78 di spazio, dieci pixel di margine — ma su un dispositivo con
+     una tacca in basso la barra si alza di venti o trenta pixel e quello
+     spazio se lo mangia, coprendo l'ultima riga. Ora lo spazio segue la
+     stessa quantità della barra. Non si può misurare in emulazione: qui
+     l'inset è zero, e questo è il motivo per cui il difetto è latente e non
+     visibile negli scatti. */
+  .pt .wrap{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px));}
   .pt .notes{bottom:calc(74px + env(safe-area-inset-bottom,0px));}
 
   /* schermate a tutta pagina: niente riquadro, occupano lo schermo */

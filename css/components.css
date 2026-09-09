@@ -246,7 +246,36 @@
 .pt [data-ico="impostazioni"]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%207h9M17%207h3M4%2017h3M11%2017h9%22%2F%3E%3Ccircle%20cx%3D%2215%22%20cy%3D%227%22%20r%3D%222.2%22%2F%3E%3Ccircle%20cx%3D%228%22%20cy%3D%2217%22%20r%3D%222.2%22%2F%3E%3C%2Fsvg%3E");}
 .pt .focus h2::before{background-color:var(--brass);}
 .pt h2 > span:first-of-type{flex:none;}
-.pt h2::after{content:"";flex:1;height:1px;order:1;margin:0 6px;
+/* ─────────────────────────────────────────────────────────────────────────
+   LA RIGHETTA DECORATIVA NON È UN CLAIMANT DELLA LARGHEZZA
+   ─────────────────────────────────────────────────────────────────────────
+
+   DIFETTO CORRETTO, visto su un telefono fisico e poi misurato: su schermo
+   stretto i titoli delle schede RICHIUDIBILI finivano scritti **una lettera
+   per riga**. «Sincronizzazione» su sedici righe, «La tua giornata» su
+   tredici, e la scheda alta settecento pixel per una parola.
+
+   La causa è una coppia di regole, non una sola:
+
+     - questo pseudo-elemento ha `flex:1`, che significa `1 1 0%`;
+     - `button.foldbtn` — il titolo cliccabile delle schede richiudibili —
+       aveva anch'esso `flex:1`.
+
+   Due elementi flessibili con base 0 e crescita 1 **si dividono la riga in
+   parti uguali**: misurato, 134px per uno su 319 disponibili, cioè il 42%
+   al titolo e il 42% a una decorazione. Dentro quel 42% il contatore
+   (`.cnt`, `flex:none`, non spezzabile) prendeva il resto: con «Non
+   collegata» al titolo restavano **zero pixel**, e `overflow-wrap:anywhere`
+   — messo per MOB-002, contro i titoli senza spazi — spezzava per lettera.
+
+   Le intestazioni NON richiudibili non hanno mai avuto il problema, perché
+   il loro titolo è `flex:none`: la righetta prende solo quel che resta. È
+   la controprova dentro la stessa schermata, e dice dov'era il difetto.
+
+   Qui la righetta resta ciò che è — un avanzo — e sotto i 640px non c'è
+   affatto: su un telefono ogni pixel appartiene al testo, e una decorazione
+   che si mangia il 42% del titolo non è una decorazione, è un difetto. */
+.pt h2::after{content:"";flex:1 1 0;min-width:0;height:1px;order:1;margin:0 6px;
     background:linear-gradient(90deg,var(--line),transparent);}
 .pt h2 > span:not(:first-of-type){order:2;}
 .pt h2 .segnale{flex:none;order:2;width:8px;height:8px;border-radius:50%;margin-right:-4px;
@@ -905,10 +934,19 @@
 .pt .filtroaree button[data-area="lavoro"][data-on="1"]{color:var(--pen);box-shadow:inset 0 -3px 0 var(--pen);}
 .pt .filtroaree button[data-area="vita"][data-on="1"]{color:var(--sage);box-shadow:inset 0 -3px 0 var(--sage);}
 /* ---------- anteprima sfumata delle sezioni chiuse ---------- */
+/* L'anteprima di una sezione chiusa scorre dentro 150px, e sul telefono si
+   fermava a metà voce: nello scatto dal dispositivo la prima riga era
+   tagliata in orizzontale. Non è il taglio a essere sbagliato — l'elenco
+   scorre di proposito, per non perdere di vista cosa contiene una sezione
+   chiusa — è il punto in cui si fermava. Con l'agganciamento l'elenco si
+   posa sempre sul bordo di una voce, mai a metà. `proximity` e non
+   `mandatory`: aggancia quando è vicino, e non contrasta chi scorre. */
 .pt .anteprima-chiusa{position:relative;max-height:150px;overflow-y:auto;
   -webkit-overflow-scrolling:touch;margin:2px 0 0;list-style:none;
   padding:0 0 26px;      /* la sfumatura deve cadere sul vuoto, non sul testo */
+  scroll-snap-type:y proximity;
   scrollbar-width:thin;}
+.pt .anteprima-chiusa > li{scroll-snap-align:start;}
 /* la sfumatura sta sul contenitore, non dentro l'elenco che scorre:
    altrimenti scorrerebbe insieme al contenuto */
 .pt .antewrap{position:relative;}
@@ -1121,7 +1159,14 @@
 /* `min-height` perché il bersaglio arrivi a 24px: era alto 20, ed è il
    comando che apre e chiude una sezione intera. Il riempimento resta a zero
    per non spostare il titolo dalla sua colonna. */
-.pt h2 > button.foldbtn{display:flex;align-items:center;gap:9px;flex:1;min-width:0;
+/* `flex:1 1 auto`, non `flex:1`. La differenza è la BASE: `flex:1` vale
+   `1 1 0%`, e con base zero questo pulsante si spartiva la riga in parti
+   uguali con la righetta decorativa di `h2::after`, che ha la stessa
+   crescita. Con base `auto` chiede la larghezza del proprio contenuto, e
+   la decorazione prende soltanto quello che avanza — fino a zero.
+   Misurato prima: pulsante 134px su 319 a parità di riga con l'ornamento,
+   e nove intestazioni su ventotto scritte su tre righe o più. */
+.pt h2 > button.foldbtn{display:flex;align-items:center;gap:9px;flex:1 1 auto;min-width:0;
   min-height:24px;
   background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;
   text-align:left;cursor:pointer;}

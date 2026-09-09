@@ -59,9 +59,22 @@
 .pt .tourcard > .chiudi{position:absolute;top:9px;right:9px;}
 
 @media (max-width:640px){
-  /* su telefono il riquadro sta sempre in basso, dove arriva il pollice, e
-     non copre la barra di navigazione fissa */
-  .pt .tourcard,.pt .tourcard[data-ancora="sotto"],.pt .tourcard[data-ancora="sopra"]{
+  /* Su telefono il riquadro sta sempre in basso, dove arriva il pollice, e
+     sopra la barra di navigazione fissa.
+
+     DIFETTO CORRETTO — l'elenco qui sotto non nominava `[data-ancora="basso"]`,
+     e quella è la variante che il codice sceglie quando il bersaglio è più
+     alto dello spazio libero: proprio il caso frequente su telefono. La
+     regola di base `.pt .tourcard[data-ancora="basso"]{bottom:16px}` ha un
+     selettore d'attributo, quindi è PIÙ SPECIFICA di `.pt .tourcard` e
+     vinceva anche dentro questa media query. Misurato: riquadro con il
+     bordo inferiore a 796px su una finestra di 812, cioè 52px sopra la
+     barra — che copriva, invece di starle sopra. Le varianti vanno nominate
+     tutte, altrimenti la specificità decide al posto nostro. */
+  .pt .tourcard,
+  .pt .tourcard[data-ancora="sotto"],
+  .pt .tourcard[data-ancora="sopra"],
+  .pt .tourcard[data-ancora="basso"]{
     top:auto;bottom:calc(78px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);}
   .pt .tourcard[data-ancora="centro"]{top:auto;transform:translateX(-50%);}
   .pt .tourazioni .link{margin-left:0;flex-basis:100%;}
