@@ -41,6 +41,47 @@
 .pt .noteact .chiudi:hover{background-color:var(--ink);}
 .pt .noteact .tiny{text-transform:uppercase;letter-spacing:.1em;font-size:11px;
     font-weight:700;padding:7px 13px;}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   IL BANNER, SU TELEFONO
+   ─────────────────────────────────────────────────────────────────────────
+
+   DIFETTO CORRETTO, visto su un telefono e poi misurato a 393 e 375px: il
+   banner «C'è una versione nuova del pannello» aveva il titolo in una
+   colonna di **65px** (47 a 375), su cinque o sei righe, con la descrizione
+   che continuava in verticale e finiva **dietro la barra di navigazione**.
+
+   Tre cause, e la prima è di cascata.
+
+   1. `bottom`. Qui sopra vale 12px, e `css/mobile.css` provava a
+      correggerlo due volte — `calc(74px + env(...))` sotto i 640px e `8px`
+      sotto i 430 — ma questo foglio si carica DOPO mobile.css, quindi
+      vincevano i 12px e nessuna delle due regole ha mai avuto effetto.
+      Misurato: `bottom` calcolato = 12px, e la barra è alta 68. Le due
+      regole morte sono state togliete di là; la regola viva è questa, che
+      sta accanto alla dichiarazione che deve correggere.
+
+   2. `margin-right:66px`, in mobile.css, riservava spazio al pulsante
+      rotondo — che su telefono è `display:none` da quando esiste la barra
+      in basso. Sessantasei pixel tolti al testo per un pulsante che non
+      c'è.
+
+   3. La riga desktop — icona, testo, azioni — restava una riga sola: le
+      azioni sono `flex:none` e occupavano 130px dei 283 disponibili. Ora
+      vanno a capo, con lo stesso schema già usato per le pastiglie delle
+      righe in mobile.css: scendono sotto, allineate a destra, e il testo
+      prende la larghezza intera.
+
+   Nessun testo rimpicciolito, nessun pulsante rimosso, nessuna parola
+   spezzata a forza. */
+@media (max-width:640px){
+  .pt .notes{
+    bottom:calc(78px + env(safe-area-inset-bottom,0px));
+    margin-right:0;
+  }
+  .pt .note{flex-wrap:wrap;}
+  .pt .noteact{flex-basis:100%;justify-content:flex-end;margin-top:4px;}
+}
 .pt .tiny.pos{color:var(--sage-testo);border-color:hsl(160 25% 40%);background:hsl(160 40% 96%);}
 .pt .tiny.pos:hover{background:var(--sage);border-color:var(--sage);color:#fff;}
 .pt .tiny.warn2{color:#8A6A16;border-color:hsl(42 45% 37%);background:hsl(44 70% 95%);}

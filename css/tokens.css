@@ -1,4 +1,42 @@
 /* tokens.css — variabili: colori, caratteri, ombre, temi chiaro e scuro */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DIRE AL BROWSER CHE IL TEMA SCURO ESISTE GIÀ
+   ─────────────────────────────────────────────────────────────────────────
+
+   DIFETTO CORRETTO, e la causa non era nei colori del pannello.
+
+   Su un telefono Android le icone della barra in basso comparivano quasi
+   nere su fondo scuro, con le etichette invece leggibili; il cerchio ottone
+   del banner diventava un bordeaux; la pastiglia della voce attiva un grigio
+   medio che questo foglio non contiene. Misurato in emulazione, con i temi
+   veri del pannello, il contrasto di quelle icone è 8,72:1 in tema scuro e
+   9,79:1 in tema chiaro — e icona ed etichetta hanno lo STESSO colore,
+   perché l'icona è `background-color:currentColor` dentro una maschera.
+
+   Il colpevole è il tema scuro AUTOMATICO del browser. Chrome su Android lo
+   applica alle pagine che **non dichiarano** di sapere stare al buio:
+   inverte i fondi con un algoritmo e lascia stare ciò che considera
+   immagine — e un'icona disegnata come maschera su un colore di fondo è
+   trattata così. Il risultato è esattamente quello degli scatti: superfici
+   invertite, testo invertito, icone no.
+
+   `color-scheme` è la dichiarazione con cui una pagina dice «i due schemi li
+   gestisco io»: da lì il browser smette di inventarne uno. Il valore segue
+   il tema scelto nel pannello, perché è quello che decide come devono
+   comparire anche i comandi nativi — campi data e ora, menù a tendina, barre
+   di scorrimento. Con «Auto» seguono il sistema; con «Chiaro» o «Scuro»
+   seguono la scelta dell'utente, non quella del telefono.
+
+   Nessun colore nuovo, e nessun colore toccato: i due temi restano quelli
+   misurati. Va detto anche il limite: **questo non è verificabile in
+   emulazione.** Qui il tema automatico del browser non esiste, e la prova
+   che si può scrivere è che la dichiarazione ci sia e valga il tema giusto. */
+:root{ color-scheme: light dark; }
+.pt[data-theme="chiaro"]{ color-scheme: light; }
+.pt[data-theme="scuro"]{ color-scheme: dark; }
+.pt[data-theme="auto"]{ color-scheme: light dark; }
+
 .pt{
   --bg1:#E9EDEF;--bg2:#DAE1E4;--grid:rgba(15,27,36,.032);
   --surface:#FCFDFD;--field:#FFFFFF;--agbg:#F1F4F5;--selbg:hsl(202 55% 96%); --track:rgba(15,27,36,.07);

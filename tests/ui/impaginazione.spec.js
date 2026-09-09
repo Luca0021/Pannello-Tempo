@@ -289,6 +289,153 @@ test.describe('impaginazione · le intestazioni su schermo stretto', () => {
   }
 });
 
+/* ─────────────────────────────────────────────────────────────────────────
+   IL BANNER DELL'AGGIORNAMENTO, SU TELEFONO
+   ─────────────────────────────────────────────────────────────────────────
+
+   Da uno scatto su telefono: il titolo «C'è una versione nuova del pannello»
+   in una colonna di 65px, su cinque righe, con la descrizione che continuava
+   in verticale e finiva dietro la barra di navigazione.
+
+   Tre cause misurate, una delle quali di cascata: `bottom:12px` dichiarato
+   in accessibility.css vinceva sulle due regole di mobile.css, che si
+   contraddicevano fra loro e non hanno mai avuto effetto; un
+   `margin-right:66px` riservava spazio a un pulsante nascosto su telefono;
+   e la riga desktop non andava a capo, con le azioni a `flex:none` che si
+   prendevano 130px su 283. */
+test.describe('impaginazione · il banner dell\'aggiornamento', () => {
+  for (const largo of [320, 375, 393]) {
+    test(`a ${largo}px il banner è leggibile e non copre la barra`, async ({ page }) => {
+      await page.setViewportSize({ width: largo, height: 812 });
+      await apri(page, 'chiaro');
+      await page.evaluate(() => {
+        /* lo stato che il service worker imposta quando trova una versione
+           nuova: è l'unico modo di far comparire questo banner */
+        S.aggiornamento = true;
+        render();
+      });
+      await page.waitForTimeout(300);
+      /* il banner è `sticky`: si aggancia in basso quando la pagina è in
+         fondo, ed è là che va misurato */
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForTimeout(350);
+
+      const m = await page.evaluate(() => {
+        const nota = document.querySelector('#app .note-undo');
+        if (!nota) return { assente: true };
+        const nav = document.querySelector('#app .navprim.basso');
+        const r = nota.getBoundingClientRect();
+        const nr = nav ? nav.getBoundingClientRect() : null;
+        const tx = nota.querySelector('.notetx');
+        const tit = tx ? tx.querySelector('b') : null;
+        const sub = tx ? tx.querySelector('.sub') : null;
+        const bot = nota.querySelector('.noteact .tiny');
+        const chiudi = nota.querySelector('.noteact .chiudi');
+        const lh = tit ? (parseFloat(getComputedStyle(tit).lineHeight) ||
+                          parseFloat(getComputedStyle(tit).fontSize) * 1.35) : 0;
+        return {
+          larghezza: Math.round(r.width),
+          basso: Math.round(r.bottom),
+          navTop: nr ? Math.round(nr.top) : null,
+          titoloRighe: (tit && lh) ? Math.round(tit.getBoundingClientRect().height / lh) : null,
+          titoloW: tit ? Math.round(tit.getBoundingClientRect().width) : null,
+          colonnaTesto: tx ? Math.round(tx.getBoundingClientRect().width) : null,
+          descrizioneSopraLaBarra: (sub && nr) ? sub.getBoundingClientRect().bottom <= nr.top + 1 : null,
+          pulsante: bot ? { w: Math.round(bot.getBoundingClientRect().width),
+                            h: Math.round(bot.getBoundingClientRect().height),
+                            testo: (bot.textContent || '').trim() } : null,
+          chiudi: chiudi ? { w: Math.round(chiudi.getBoundingClientRect().width),
+                             h: Math.round(chiudi.getBoundingClientRect().height) } : null,
+          scorrimento: document.documentElement.scrollWidth - document.documentElement.clientWidth
+        };
+      });
+
+      expect(m.assente, 'il banner deve comparire').toBeUndefined();
+      /* 15 — il titolo. Cinque righe in una colonna di 65px era il difetto;
+         due righe su schermo da 320px sono un titolo lungo che va a capo. */
+      expect(m.titoloRighe, '15 — il titolo del banner sta in due righe al massimo').toBeLessThanOrEqual(2);
+      /* 16 — la colonna del testo prende la maggior parte del banner: era
+         il 23%, perché le azioni non andavano a capo */
+      expect(Math.round(m.colonnaTesto * 100 / m.larghezza),
+        '16 — al testo del banner almeno il 60% della larghezza').toBeGreaterThanOrEqual(60);
+      /* 17 — la barra fissa non deve coprirlo: `bottom` era 12px contro una
+         barra alta 68 */
+      expect(m.basso, '17 — il banner sta sopra la barra di navigazione').toBeLessThanOrEqual(m.navTop);
+      expect(m.descrizioneSopraLaBarra, '18 — e la descrizione si legge per intero').toBe(true);
+      /* 19 — i due comandi restano quelli, con i loro bersagli */
+      expect(m.pulsante.testo.toLowerCase(), '19 — il pulsante per aggiornare c\'è').toContain('aggiorna');
+      expect(m.pulsante.h, '20 — e il suo bersaglio non è stato ridotto').toBeGreaterThanOrEqual(30);
+      expect(m.chiudi.h, '21 — la chiusura resta 28px o più').toBeGreaterThanOrEqual(28);
+      expect(m.scorrimento, '22 — nessuno scorrimento orizzontale').toBeLessThanOrEqual(1);
+    });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────────────
+   DUE COSE CHE SI DICHIARANO, E CHE NESSUNA MISURA DI GEOMETRIA VEDE
+   ───────────────────────────────────────────────────────────────────────── */
+test.describe('impaginazione · dichiarazioni', () => {
+  test.use({ viewport: VIEWPORT.telefono });
+
+  test('il documento dichiara di sapere stare al buio', async ({ page }) => {
+    await apri(page, 'auto');
+    /* Senza `color-scheme` il tema scuro AUTOMATICO del browser Android
+       inverte la pagina con un algoritmo e lascia stare le maschere: le
+       icone della barra restano scure su fondo diventato scuro. È la causa
+       dello scatto dal telefono, e non è riproducibile in emulazione —
+       quello che si può verificare è che la dichiarazione ci sia, e che
+       segua il tema scelto nel pannello. */
+    const d = await page.evaluate(() => {
+      const app = document.getElementById('app');
+      const leggi = (t) => { P.theme = t; savePrefs(); render();
+        return getComputedStyle(document.getElementById('app')).colorScheme; };
+      return {
+        radice: getComputedStyle(document.documentElement).colorScheme,
+        auto: leggi('auto'), chiaro: leggi('chiaro'), scuro: leggi('scuro'),
+        attributo: app.getAttribute('data-theme')
+      };
+    });
+    expect(d.radice, '23 — la radice dichiara i due schemi').toContain('dark');
+    expect(d.auto, '24 — con «Auto» il pannello segue il sistema').toContain('dark');
+    expect(d.chiaro, '25 — con «Chiaro» i comandi nativi restano chiari').toBe('light');
+    expect(d.scuro, '26 — con «Scuro» restano scuri').toBe('dark');
+  });
+
+  test('nessuna icona è un quadrato pieno', async ({ page }) => {
+    await apri(page, 'chiaro');
+    await page.evaluate(() => {
+      P.fold = {};
+      ['settings', 'setrit', 'setcal', 'setsync', 'setpausa', 'setind', 'setmod',
+       'setics', 'setpiano', 'setinfo', 'setpriv'].forEach(k => { P.fold[k] = false; });
+      setImp('modo', 'avanzata');
+      savePrefs();
+      commit();
+    });
+    await page.waitForTimeout(400);
+    /* `data-ico="sereno"` era usato dal codice e non definito da nessun
+       foglio: per un `h2::before` una `--ico` mancante non fa sparire
+       l'icona, lascia il riempimento — un quadrato ottone di 20px, ben
+       visibile negli scatti. */
+    const quadrati = await page.evaluate(() => {
+      const out = [];
+      for (const el of document.querySelectorAll('#app [data-ico]')) {
+        const v = el.getAttribute('data-ico');
+        if (!v) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) continue;
+        const pre = getComputedStyle(el, '::before');
+        if (pre.display === 'none' || pre.content === 'none') continue;
+        const mascherata = /url\(/.test(pre.maskImage || pre.webkitMaskImage || '');
+        const dipinta = pre.backgroundColor && !/rgba\(0, 0, 0, 0\)/.test(pre.backgroundColor);
+        if (!mascherata && dipinta)
+          out.push({ ico: v, fondo: pre.backgroundColor, w: pre.width });
+      }
+      return out;
+    });
+    expect(quadrati, '27 — nessun data-ico dipinto senza maschera').toEqual([]);
+  });
+});
+
 test.describe('impaginazione · agenda del giorno', () => {
   test.use({ viewport: VIEWPORT.desktop });
 

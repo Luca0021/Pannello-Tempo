@@ -395,6 +395,89 @@ un'altra cosa: **il difetto non è stato introdotto dal lavoro sul primo
 accesso.** È nella build in rete da prima, e ci è voluto un telefono vero
 per vederlo.
 
+## 5-ter. Il secondo giro sul telefono: tre difetti, e uno non era nostro
+
+Due scatti dopo la pubblicazione, sulla build `e9005f8`. Segnalati due
+problemi; misurandoli sono diventati tre, e il primo ha una causa che non
+sta nei colori del pannello.
+
+### a) Le icone della barra: colpa del tema scuro automatico del browser
+
+Nello scatto le icone di Agenda, Nuovo e Riepilogo sono quasi nere sul fondo
+scuro, mentre le loro etichette si leggono; il cerchio ottone del banner è
+un bordeaux; la pastiglia della voce attiva un grigio medio che questo
+progetto non contiene.
+
+**Misurato in emulazione, coi temi veri del pannello:**
+
+| | tema scuro | tema chiaro |
+|---|---|---|
+| icone delle voci non attive | **8,72:1** | **9,79:1** |
+| etichette delle voci non attive | 8,72:1 | 9,79:1 |
+| voce attiva | 10,97:1 | 15,99:1 |
+
+Icona ed etichetta hanno lo **stesso** contrasto, perché l'icona è
+`background-color:currentColor` dentro una maschera: prende il colore del
+testo. Nei nostri temi il difetto non esiste.
+
+Il colpevole è il **tema scuro automatico** di Chrome su Android. Si applica
+alle pagine che non dichiarano `color-scheme`: inverte i fondi con un
+algoritmo e lascia stare ciò che considera immagine — e un'icona disegnata
+come maschera su un colore di fondo è trattata così. Da qui la firma esatta
+degli scatti: superfici invertite, testo invertito, icone no, ottone virato.
+
+Verificato: `getComputedStyle(:root).colorScheme` era **`normal`**, cioè il
+documento non dichiarava niente, pur avendo un tema scuro completo scritto a
+mano. Ora `:root` dichiara `light dark`, e il valore segue il tema scelto nel
+pannello (`chiaro` → `light`, `scuro` → `dark`, `auto` → `light dark`), così
+anche i comandi nativi — campi data e ora, menù, barre di scorrimento —
+seguono la scelta dell'utente e non quella del telefono.
+
+**Il limite, dichiarato:** questo non è riproducibile in emulazione. La prova
+che si può scrivere è che la dichiarazione ci sia e valga il tema giusto, ed
+è quella che c'è. La prova sul contrasto delle icone **non avrebbe trovato
+questo difetto** — passa anche sulla build rotta — e serve a un'altra cosa:
+garantire che icona ed etichetta restino allo stesso livello.
+
+### b) Il banner dell'aggiornamento: tre cause, una di cascata
+
+| | prima | dopo |
+|---|---|---|
+| colonna del titolo, 393px | **65px**, 5 righe | **274px**, 1 riga |
+| colonna del titolo, 375px | 47px, 6 righe | 256px, 1 riga |
+| quota della larghezza al testo | 23% | **78%** |
+| `bottom` calcolato | **12px**, contro una barra alta 68 | 78px + safe area |
+| descrizione | tagliata dalla barra | interamente leggibile |
+
+1. **Cascata.** `accessibility.css` dichiara `.pt .notes{bottom:12px}` e si
+   carica **dopo** `mobile.css`, che provava a correggerlo due volte —
+   `calc(74px + env(...))` sotto i 640px e `8px` sotto i 430. Stessa
+   specificità, foglio successivo: **entrambe morte**, e in più si
+   contraddicevano fra loro. La regola viva sta ora accanto a quella che
+   deve correggere.
+2. **`margin-right:66px`** riservava spazio al pulsante rotondo, che su
+   telefono è `display:none` da quando esiste la barra in basso.
+   Sessantasei pixel tolti al testo per niente.
+3. **La riga desktop non andava a capo:** le azioni sono `flex:none` e si
+   prendevano 130px su 283. Ora scendono su una riga propria, allineate a
+   destra, con lo stesso schema già usato per le pastiglie delle righe.
+
+Nessun testo rimpicciolito, nessun pulsante rimosso, nessun bersaglio
+ridotto: «AGGIORNA» resta 96×34 e la chiusura 28×28.
+
+### c) Un'icona che era un quadrato
+
+`data-ico="sereno"` — usata da «Imparare il pannello» e dalle due schede
+della modalità scoperta — **non era definita in nessun foglio**. Per la barra
+di navigazione una `--ico` mancante fa sparire l'icona, e il commento di
+quella regola lo dichiara; per un `h2::before` no: senza maschera resta il
+riempimento, cioè un quadrato ottone di 20px. Verificato: `--ico` non
+definita, `mask-image:none`, riquadro pieno di `rgb(190,140,54)`.
+
+Definita, nello stile delle altre ventidue. E una prova nuova guarda **ogni**
+`data-ico` disegnato: se è dipinto e non mascherato, fallisce. Sul sito
+pubblicato quella prova fallisce, riportando il colore del quadrato.
+
 ## 6. Che cosa questo documento non dice
 
 - **Non dice che l'impaginazione è finita.** Dice che nove misure su dodici

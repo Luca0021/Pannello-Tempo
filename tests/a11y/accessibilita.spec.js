@@ -424,6 +424,72 @@ test.describe('A11Y · contrasto misurato, non stimato', () => {
     expect(esito.falliti, 'comandi che non si distinguono dal fondo (min 3:1)').toEqual([]);
   });
 
+  /* ─────────────────────────────────────────────────────────────────────
+     LE ICONE DELLA BARRA IN BASSO, NEI TRE TEMI
+     ─────────────────────────────────────────────────────────────────────
+     Da uno scatto su telefono: le icone di Agenda, Nuovo e Riepilogo
+     comparivano quasi nere sul fondo scuro, mentre le loro etichette si
+     leggevano bene. Icona ed etichetta devono avere ENTRAMBE un contrasto
+     adeguato — un'etichetta leggibile accanto a un'icona invisibile non è
+     una barra leggibile.
+
+     L'icona è `background-color:currentColor` dentro una maschera, quindi
+     prende lo stesso colore del testo: questa prova serve a garantire che
+     resti così, e a misurarlo invece di dedurlo. Misurato: 8,72:1 in tema
+     scuro, 9,79:1 in chiaro; la voce attiva 10,97 e 15,99.
+
+     La causa vera di quello scatto era un'altra e sta in tokens.css: il
+     documento non dichiarava `color-scheme`, e il tema scuro AUTOMATICO del
+     browser Android invertiva la pagina lasciando stare le maschere. Quello
+     non è misurabile qui — l'emulazione non ha quella funzione — e la prova
+     che la dichiarazione esista sta in tests/ui/impaginazione.spec.js. */
+  for (const [tema, schema] of [['auto', 'dark'], ['scuro', 'dark'], ['chiaro', 'light']]) {
+    test(`1.4.3 e 1.4.11 · barra in basso, icone ed etichette (tema ${tema})`, async ({ page }) => {
+      await page.setViewportSize({ width: 393, height: 812 });
+      await page.emulateMedia({ colorScheme: schema });
+      await apri(page);
+      await page.evaluate((t) => { P.theme = t; savePrefs(); render(); }, tema);
+      await page.waitForTimeout(300);
+      await page.evaluate(MISURE);
+      const esito = await page.evaluate(() => {
+        const nav = document.querySelector('#app .navprim.basso');
+        if (!nav) return { assente: true };
+        const voci = [];
+        nav.querySelectorAll('button').forEach(b => {
+          if (!__M.visibile(b)) return;
+          const cs = getComputedStyle(b);
+          const pre = getComputedStyle(b, '::before');
+          const bs = __M.fondi(b);
+          const contrasto = (col) => {
+            const c = __M.P(col);
+            if (!c || c.a === 0) return 0;
+            let peggio = 99;
+            bs.forEach(x => { const f = c.a < 1 ? __M.S(c, x) : c; const r = __M.R(f, x); if (r < peggio) peggio = r; });
+            return Math.round(peggio * 100) / 100;
+          };
+          voci.push({
+            nome: (b.textContent || '').trim().slice(0, 12),
+            icona: contrasto(pre.backgroundColor),
+            etichetta: contrasto(cs.color),
+            /* un'icona senza maschera è un quadrato pieno, non un'icona */
+            mascherata: /url\(/.test(pre.maskImage || pre.webkitMaskImage || '')
+          });
+        });
+        return { voci };
+      });
+      expect(esito.assente, 'la barra in basso deve esserci a 393px').toBeUndefined();
+      expect(esito.voci.length, 'le quattro voci della barra').toBe(4);
+      /* le icone sono elementi non testuali: la soglia è 3:1 (1.4.11) */
+      expect(esito.voci.filter(v => v.icona < 3),
+        'icone della barra sotto 3:1').toEqual([]);
+      /* le etichette sono testo piccolo: 4,5:1 (1.4.3) */
+      expect(esito.voci.filter(v => v.etichetta < 4.5),
+        'etichette della barra sotto 4,5:1').toEqual([]);
+      expect(esito.voci.filter(v => !v.mascherata),
+        'icone senza maschera: comparirebbero come quadrati pieni').toEqual([]);
+    });
+  }
+
   test('2.5.8 · nessun bersaglio piccolo E affollato', async ({ page }) => {
     await page.evaluate(MISURE);
     const esito = await page.evaluate(() => {

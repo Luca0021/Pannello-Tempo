@@ -53,8 +53,14 @@
   /* la settimana resta leggibile scorrendo, invece di comprimersi a strisce */
   .pt .wkscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .pt .wkgrid{min-width:560px;}
-  /* la striscia in fondo non finisce sotto il pulsante rotondo */
-  .pt .notes{margin-right:66px;}
+  /* Qui c'era `.pt .notes{margin-right:66px}`, «perché la striscia non
+     finisca sotto il pulsante rotondo». Ma il pulsante rotondo su telefono
+     è `display:none` da quando esiste la barra in basso — due regole più
+     giù — quindi erano sessantasei pixel tolti al testo del banner per
+     lasciare posto a niente. Misurato: la colonna del titolo scendeva a
+     65px e il titolo finiva su cinque righe. Il margine ora è azzerato
+     nella regola che governa il banner su telefono, in accessibility.css,
+     dove sta anche la spiegazione. */
   .pt .wrap[data-notes="1"] .fab{bottom:14px;}
   /* Su telefono la barra in basso contiene già «Nuovo» e «Riepilogo»:
      il pulsante rotondo e l'icona del riepilogo nella barra alta erano
@@ -85,7 +91,12 @@
      l'inset è zero, e questo è il motivo per cui il difetto è latente e non
      visibile negli scatti. */
   .pt .wrap{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px));}
-  .pt .notes{bottom:calc(74px + env(safe-area-inset-bottom,0px));}
+  /* La riga che stava qui — `.pt .notes{bottom:calc(74px + env(...))}` — non
+     ha mai avuto effetto: `css/accessibility.css` si carica DOPO questo
+     foglio e vi dichiara `.pt .notes{bottom:12px}` con la stessa
+     specificità. Misurato: `bottom` calcolato = 12px, e la barra in basso è
+     alta 68. La regola viva sta ora accanto a quella che deve correggere,
+     in accessibility.css. */
 
   /* schermate a tutta pagina: niente riquadro, occupano lo schermo */
   .pt .schermata{padding:0 0 24px;}
@@ -101,7 +112,12 @@
   .pt .card{padding:15px var(--cardpad);}
     .pt .tool{padding:2px 10px;}
   .pt li{gap:8px;}
-  .pt .notes{bottom:8px;}
+  /* E qui c'era `.pt .notes{bottom:8px}`, che contraddiceva la regola del
+     blocco sopra e non ha mai avuto effetto per la stessa ragione di
+     cascata. Otto pixel dal fondo avrebbero messo il banner DIETRO la barra
+     di navigazione, alta 68: due regole morte che si contraddicevano fra
+     loro, ed è il motivo per cui nessuno si era accorto che il banner
+     finiva coperto. */
   .pt .note{padding:11px 12px;gap:10px;}
   .pt .hero{gap:12px;}
   .pt .ring{width:62px;height:62px;}
