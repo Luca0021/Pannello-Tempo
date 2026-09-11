@@ -205,7 +205,7 @@ quali sezioni esistono.
 | file | prove | che cosa copre |
 |---|---|---|
 | `tests/unit/profili.test.js` | 33 | identità dei tre profili, i cinque rami di `moduloAttivo`, precedenza delle scelte esplicite, dipendenze, compatibilità con impostazioni senza le due chiavi, provenienza, anteprima del ripristino, ripristino che non tocca i dati, separazione dai piani |
-| `tests/ui/profili.spec.js` | 18 | che il comando della modalità esista nella pagina, che il profilo non la muova, che l'ingresso la mostri e la applichi, che la conferma preceda l'azione e nomini le parti, che annullare non cambi niente, che la provenienza si legga |
+| `tests/ui/profili.spec.js` | 30 | che il comando della modalità esista nella pagina, che il profilo non la muova, che l'ingresso la mostri e la applichi, che la conferma preceda l'azione e nomini le parti, che annullare non cambi niente, che la provenienza si legga — e le stesse cose **a 320, 375, 393px e a zoom 200%**, nei due temi (§7) |
 
 ### Controprova
 
@@ -247,7 +247,116 @@ collisione. Nessun modulo JavaScript è stato aggiunto, quindi `js/ORDINE.txt`,
   erano già state dimenticate al primo cambio. Il comportamento non è
   cambiato: è dichiarato in anticipo dall'anteprima («Dimentica *N* scelte
   fatte a mano»), e ora anche da una prova.
-- **Nessuna verifica su telefono fisico** per questo intervento: le modifiche
-  visibili sono due gruppi di comandi e una scheda di conferma, tutti già
-  coperti dalle prove di impaginazione e accessibilità alle larghezze da 320px
-  in su, ma una pipeline verde non è una verifica su un telefono vero.
+- **Nessuna verifica su telefono fisico** per questo intervento, e una
+  pipeline verde non è una verifica su un telefono vero.
+
+> **AFFERMAZIONE CORRETTA.** La prima versione di questo elenco diceva che le
+> modifiche visibili erano «tutti già coperti dalle prove di impaginazione e
+> accessibilità alle larghezze da 320px in su». **Non era vero**, e il §7
+> racconta che cosa si è trovato andando a guardare: quelle suite spazzano la
+> pagina *a riposo*, e i tre stati introdotti qui non esistono a riposo.
+
+---
+
+## 7. Gli stessi stati, su uno schermo da telefono
+
+`tests/ui/profili.spec.js` girava soltanto a 1280×900. Non era una
+dimenticanza innocua: i tre stati che il commit ha introdotto **non esistono
+nella pagina a riposo** — il comando della modalità sta in fondo a otto
+sezioni di impostazioni, il badge «scelta tua» compare solo con una
+personalizzazione, la scheda di conferma solo dopo un clic. Nessuna delle
+suite che misurano a 320, 375 e 393px li aveva quindi mai visti, e la loro
+verdura non diceva niente su di essi.
+
+Il censimento — cinque larghezze per due temi, più il passo dell'ingresso
+guidato — ha prodotto 45 segnalazioni. Vagliate: **due difetti veri, un
+allarme del mio strumento di misura, e una crescita dichiarata.**
+
+### 7.1 La conferma nasceva fuori dallo schermo
+
+La scheda dei profili sta in fondo alle impostazioni, quindi al momento del
+clic la pagina è scorsa di quasi settemila pixel; la scheda di conferma viene
+però disegnata in cima, nella zona «priorità».
+
+Misurato a 393×852: dialogo a **5618 pixel sopra il bordo della vista**, fuoco
+rimasto sul pulsante premuto. Premere «Torna al preset» non produceva niente
+di visibile. Lo stesso a 1280×900 (−3387px): non era un problema di telefono,
+era un problema che solo una prova *non* fatta a pagina ferma poteva trovare.
+
+`S.inCima` non bastava — riporta a zero, e il dialogo sta a y 1636 — quindi si
+usa l'ancora, che nel pannello esiste proprio per questo: `riporta()` scorre
+finché l'elemento non ha il `top` richiesto nella vista. Il fuoco entra nel
+dialogo, che ha ricevuto `tabindex="-1"`: un `role="alertdialog"` che non
+riceve il fuoco viene annunciato a metà.
+
+Dopo: dialogo a `top = 12` a 320, 375, 393, 412 e 1280px, «Torna al preset»
+visibile senza scorrere, fuoco sul dialogo, zero scorrimento orizzontale.
+
+### 7.2 Il bordo del badge «scelta tua» era sotto la soglia
+
+Era `border-color: var(--brass)`, copiato da `.due-soon`, con un commento che
+dichiarava il contrasto «già coperto dalla prova di accessibilità». Non era
+vero: nessuna prova misura il bordo di uno `.slot`. Misurato: **2,95:1 in tema
+chiaro** contro il 3:1 che il progetto si è dato per il non testuale, e 6,55:1
+in tema scuro — ed è il motivo per cui guardando un tema solo non si vedeva.
+
+Ora il bordo è `currentColor`, cioè lo stesso `--brass-testo` del testo: 7,02:1
+in chiaro, 6,55:1 in scuro. Nessun colore nuovo. Lo stato resta identificato
+dalla **parola** — «scelta tua» contro «dal profilo» — e il bordo è rinforzo.
+
+### 7.3 Un allarme che era del mio strumento
+
+Il censimento segnalava «il segmento non premuto della modalità è a 1,75:1»,
+a tutte le larghezze e in tutti i temi. Era il calcolatore: raccoglieva i fondi
+risalendo gli antenati e, se il primo era semitrasparente, lo usava così com'è
+invece di comporlo su quello sotto. Il fondo `rgba(15,27,36,.07)` di `.seg`
+finiva trattato come un quasi nero.
+
+Composto bene: **8,51:1 in chiaro, 6,85:1 in scuro**. Nessun difetto. Il
+modello `.seg` è quello che il pannello usa già per «Sfondo» e non è stato
+toccato; la correzione sta nel calcolatore, che ora compone gli strati dal
+basso ed è quello che le prove nuove usano.
+
+### 7.4 Il passo del profilo è più alto di uno schermo da 320px
+
+Misurato a 320×568, confrontando col sito pubblicato che è il codice di prima:
+
+| | 24b2d87 | dopo il commit | adesso |
+|---|---|---|---|
+| altezza del passo | 762px | 1067px | **1028px** |
+| «Avanti» | y 508, sopra la piega | y 813, sotto | y 774, sotto |
+
+I 266 pixel di crescita si dividono così: **144** il beneficio dei tre profili
+— contenuto approvato, che non si toglie —, **58** la riga della modalità, **39**
+la sua didascalia, già accorciata da 78 togliendo la frase che ripeteva quello
+che la riga in cima al passo dice da sempre.
+
+«Avanti» sopra la piega a 320px **non è una regola che questo progetto si è
+dato**, e riportarlo là vorrebbe dire togliere una delle due cose che il passo
+deve dire. Non lo dichiaro corretto: lo dichiaro misurato. Quello che è una
+regola, e che le prove nuove fissano, è che a quella larghezza non ci sia
+scorrimento laterale, che niente sia tagliato, che il comando per andare
+avanti sia raggiungibile, a misura piena, e funzionante.
+
+### 7.5 Due difetti trovati e non corretti, dichiarati
+
+Il censimento ne ha trovati altri due, **entrambi precedenti a questo lavoro**
+e fuori dal perimetro di questa fase. Non li ho toccati, e non li dichiaro
+corretti:
+
+1. **Le conferme distruttive hanno lo stesso difetto della 7.1.** Misurato:
+   premendo un'azione in «Backup e dati» il dialogo nasce a 10069 pixel sopra
+   il bordo della vista. Vale per «Svuota le attività», «Cancella tutto» e le
+   altre. La correzione è la stessa riga usata qui — impostare
+   `S.ancora = { sel: '[role="alertdialog"]', top: 12 }` prima di `render()`
+   nel ramo `distr` di `js/events.js` — ma il flusso delle azioni distruttive
+   è il più delicato del pannello e non è ciò che questa fase autorizzava.
+2. **`.pt ul.linklist .sub` dichiara `word-break: break-all`**
+   (`css/components.css`), e le descrizioni delle parti si spezzano a metà
+   parola: misurate «tor|nano», «Tem|po.», «Nes|sun» a 375 e 393px, con i due
+   rettangoli del Range a prova. È il costrutto che un brief precedente ha
+   escluso come soluzione generale. La correzione sarebbe togliere
+   `word-break: break-all` lasciando `overflow-wrap`, che spezza una parola
+   solo quando non c'è altro modo — ma quella regola vale per **ogni**
+   `ul.linklist` del prodotto, e non è una riga da cambiare dentro una fase
+   sui profili.

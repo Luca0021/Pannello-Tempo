@@ -14,6 +14,48 @@ era a rischio.
 `f915fb62fff8`, **con configurazione Firebase generata dai Secrets**: sul
 sito l'Account è disponibile e funziona.
 
+### La conferma del ripristino nasceva 5618 pixel sopra lo schermo
+
+Trovato estendendo le prove dei profili alle larghezze da telefono, che è la
+lacuna che le prove avevano: giravano a 1280×900, e i tre stati introdotti dal
+commit precedente **non esistono nella pagina a riposo** — il comando della
+modalità sta in fondo a otto sezioni, il badge «scelta tua» compare solo con
+una personalizzazione, la conferma solo dopo un clic. Le suite che misurano a
+320, 375 e 393px non li avevano quindi mai visti.
+
+La scheda dei profili sta in fondo alle impostazioni, quindi al clic la pagina
+è scorsa di quasi settemila pixel; la scheda di conferma viene disegnata in
+cima. Misurato a 393×852: dialogo a 5618px **sopra** il bordo della vista e
+fuoco rimasto sul pulsante premuto. Premere «Torna al preset» non produceva
+niente di visibile. Lo stesso a 1280×900, a −3387px: non era un problema di
+telefono, era un problema che solo una prova non fatta a pagina ferma trova.
+
+`S.inCima` non bastava — riporta a zero, e il dialogo sta a y 1636 — quindi si
+usa l'ancora, che esiste per questo. Il fuoco entra nel dialogo, che ha
+ricevuto `tabindex="-1"`: un `role="alertdialog"` che non riceve il fuoco viene
+annunciato a metà. Dopo: dialogo a `top = 12` a 320, 375, 393, 412 e 1280px.
+
+**Lo stesso difetto c'è nelle conferme distruttive** — misurato: 10069px sopra
+la vista — ed è precedente a questo lavoro. Non è stato toccato: la correzione
+è la stessa riga, ma quel flusso non è ciò che questa fase riguardava. Vedi
+`PROFILI-REPORT.md` §7.5.
+
+### Il bordo del badge «scelta tua» era a 2,95:1, e il commento diceva il falso
+
+Era `border-color: var(--brass)`, copiato da `.due-soon`, con un commento che
+dichiarava il contrasto «già coperto dalla prova di accessibilità». Nessuna
+prova misura il bordo di uno `.slot`: misurandolo dà **2,95:1 in tema chiaro**
+contro il 3:1 che il progetto si è dato per il non testuale, e 6,55:1 in tema
+scuro — ed è il motivo per cui guardando un tema solo non si vedeva. Ora è
+`currentColor`: 7,02:1 e 6,55:1, senza colori nuovi.
+
+Nello stesso censimento, un terzo allarme era **del mio strumento di misura**:
+«il segmento non premuto della modalità è a 1,75:1». Il calcolatore usava un
+fondo semitrasparente così com'era invece di comporlo su quello sotto, e
+`rgba(15,27,36,.07)` finiva trattato come un quasi nero. Composto bene: 8,51:1
+e 6,85:1. `.seg` — il modello che il pannello usa già per «Sfondo» — non è
+stato toccato.
+
 ### Il profilo cambiava la modalità, e la modalità non aveva un comando
 
 `applicaProfilo` eseguiva `setImp("modo", id === "completo" ? "avanzata" :

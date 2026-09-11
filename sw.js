@@ -2,7 +2,7 @@
    Strategie distinte: lo scheletro dell'app va dalla cache (è statico e
    versionato), le chiamate ai servizi esterni vanno sempre in rete e non
    vengono mai messe in cache, perché conterrebbero dati personali. */
-var VERSIONE = 'pt-0506d14c';
+var VERSIONE = 'pt-89a4a109';
 var SCHELETRO = [
   './', './index.html', './offline.html', './landing.html',
   './manifest.webmanifest', './build.json',

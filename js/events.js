@@ -853,7 +853,25 @@ document.addEventListener("click", function(ev){
     var ap = anteprimaRipristinoPreset();
     if (!ap.ok) { toast(ap.motivo, "info"); return; }
     if (!ap.scelte) { toast("Non c'è nulla da ripristinare.", "info"); return; }
-    S.conferma = "preset"; render();
+    S.conferma = "preset";
+    /* DIFETTO CORRETTO — la conferma compariva fuori dallo schermo.
+       Misurato su telefono a 393x852 e su desktop: la scheda dei profili sta
+       in fondo a otto sezioni di impostazioni, quindi al momento del clic la
+       pagina è scorsa di quasi settemila pixel; la scheda di conferma viene
+       però disegnata in cima, nella zona «priorità». Il risultato era che
+       premendo «Torna al preset» il dialogo nasceva a 5618 pixel SOPRA il
+       bordo della vista e il fuoco restava sul pulsante premuto: all'utente
+       non succedeva niente di visibile.
+       `S.inCima` non basta — riporta a zero, e il dialogo sta a y 1636 —
+       quindi si usa l'ancora, che esiste per questo: `riporta()` scorre
+       finché l'elemento non ha quel `top` nella vista. */
+    S.ancora = { sel: '[role="alertdialog"]', top: 12 };
+    render();
+    /* e il fuoco entra nel dialogo: un `role="alertdialog"` che non lo
+       riceve viene annunciato a metà, e il ridisegno della zona lo aveva
+       comunque perso */
+    var dlg = document.querySelector('#app [role="alertdialog"]');
+    if (dlg && dlg.focus) { try { dlg.focus({ preventScroll: true }); } catch (e3) { dlg.focus(); } }
   }
   else if (act === "preset-ok") {
     S.conferma = null;

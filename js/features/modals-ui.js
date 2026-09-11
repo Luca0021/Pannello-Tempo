@@ -65,9 +65,13 @@ function onboardingHtml(){
             return '<button data-act="onb-modo" data-v="'+x[0]+'" data-on="'+(on?1:0)+'" '+
                    'aria-pressed="'+on+'">'+esc(x[1])+'</button>';
           }).join("")+'</span></div>'+
-          '<p class="hint">Comincerai in modalità <b>'+esc(m)+'</b>: decide quanto '+
-          'dettaglio vedere <b>dentro</b> le parti attive, non quali parti '+
-          'esistono. La cambi quando vuoi dalle impostazioni.</p>';
+          /* Corta di proposito. La prima versione erano tre frasi, 78px di
+             altezza a 320px, e la terza — «la cambi quando vuoi dalle
+             impostazioni» — ripeteva quello che la riga in cima a questo
+             passo già dice. Su uno schermo da 320x568 ogni riga qui spinge
+             «Avanti» più in basso, e questo è il passo del primo minuto. */
+          '<p class="hint">Comincerai in modalità <b>'+esc(m)+'</b>: quanto '+
+          'dettaglio vedere <b>dentro</b> le parti attive.</p>';
       })()+
       '<div class="schazioni"><button class="add" data-act="onb-avanti">Avanti</button>'+
       '<button class="tiny" data-act="onb-indietro">Indietro</button></div>';

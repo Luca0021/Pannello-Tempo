@@ -223,7 +223,12 @@ jobs:
         # distingueva una scelta dell'utente da un preset del profilo.
         # La logica è coperta da tests/unit/profili.test.js: qui si verifica
         # che i comandi esistano nella pagina e che la conferma preceda
-        # l'azione. Vedi PROFILI-REPORT.md.
+        # l'azione — a 1280x900 E a 320, 375, 393px e zoom 200%, nei due temi.
+        # Le larghezze da telefono non sono un extra: i tre stati introdotti
+        # non esistono nella pagina a riposo, quindi le suite che la spazzano
+        # a quelle larghezze non li vedevano, e là si nascondevano due
+        # difetti veri — la conferma disegnata 5618px sopra il bordo della
+        # vista e il bordo di un badge a 2,95:1. Vedi PROFILI-REPORT.md §7.
         run: npx playwright test tests/ui/profili.spec.js --project=${{ matrix.browser }}
 
       - name: Sentinelle dei segreti

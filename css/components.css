@@ -654,11 +654,20 @@
 .pt .slot[data-set="1"]{color:var(--ink2);border-color:var(--muted);}
 /* La provenienza di una parte del pannello, nell'elenco delle impostazioni:
    «dal profilo» resta grigio come il resto, «scelta tua» si distingue perché
-   è l'informazione che prima non c'era. Usa gli stessi due token di
-   `.due-soon`, che sono già dichiarati per ogni tema e il cui contrasto è
-   già coperto dalla prova di accessibilità: un colore nuovo qui avrebbe
-   voluto dire una misura nuova. */
-.pt .slot.tua{color:var(--brass-testo);border-color:var(--brass);}
+   è l'informazione che prima non c'era.
+
+   CORREZIONE — la prima versione era `border-color:var(--brass)`, copiata da
+   `.due-soon`, con un commento che dichiarava il contrasto «già coperto dalla
+   prova di accessibilità». Non era vero: nessuna prova misurava il bordo di
+   uno `.slot`, e misurandolo dà 2,95:1 in tema chiaro contro il 3:1 che
+   questo progetto si è dato per il non testuale (WCAG 1.4.11). In tema scuro
+   dava 6,55:1, ed è il motivo per cui l'errore non si vedeva guardando un
+   tema solo.
+   Ora il bordo è `currentColor`, cioè lo stesso `--brass-testo` del testo:
+   7,02:1 in chiaro e 6,55:1 in scuro, misurati, senza introdurre un colore
+   nuovo. Lo stato resta identificato dalla PAROLA («scelta tua» contro «dal
+   profilo»), non dal colore: il bordo è rinforzo, non informazione. */
+.pt .slot.tua{color:var(--brass-testo);border-color:currentColor;}
 .pt .slot.due-none{color:var(--ink2);border-color:var(--muted);}
 .pt .slot.due-soon{color:var(--brass-testo);border-color:var(--brass);}
 .pt .slot.due-urgent{color:#7A5A16;background:hsl(44 72% 92%);border-color:hsl(42 50% 66%);font-weight:600;}

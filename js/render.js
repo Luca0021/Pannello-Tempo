@@ -550,7 +550,9 @@ function renderInner(){
   else if (S.conferma === "preset") {
     var ap2 = (typeof anteprimaRipristinoPreset === "function") ? anteprimaRipristinoPreset() : null;
     if (ap2 && ap2.ok) {
-      h += '<div class="card invito pronta" role="alertdialog" aria-labelledby="ptit">'+
+      /* `tabindex="-1"` perché il fuoco ci entra da js/events.js: senza,
+         `focus()` su un div non fa niente e il dialogo resta non annunciato */
+      h += '<div class="card invito pronta" role="alertdialog" tabindex="-1" aria-labelledby="ptit">'+
         '<h2 data-ico="impostazioni"><span id="ptit">Tornare al preset di «'+
         esc(ap2.profilo.nome)+'»?</span></h2>'+
         '<p class="hint" style="margin-top:0"><b>Viene dimenticato:</b> '+
