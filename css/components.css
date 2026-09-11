@@ -652,6 +652,13 @@
     white-space:nowrap;transition:border-color .15s,color .15s;}
 .pt .slot:hover{border-color:var(--ink);color:var(--ink);}
 .pt .slot[data-set="1"]{color:var(--ink2);border-color:var(--muted);}
+/* La provenienza di una parte del pannello, nell'elenco delle impostazioni:
+   «dal profilo» resta grigio come il resto, «scelta tua» si distingue perché
+   è l'informazione che prima non c'era. Usa gli stessi due token di
+   `.due-soon`, che sono già dichiarati per ogni tema e il cui contrasto è
+   già coperto dalla prova di accessibilità: un colore nuovo qui avrebbe
+   voluto dire una misura nuova. */
+.pt .slot.tua{color:var(--brass-testo);border-color:var(--brass);}
 .pt .slot.due-none{color:var(--ink2);border-color:var(--muted);}
 .pt .slot.due-soon{color:var(--brass-testo);border-color:var(--brass);}
 .pt .slot.due-urgent{color:#7A5A16;background:hsl(44 72% 92%);border-color:hsl(42 50% 66%);font-weight:600;}

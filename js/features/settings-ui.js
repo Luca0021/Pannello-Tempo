@@ -33,7 +33,8 @@ function zonaImpostazioni(){
        '<dt>Parti del pannello</dt><dd>Il controllo fine: ogni parte si accende e si spegne '+
        'da sola, e la tua scelta vince sul profilo.</dd>'+
        '<dt>Modalità</dt><dd>Quanto dettaglio mostrare <b>dentro</b> le parti attive. '+
-       'Non decide quali parti esistono.</dd></dl>'+
+       'Non decide quali parti esistono, e <b>cambiare profilo non la modifica</b>: '+
+       'la scegli qui sotto e resta quella.</dd></dl>'+
        Object.keys(PROFILI).map(function(k3){
          var p3 = PROFILI[k3], sel = (pref("profilo") === k3);
          var ant = anteprimaProfilo(k3);
@@ -41,6 +42,10 @@ function zonaImpostazioni(){
            'data-act="profilo" data-v="'+k3+'" aria-pressed="'+sel+'">'+
            '<span class="pnome">'+esc(p3.nome)+(sel ? ' <span class="slot">attivo</span>' : '')+'</span>'+
            '<span class="sub">'+esc(p3.per)+
+           /* PRD: il profilo non deve dire soltanto che cosa contiene, ma
+              che cosa ci si guadagna. L'elenco delle parti lo dà comunque
+              l'anteprima qui sotto, in numeri. */
+           (p3.beneficio ? '<br>'+esc(p3.beneficio) : '')+
            (ant && !sel
              ? '<br><b>Sceglierlo:</b> '+
                (ant.accesi.length ? 'accende '+ant.accesi.length+
@@ -54,12 +59,40 @@ function zonaImpostazioni(){
                '. I dati non si toccano.'
              : '')+'</span></button>';
        }).join("")+
+       /* DIFETTO CORRETTO — la modalità non aveva un comando.
+          `data-act="modo"` esisteva in js/events.js e nessuna pagina lo
+          disegnava: l'unico modo di cambiare modalità era scegliere un
+          profilo, perché `applicaProfilo` la impostava di nascosto. Tolta
+          quella conseguenza, senza questo comando la modalità sarebbe
+          diventata irraggiungibile. Sta qui, accanto al profilo, perché le
+          due domande sono vicine e diverse: quali parti vedo, e quanto
+          dettaglio dentro quelle parti. */
+       (function(){
+         var mod = modoAvanzato() ? "avanzata" : "semplice";
+         return '<div class="row"><span class="lbl" id="setmodol" '+
+           'style="align-self:center;margin:0">Dettaglio</span>'+
+           '<span class="seg" role="group" aria-labelledby="setmodol">'+
+           [["semplice","Semplice"],["avanzata","Avanzata"]].map(function(x){
+             var on = (mod === x[0]);
+             return '<button data-act="modo" data-v="'+x[0]+'" data-on="'+(on?1:0)+'" '+
+                    'aria-pressed="'+on+'">'+esc(x[1])+'</button>';
+           }).join("")+'</span></div>';
+       })()+
+       /* Le tre cose che il profilo deve promettere sempre, non solo quando
+          esiste già una personalizzazione da ripristinare. */
+       '<p class="hint">Puoi cambiare profilo quando vuoi, e tornare a quello di '+
+       'prima: cambiarlo non cancella niente. Le parti che accendi o spegni a mano '+
+       'qui sotto vincono sul profilo, e da lì puoi sempre tornare alla '+
+       'configurazione originale.</p>'+
        (sceltePersonali()
          ? '<div class="row"><button class="tiny" data-act="preset-ripristina">'+
            'Torna al preset del profilo</button>'+
+           /* «diverse dal profilo» era impreciso: il conteggio è quello delle
+              scelte esplicite, e una scelta esplicita può coincidere col
+              profilo. Ora la frase dice quello che il numero è davvero. */
            '<span class="hint" style="margin:0;align-self:center">'+sceltePersonali()+
-           (sceltePersonali()===1 ? ' parte è' : ' parti sono')+
-           ' diversa dal profilo scelto.</span></div>'
+           (sceltePersonali()===1 ? ' parte segue' : ' parti seguono')+
+           ' una tua scelta invece del profilo. Ti dico quali prima di cambiarle.</span></div>'
          : '')+
        '<p class="lbl" style="margin:16px 0 6px">Le parti del pannello</p>'+
        '<ul class="linklist moduli">'+MODULI.map(function(mo){
@@ -68,7 +101,17 @@ function zonaImpostazioni(){
            var md = modulo(d); return md ? md.nome : d;
          });
          var cons = att ? conseguenzeSpegnimento(mo.id) : null;
+         /* DIFETTO CORRETTO — la provenienza non era visibile.
+            L'elenco diceva «attiva» o «spenta»; che quello stato venisse dal
+            profilo o da una scelta fatta a mano si poteva soltanto dedurre
+            dal conteggio aggregato in cima («3 parti sono diverse»). Qui
+            ogni riga lo dichiara, e le righe personalizzate portano un segno
+            che si distingue da quelle che seguono il profilo. */
+         var prov = (typeof provenienzaModulo === "function") ? provenienzaModulo(mo.id) : null;
          return '<li><span class="txt">'+esc(mo.nome)+
+           (prov && !mo.core
+             ? ' <span class="slot'+(prov.diverge ? " tua" : "")+'">'+esc(prov.etichetta)+'</span>'
+             : '')+
            '<span class="sub">'+esc(mo.cosa)+
            (dip.length ? '<br><b>Richiede:</b> '+esc(dip.join(", ")) : '')+
            (cons ? '<br><b>Spegnendola:</b> '+esc(cons.testo) : '')+'</span></span>'+

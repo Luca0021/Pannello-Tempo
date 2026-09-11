@@ -92,32 +92,57 @@ function moduliAttivi(){
 /* Profili: tre, non cinque. Ogni profilo in più è una configurazione in più da
    disegnare, provare e mantenere, e nessuno di questi tre è ancora stato
    validato con persone vere. */
+/* `per` dice a chi somiglia il profilo, ed è la risposta alla domanda
+   dell'ingresso guidato («quanto vuoi vedere all'inizio?»). `beneficio` dice
+   che cosa ci si guadagna, che è una cosa diversa: un elenco di parti accese
+   non spiega perché accenderle. Servono entrambi, e nessuno dei due è
+   l'elenco dei moduli — quello lo calcola `anteprimaProfilo`. */
 var PROFILI = {
   essenziale: {
     nome:"Essenziale",
     per:"Voglio sapere cosa fare oggi, niente di più.",
+    beneficio:"Ti concentri sull'essenziale: le tre cose di oggi, l'agenda e la chiusura di giornata.",
     moduli:["note"]
   },
   pianificatore: {
     nome:"Pianificatore",
     per:"Organizzo la settimana e ho cose che si ripetono.",
+    beneficio:"Organizzi anche la settimana: ciò che torna, ciò che aspetta una risposta e i modelli di giornata.",
     moduli:["routine","note","bloccati","modelli","coach"]
   },
   completo: {
     nome:"Completo",
     per:"Voglio tutto: etichette, obiettivi, energia, dati sincronizzati.",
+    beneficio:"Usi tutti gli strumenti: etichette, obiettivi, energia, importi e le stesse giornate su più dispositivi.",
     moduli:["routine","note","bloccati","etichette","energia","obiettivi",
             "modelli","importi","sync","calendario","coach"]
   }
 };
+
+/* DIFETTO CORRETTO — il profilo cambiava anche la modalità.
+
+   `applicaProfilo` eseguiva `setImp("modo", id === "completo" ? "avanzata" :
+   "semplice")`. Diciassette righe più sotto, il blocco SET-002 dichiara la
+   regola opposta: «il profilo tocca i moduli, la modalità no». Il codice
+   contraddiceva la propria documentazione, e la conseguenza era concreta: chi
+   lavorava in modalità avanzata e scegliesse «Pianificatore» per spegnere due
+   sezioni si ritrovava anche con meno dettaglio dentro quelle rimaste, senza
+   che l'anteprima lo avesse annunciato — l'anteprima elenca parti accese,
+   parti spente e scelte dimenticate, non la modalità.
+
+   Ora il profilo tocca soltanto i moduli. La modalità coerente col profilo
+   resta una PROPOSTA, e vive dove una proposta si può vedere e rifiutare:
+   l'ingresso guidato. Vedi `modoSuggerito`. */
 function applicaProfilo(id){
   if (!PROFILI[id]) return false;
   setImp("profilo", id);
   setImp("moduli", {});          /* il profilo torna a decidere */
-  /* la modalità avanzata resta un modo rapido di dire «accendi tutto» */
-  setImp("modo", id === "completo" ? "avanzata" : "semplice");
   return true;
 }
+
+/* La modalità che si accompagna bene a un profilo. Non la applica nessuno di
+   nascosto: la usa l'ingresso guidato per proporla, mostrandola. */
+function modoSuggerito(id){ return id === "completo" ? "avanzata" : "semplice"; }
 
 /* ---------------------------------------------------------------------------
    SET-002 — distinguere modalità, profili e moduli.
@@ -186,7 +211,9 @@ function conseguenzeSpegnimento(id){
   };
 }
 
-/* Torna al preset del profilo, dimenticando le scelte fatte a mano. */
+/* Torna al preset del profilo, dimenticando le scelte fatte a mano.
+   Tocca SOLO `settings.moduli`, cioè la visibilità delle parti: nessuna
+   attività, nota, routine o modello viene sfiorato. */
 function ripristinaPreset(){
   var id = pref("profilo");
   if (!id || !PROFILI[id]) return { ok:false, motivo:"Nessun profilo scelto." };
@@ -197,3 +224,57 @@ function ripristinaPreset(){
                           : "Non c'era nulla da ripristinare." };
 }
 function sceltePersonali(){ return Object.keys(pref("moduli") || {}).length; }
+
+/* Da dove viene lo stato di una parte. Serve a rispondere in interfaccia alla
+   domanda «questa l'ho accesa io o me l'ha accesa il profilo?», che prima si
+   poteva soltanto dedurre da un conteggio aggregato.
+
+   Quattro origini, e sono esattamente i rami di `moduloAttivo`:
+     core         non si spegne
+     personale    c'è una scelta esplicita in settings.moduli, e vince
+     profilo      decide il profilo attivo
+     predefinito  nessun profilo scelto: decide il modulo (o la modalità, per
+                  quelli marcati «avanzato») */
+function provenienzaModulo(id){
+  var mo = modulo(id);
+  if (!mo) return null;
+  if (mo.core) return { origine:"core", attivo:true, etichetta:"sempre attiva", diverge:false };
+  var attivo = moduloAttivo(id);
+  var scelte = (pref("moduli") || {});
+  var prof = PROFILI[pref("profilo")];
+  if (scelte[id] !== undefined) {
+    /* che cosa direbbe il profilo, se la scelta esplicita non ci fosse */
+    var daProfilo = prof ? (prof.moduli.indexOf(id) >= 0)
+                         : (mo.predefinito === "avanzato" ? modoAvanzato() : !!mo.predefinito);
+    /* etichette corte di proposito: finiscono in una riga accanto al nome
+       della parte, e a 320px una didascalia lunga spinge il comando fuori */
+    return { origine:"personale", attivo:attivo, diverge: (attivo !== daProfilo),
+             etichetta:"scelta tua" };
+  }
+  if (prof) return { origine:"profilo", attivo:attivo, diverge:false,
+                     etichetta:"dal profilo" };
+  return { origine:"predefinito", attivo:attivo, diverge:false, etichetta:"predefinita" };
+}
+
+/* Che cosa cambierebbe tornando al preset: QUALI parti, non quante. Il
+   comando esisteva e si eseguiva subito, spiegando dopo con un conteggio;
+   questa funzione è ciò che permette di spiegarlo prima e per nome. */
+function anteprimaRipristinoPreset(){
+  var id = pref("profilo");
+  if (!id || !PROFILI[id])
+    return { ok:false, motivo:"Nessun profilo scelto: non c'è un preset a cui tornare." };
+  var p = PROFILI[id];
+  var scelte = (pref("moduli") || {});
+  var accese = [], spente = [], invariate = 0;
+  Object.keys(scelte).forEach(function(k){
+    var mo = modulo(k);
+    if (!mo || mo.core) return;
+    var prima = moduloAttivo(k);
+    var dopo = p.moduli.indexOf(k) >= 0;
+    if (dopo && !prima) accese.push(mo);
+    else if (!dopo && prima) spente.push(mo);
+    else invariate++;
+  });
+  return { ok:true, profilo:p, id:id, accese:accese, spente:spente,
+           invariate:invariate, scelte:Object.keys(scelte).length };
+}

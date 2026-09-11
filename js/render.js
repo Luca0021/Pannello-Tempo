@@ -543,6 +543,36 @@ function renderInner(){
       esc(az.nome)+'</button>'+
       '<button class="tiny" data-act="conferma-annulla">Annulla</button></div></div>';
   }
+  /* Ritorno al preset del profilo: non è un'azione sui dati, quindi non sta
+     in AZIONI_DISTRUTTIVE, ma toglie qualcosa all'utente — le sue scelte
+     manuali — e quindi passa dalla stessa scheda di conferma, con i nomi
+     delle parti invece di un conteggio. */
+  else if (S.conferma === "preset") {
+    var ap2 = (typeof anteprimaRipristinoPreset === "function") ? anteprimaRipristinoPreset() : null;
+    if (ap2 && ap2.ok) {
+      h += '<div class="card invito pronta" role="alertdialog" aria-labelledby="ptit">'+
+        '<h2 data-ico="impostazioni"><span id="ptit">Tornare al preset di «'+
+        esc(ap2.profilo.nome)+'»?</span></h2>'+
+        '<p class="hint" style="margin-top:0"><b>Viene dimenticato:</b> '+
+        esc(ap2.scelte + (ap2.scelte === 1 ? " scelta fatta a mano" : " scelte fatte a mano"))+
+        ' sulle parti del pannello.</p>'+
+        (ap2.accese.length
+          ? '<p class="hint"><b>Tornano attive:</b> '+
+            esc(ap2.accese.map(function(x){ return x.nome; }).join(", "))+'.</p>' : '')+
+        (ap2.spente.length
+          ? '<p class="hint"><b>Tornano spente:</b> '+
+            esc(ap2.spente.map(function(x){ return x.nome; }).join(", "))+
+            '. Le sezioni si nascondono, i dati restano dove sono.</p>' : '')+
+        (!ap2.accese.length && !ap2.spente.length
+          ? '<p class="hint">Nessuna parte cambia stato: le tue scelte coincidevano '+
+            'già col profilo.</p>' : '')+
+        '<p class="hint"><b>Resta:</b> ogni attività, nota, routine, modello e '+
+        'tutte le altre impostazioni, modalità compresa.</p>'+
+        '<p class="hint">Potrai annullare subito dopo.</p>'+
+        '<div class="row"><button class="add" data-act="preset-ok">Torna al preset</button>'+
+        '<button class="tiny" data-act="conferma-annulla">Annulla</button></div></div>';
+    }
+  }
   else if (S.conferma) {
     var tutto = S.conferma === "tutto";
     h += '<div class="card invito pronta" role="alertdialog" aria-labelledby="conftit">'+

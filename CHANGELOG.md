@@ -14,6 +14,74 @@ era a rischio.
 `f915fb62fff8`, **con configurazione Firebase generata dai Secrets**: sul
 sito l'Account è disponibile e funziona.
 
+### Il profilo cambiava la modalità, e la modalità non aveva un comando
+
+`applicaProfilo` eseguiva `setImp("modo", id === "completo" ? "avanzata" :
+"semplice")`. Diciassette righe più sotto, nello stesso file, il blocco
+`SET-002` dichiara la regola contraria: **il profilo tocca i moduli, la
+modalità no**. Il codice contraddiceva la propria documentazione, e la
+conseguenza era misurabile: chi lavorava in modalità avanzata e scegliesse
+«Pianificatore» per spegnere due sezioni si ritrovava anche con meno
+dettaglio dentro quelle rimaste, senza che l'anteprima del profilo — che
+elenca parti accese, parti spente e scelte dimenticate — lo avesse nominato.
+
+Togliendo quella riga è venuto fuori un difetto peggiore: **`data-act="modo"`
+esisteva in `js/events.js` e nessuna schermata lo disegnava.** L'unico modo di
+cambiare modalità era scegliere un profilo. Il comando ora c'è, nella scheda
+«Come vuoi usare il pannello», accanto al profilo.
+
+La modalità coerente col profilo resta una proposta, e vive dove una proposta
+si può vedere e rifiutare: nell'ingresso guidato, al passo del profilo, scritta
+(«Comincerai in modalità *semplice*») e cambiabile senza aggiungere un passo.
+Chi rivede la presentazione da già configurato riprende la propria.
+
+### Tornare al preset del profilo: ora si sa quali parti cambieranno
+
+Il comando eseguiva subito e spiegava dopo con un conteggio. Ora apre la stessa
+scheda di conferma delle altre azioni che togliono qualcosa, e la conferma
+elenca **i nomi** delle parti che tornano attive e di quelle che tornano
+spente, dichiara che i dati restano, che la modalità non viene toccata, e che
+si potrà annullare — con la fotografia dei dati scattata prima dell'azione.
+
+Non è entrato in `AZIONI_DISTRUTTIVE`: quelle sono azioni sui dati, questa
+tocca soltanto la visibilità delle parti. Riusa la scheda, non il registro.
+
+### Ogni parte del pannello dice da dove viene il suo stato
+
+L'elenco delle quattordici parti diceva «attiva» o «spenta»: che quello stato
+venisse dal profilo o da una scelta fatta a mano si poteva dedurre soltanto da
+un conteggio aggregato. Ora ogni riga porta la sua provenienza — «dal profilo»,
+«scelta tua», «predefinita», «sempre attiva» — e «scelta tua» si distingue
+visivamente solo quando diverge davvero da quello che il profilo deciderebbe.
+
+Nello stesso giro è caduta una frase che contava la cosa sbagliata: «*N* parti
+sono **diverse** dal profilo» contava tutte le scelte esplicite, e una parte
+accesa a mano che il profilo accende comunque risultava «diversa». Ora la frase
+dice quello che il numero è: «*N* parti seguono una tua scelta invece del
+profilo».
+
+### I tre profili spiegano il beneficio, non solo chi li sceglie
+
+Nomi e identificativi invariati — Essenziale, Pianificatore, Completo. Il campo
+`per` diceva a chi somiglia il profilo; accanto, non al suo posto, c'è ora
+`beneficio`, che dice che cosa ci si guadagna. E le tre promesse che un profilo
+deve fare sempre — si può cambiare, non si cancella niente, si può tornare
+alla configurazione originale — stanno nella scheda a prescindere dal fatto che
+esista già una personalizzazione da ripristinare. Prima la terza compariva solo
+a chi sapeva già che si poteva.
+
+### Il buco di copertura più grande del pannello
+
+`moduloAttivo` decide quali sezioni esistono, e **non aveva un solo test**: le
+uniche tracce dei profili in `tests/` erano quattro chiamate a `attivaModulo`
+usate per preparare lo stato di un'altra prova. Ora ci sono 33 prove unitarie
+in `tests/unit/profili.test.js` e 18 nel browser in `tests/ui/profili.spec.js`.
+
+Controprova eseguita, perché una prova che non fallisce sul difetto non prova
+niente: rimettendo la riga che accoppiava profilo e modalità cadono **5 prove
+unitarie su 33**; puntando la suite del browser al sito pubblicato, che è il
+codice di prima, cadono **16 su 18**. Vedi `PROFILI-REPORT.md`.
+
 ### `.barrabasso`: quattordici righe di stile per una barra che non esiste
 
 La barra fissa in basso del telefono è stata sostituita da `.navprim.basso`

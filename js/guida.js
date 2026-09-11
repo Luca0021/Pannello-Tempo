@@ -114,6 +114,11 @@ var GUIDA_SEZIONI = [
            "un colpo solo. Le parti si accendono e si spengono una per una, e "+
            "la tua scelta vince sul profilo. La modalità decide quanto "+
            "dettaglio vedere dentro le parti attive, non quali parti esistono.",
+           "I tre concetti restano separati: cambiare profilo non cambia la "+
+           "modalità, e ogni parte dice se il suo stato viene dal profilo o "+
+           "da una scelta tua. Da «Torna al preset del profilo» si rimettono "+
+           "le cose come le aveva lasciate il profilo, e prima ti viene detto "+
+           "quali parti cambieranno.",
            "Spegnere una parte non cancella niente: i dati restano e tornano "+
            "riaccendendola."],
     elenco: function(){

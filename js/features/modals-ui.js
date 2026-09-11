@@ -46,8 +46,29 @@ function onboardingHtml(){
         return '<button type="button" class="profilo'+(sel?" scelto":"")+'" '+
           'data-act="onb-profilo" data-v="'+k+'" aria-pressed="'+sel+'">'+
           '<span class="pnome">'+esc(p.nome)+'</span>'+
-          '<span class="sub">'+esc(p.per)+'</span></button>';
+          '<span class="sub">'+esc(p.per)+
+          (p.beneficio ? '<br>'+esc(p.beneficio) : '')+'</span></button>';
       }).join("")+
+      /* DIFETTO CORRETTO — la modalità era una conseguenza nascosta.
+         Il profilo la impostava da sé (js/modules.js), quindi qui l'utente
+         scegliendo «Completo» finiva in modalità avanzata senza che nessuno
+         gliel'avesse detto, e scegliendo gli altri due tornava in semplice
+         anche se l'aveva già cambiata. Ora è una proposta visibile, nello
+         stesso passo e senza aggiungerne uno. */
+      (function(){
+        var m = (o.modo === "avanzata") ? "avanzata" : "semplice";
+        return '<div class="row"><span class="lbl" id="onbmodol" '+
+          'style="align-self:center;margin:0">Dettaglio</span>'+
+          '<span class="seg" role="group" aria-labelledby="onbmodol">'+
+          [["semplice","Semplice"],["avanzata","Avanzata"]].map(function(x){
+            var on = (m === x[0]);
+            return '<button data-act="onb-modo" data-v="'+x[0]+'" data-on="'+(on?1:0)+'" '+
+                   'aria-pressed="'+on+'">'+esc(x[1])+'</button>';
+          }).join("")+'</span></div>'+
+          '<p class="hint">Comincerai in modalità <b>'+esc(m)+'</b>: decide quanto '+
+          'dettaglio vedere <b>dentro</b> le parti attive, non quali parti '+
+          'esistono. La cambi quando vuoi dalle impostazioni.</p>';
+      })()+
       '<div class="schazioni"><button class="add" data-act="onb-avanti">Avanti</button>'+
       '<button class="tiny" data-act="onb-indietro">Indietro</button></div>';
   }

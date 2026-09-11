@@ -24,11 +24,20 @@ function invitoInstallazione(){
   return null;
 }
 function apriOnboarding(passo){
+  var profIniz = pref("profilo") || "pianificatore";
+  /* La modalità è una scelta dell'utente, non una conseguenza del profilo
+     (vedi il difetto corretto in js/modules.js). Qui viene PROPOSTA e
+     mostrata, e l'ingresso guidato è l'unico posto che la applica.
+     Chi è già configurato — un profilo già scelto — riprende la propria:
+     rivedere la presentazione non deve cambiare di nascosto una scelta
+     già fatta, e `modoScelto` impedisce che cambiarla di profilo la muova. */
   S.onboarding = {
     passo: passo || (pref("onboardingPasso") || 1),
     priorita: ["", "", ""],
     aree: ["lavoro", "lavoro", "lavoro"],
-    profilo: pref("profilo") || "pianificatore",
+    profilo: profIniz,
+    modo: pref("profilo") ? (pref("modo") || "semplice") : modoSuggerito(profIniz),
+    modoScelto: !!pref("profilo"),
     fascia: { da: fasciaDi().da, a: fasciaDi().a },
     areaPrima: "lavoro",
     primoTask: "",
@@ -58,6 +67,9 @@ function applicaScelteOnboarding(){
   var o = S.onboarding;
   if (!o) return;
   if (o.profilo && PROFILI[o.profilo]) applicaProfilo(o.profilo);
+  /* La modalità la applica soltanto questo passaggio, dov'è stata mostrata
+     accanto al profilo. Cambiare profilo dalle impostazioni non la tocca. */
+  if (o.modo === "semplice" || o.modo === "avanzata") setImp("modo", o.modo);
   if (o.fascia && o.fascia.a > o.fascia.da) impostaFascia(o.fascia.da, o.fascia.a);
   salvaPrioritaOnboarding();
   var t = (o.primoTask || "").trim();

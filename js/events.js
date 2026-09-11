@@ -132,7 +132,20 @@ document.addEventListener("click", function(ev){
   }
   /* REC-002 — le cinque decisioni sui ritardi */
   /* TOP-002 — righe progressive, riordino accessibile, scollegamento */
-  else if (act === "onb-profilo" && S.onboarding) { S.onboarding.profilo = v; render(); }
+  else if (act === "onb-profilo" && S.onboarding) {
+    if (!PROFILI[v]) return;             /* un valore inatteso non cambia niente */
+    S.onboarding.profilo = v;
+    /* la modalità PROPOSTA segue il profilo finché non la sceglie l'utente:
+       dopo, la sua scelta vince e cambiare profilo non la muove */
+    if (!S.onboarding.modoScelto) S.onboarding.modo = modoSuggerito(v);
+    render();
+  }
+  else if (act === "onb-modo" && S.onboarding) {
+    if (v !== "semplice" && v !== "avanzata") return;
+    S.onboarding.modo = v;
+    S.onboarding.modoScelto = true;
+    render();
+  }
   else if (act === "onb-area1" && S.onboarding) { S.onboarding.areaPrima = v; S.onboarding.aree[0] = v; render(); }
   else if (act === "onb-areatask" && S.onboarding) { S.onboarding.areaTask = v; render(); }
   /* SYN-004 — la decisione su un singolo record */
@@ -830,7 +843,21 @@ document.addEventListener("click", function(ev){
     if (["griglia","carta","unito"].indexOf(v) < 0) return;
     setImp("sfondo", v); render();
   }
+  /* DIFETTO CORRETTO — il ripristino del preset si eseguiva subito.
+     L'utente leggeva un conteggio («3 parti sono diverse dal profilo») e
+     dopo un toast: quali tre parti stessero per tornare indietro non lo
+     sapeva né prima né dopo. Ora passa dalla stessa scheda di conferma
+     delle altre azioni che togliono qualcosa, con i nomi delle parti e
+     l'annullamento. Nessun dato viene toccato, e lo dice. */
   else if (act === "preset-ripristina") {
+    var ap = anteprimaRipristinoPreset();
+    if (!ap.ok) { toast(ap.motivo, "info"); return; }
+    if (!ap.scelte) { toast("Non c'è nulla da ripristinare.", "info"); return; }
+    S.conferma = "preset"; render();
+  }
+  else if (act === "preset-ok") {
+    S.conferma = null;
+    snapshot("Sei tornato al preset del profilo.", "Vuoi rimettere le tue scelte?");
     var rp = ripristinaPreset();
     toast(rp.motivo, rp.ok ? "ok" : "info");
     S.disegnoCompleto = "cambio-profilo"; forzaProssimoCompleto();

@@ -141,25 +141,35 @@ l'ultima parola.
 
 ---
 
-## 4. `tests/` — dodici file
+## 4. `tests/` — diciotto file
 
-Nessuno è mai stato eseguito in questo ambiente: non c'è Node.
-`TEST-REPORT.md` distingue eseguito, scritto-e-non-eseguito, e non scritto.
+La riga che stava qui — «nessuno è mai stato eseguito in questo ambiente: non
+c'è Node» — era vera quando è stata scritta e non lo è più: Node c'è, e
+`TEST-REPORT.md` distingue eseguito, scritto-e-non-eseguito e non scritto.
+Resta vero che **Firefox non è installabile su questa macchina** (il binario
+non si scarica da questa rete): la seconda metà della matrice del flusso
+`Verifica` la esegue soltanto la pipeline.
 
 | File | Prove | Richiede |
 |---|---|---|
 | `runner.js` | — | esegue `unit/` e `integration/` |
-| `avvio.test.js` | 60 | Node. Carica i 60 moduli in un DOM finto: un `ReferenceError` lascerebbe la pagina bianca, e questo lo scopre in mezzo secondo |
+| `avvio.test.js` | 60 | Node. Carica i moduli in un DOM finto: un `ReferenceError` lascerebbe la pagina bianca, e questo lo scopre in mezzo secondo |
 | `unit/migrazioni.test.js` | 15 | Node |
 | `unit/limiti-e-versioni.test.js` | 13 | Node. Le collisioni fra globali, i limiti di importazione, e che le modifiche risultino da sincronizzare |
+| `unit/messaggi-errore.test.js` | — | Node |
+| `unit/sincronizzazione.test.js` | 19 | Node |
+| `unit/profili.test.js` | 33 | Node. Profili, i cinque rami di `moduloAttivo`, precedenza delle scelte esplicite, provenienza, ritorno al preset. La logica che decide quali sezioni esistono, e che prima non aveva un solo test |
 | `integration/gist-migrazione.test.js` | 20 | Node |
 | `security/regole.test.js` | 14 | Node + Java + emulatore Firestore |
 | `security/sentinelle.test.js` | 11 | Node + Playwright |
 | `ui/ui006.spec.js` | 60 + regressione visiva | Node + Playwright |
 | `ui/terminologia.spec.js` | 8 | Node + Playwright |
+| `ui/impaginazione.spec.js` | 18 | Node + Playwright. Le regole misurabili dell'impaginazione, più le tre dichiarazioni che nessuna geometria vede |
+| `ui/primo-accesso.spec.js` | 17 | Node + Playwright |
+| `ui/profili.spec.js` | 18 | Node + Playwright. Che i comandi di profilo e modalità esistano nella pagina, che la conferma preceda l'azione, che la provenienza di ogni parte si legga |
 | `e2e/cancellazione.spec.js` | 10 | Node + Playwright |
 | `e2e/piattaforma.spec.js` | 17 | Node + Playwright |
-| `a11y/accessibilita.spec.js` | 14 + 6 | Node + Playwright + axe-core. Le sei aggiunte misurano ciò che axe non misura, e hanno trovato difetti veri |
+| `a11y/accessibilita.spec.js` | 14 + 6 + 3 | Node + Playwright + axe-core. Le aggiunte misurano ciò che axe non misura, e hanno trovato difetti veri |
 
 ---
 
