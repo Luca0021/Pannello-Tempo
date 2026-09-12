@@ -14,6 +14,75 @@ era a rischio.
 `f915fb62fff8`, **con configurazione Firebase generata dai Secrets**: sul
 sito l'Account è disponibile e funziona.
 
+### Premere «Elimina i dati» non produceva niente di visibile
+
+Le schede di conferma si disegnano in cima alla pagina; i comandi che le aprono
+stanno in fondo alle impostazioni, dopo otto sezioni. Misurato: premendo
+un'azione distruttiva il dialogo nasceva a **10709 pixel sopra** il bordo della
+vista a 320×568, a 9637 a 393×852, a 6087 a 1280×900, con il fuoco su `BODY`.
+Sono le sette azioni più pericolose del pannello, tre delle quali chiedono di
+scrivere `CANCELLA` e non si annullano. E una conferma armata e invisibile
+resta armata.
+
+Corretto con l'ancora che il pannello ha già, e col fuoco che entra nel
+dialogo. Una funzione sola, `mostraConfermaInVista()`, per tutte e sette le
+azioni, le due cancellazioni diffuse e il ritorno al preset dei profili.
+
+Correggendolo ne è emerso un altro: **qualunque ridisegno toglieva il fuoco a
+una conferma aperta**. `render()` lo conserva solo per gli elementi con
+`data-act` o `data-keep`, e il dialogo non ha né l'uno né l'altro. Bastava il
+toast di un'azione precedente, che scade dopo 3,7 secondi e chiama `render()`:
+il dialogo spariva da sotto le dita di chi naviga da tastiera mentre era ancora
+sullo schermo.
+
+### L'account poteva essere eliminato lasciando i dati irraggiungibili
+
+L'ordine dati-poi-account era giusto — eliminando prima l'account si perde il
+token con cui cancellare i dati — ma mancava la conseguenza di quell'ordine: se
+il passo sui dati falliva, o la verifica non confermava, l'eliminazione
+dell'account procedeva lo stesso. Risultato possibile: dati nel database e
+nessuna chiave per raggiungerli, nemmeno per chi li ha scritti.
+
+Ora non viene nemmeno tentata, e il motivo lo dice. I dati locali vengono
+comunque rimossi: quella è un'altra decisione.
+
+### «Non c'era niente da fare» veniva riportato come un guasto
+
+Senza sessione, «Elimina i dati dal tuo account» riportava «Una parte non è
+riuscita»: il ramo senza sessione segnava il passo `cloud` come riuscito,
+quindi si andava a rileggere un documento che non esiste in un account che non
+c'è. In quest'area un falso allarme costa quanto un falso successo. I passi ora
+distinguono *riuscito* da *non applicabile*, e i messaggi sono quattro invece
+di due.
+
+### Il messaggio e la scheda d'esito si contraddicevano
+
+Trovato rivedendo il commit prima del push, e introdotto dalla separazione fra
+«riuscito» e «non applicabile»: il messaggio breve diceva «Non c'era niente da
+eliminare.» mentre la scheda d'esito titolava **«Cancellazione completata»**.
+Due frasi sullo stesso schermo, e quella che restava era la falsa. Corretto il
+titolo, e portata in cima anche la decisione sull'account conservato, che prima
+si leggeva soltanto dentro il passo che la riportava.
+
+Nella stessa revisione è stato verificato, su `localStorage` prima e dopo, che
+cosa resta per **ogni** azione quando la cancellazione remota fallisce. Il
+comportamento è risultato corretto e **non è stato cambiato**: dopo una
+cancellazione completa riuscita a metà nessun dato è perduto — la copia nel
+servizio resta e l'account che la raggiunge pure — e non resta niente che possa
+fare danni da solo (coda 0, niente da inviare, istantanea azzerata, provider
+tornato «locale»). Il contratto è ora fissato da prove parametrizzate.
+
+### Quattro funzioni che nessuna prova citava
+
+`ripristinaBackup`, `backupIntegro`, `ripulisciProfondo` e
+`verificaCancellazioneRemota` non comparivano in nessun file di prova. Le prime
+due sono il percorso che ti salva quando qualcosa è andato storto; la terza è
+l'unica cosa fra un file importato e `Object.prototype`.
+
+25 prove unitarie nuove in `tests/unit/dati-sicuri.test.js` e 13 nel browser.
+Controprova: rimessi i quattro moduli com'erano, **11 delle 12 prove di
+comportamento cadono**.
+
 ### Un titolo che non poteva andare a capo, e che solo la CI vedeva sfondare
 
 La pipeline è diventata rossa: `Verifica` #8, su **entrambi** i browser,

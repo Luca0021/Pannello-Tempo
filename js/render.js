@@ -521,7 +521,9 @@ function renderInner(){
   /* BCK-002 — conferma proporzionata all'azione scelta */
   if (S.conferma && azioneDistruttiva(S.conferma)) {
     var az = azioneDistruttiva(S.conferma);
-    h += '<div class="card invito pronta" role="alertdialog" aria-labelledby="dtit">'+
+    /* `tabindex="-1"`: il fuoco ci entra da js/events.js, e senza
+       l'attributo `focus()` su un div non fa niente */
+    h += '<div class="card invito pronta" role="alertdialog" tabindex="-1" aria-labelledby="dtit">'+
       '<h2 data-ico="ritardo"><span id="dtit">'+esc(az.nome)+'?</span></h2>'+
       '<p class="hint" style="margin-top:0"><b>Viene eliminato:</b> '+esc(az.elimina)+'</p>'+
       '<p class="hint"><b>Resta:</b> '+esc(az.conserva)+'</p>'+
@@ -577,7 +579,7 @@ function renderInner(){
   }
   else if (S.conferma) {
     var tutto = S.conferma === "tutto";
-    h += '<div class="card invito pronta" role="alertdialog" aria-labelledby="conftit">'+
+    h += '<div class="card invito pronta" role="alertdialog" tabindex="-1" aria-labelledby="conftit">'+
       '<h2 data-ico="ritardo"><span id="conftit">'+
       (tutto ? "Cancellare tutto?" : "Cancellare la cronologia?")+'</span></h2>'+
       '<p class="hint" style="margin-top:0">'+
@@ -607,11 +609,27 @@ function renderInner(){
   }
   if (S.esitoCancellazione) {
     var ec = S.esitoCancellazione;
+    /* DIFETTO CORRETTO — il toast e questa scheda si contraddicevano.
+       Introdotto separando «riuscito» da «non c'era niente da fare»: il
+       messaggio breve diceva «Non c'era niente da eliminare.» e il titolo
+       qui, che guarda solo `completo`, diceva «Cancellazione completata».
+       Due frasi sullo stesso schermo, e quella che restava era la falsa:
+       dichiarava una cancellazione mai avvenuta. */
     h += '<div class="card"><h2 data-ico="dati"><span>'+
-      (ec.completo ? "Cancellazione completata"
+      (ec.nullaDaFare ? "Non c'era niente da eliminare"
+       : ec.completo ? "Cancellazione completata"
        : ec.parziale ? "Cancellazione parziale" : "Cancellazione non riuscita")+'</span></h2>'+
-      (ec.parziale ? '<p class="hint avviso">Una parte non è riuscita. Qui sotto trovi che '+
-                     'cosa è stato rimosso e che cosa no.</p>' : '')+
+      (ec.nullaDaFare ? '<p class="hint">Nessun account collegato: da qui non c\'era nulla '+
+                        'da rimuovere. I dati di questo dispositivo non sono stati toccati.</p>' : '')+
+      /* la decisione di NON eliminare l'account va letta in cima, non
+         soltanto dentro il passo che la riporta */
+      (ec.accountNonToccato ? '<p class="hint avviso"><b>L\'account è stato conservato di '+
+                     'proposito.</b> I dati nel tuo account non risultano cancellati, e senza '+
+                     'l\'account non ci sarebbe più modo di raggiungerli. Riprova quando la '+
+                     'cancellazione dei dati sarà riuscita.</p>' : '')+
+      (ec.parziale && !ec.accountNonToccato
+        ? '<p class="hint avviso">Una parte non è riuscita. Qui sotto trovi che '+
+          'cosa è stato rimosso e che cosa no.</p>' : '')+
       '<ul class="chlista">'+
       PASSI_CANCELLAZIONE().map(function(p2){
         var r2 = ec.passi[p2.id];
@@ -1183,6 +1201,22 @@ function renderInner(){
   /* conserva testo in digitazione, fuoco e cursore attraverso il ridisegno */
   var keep = {}, focusKey = null, caret = null, focusAct = null;
   var ae = document.activeElement;
+  /* DIFETTO CORRETTO — un ridisegno qualsiasi toglieva il fuoco a una
+     conferma aperta.
+
+     Il fuoco viene conservato attraverso il ridisegno solo per gli elementi
+     che portano `data-act` o `data-keep`. La scheda di conferma non ha né
+     l'uno né l'altro: è un `div[role="alertdialog"][tabindex="-1"]`, e la
+     riga più sotto le toglie il fuoco prima dello scambio senza che nessuno
+     glielo restituisca.
+
+     Non è teorico, ed è così che è stato trovato: il toast di un'azione
+     precedente scade dopo 3,7 secondi e chiama `render()`. Se in quel
+     momento una conferma è aperta, `document.activeElement` torna BODY —
+     misurato: apri tre conferme di fila e la terza perde il fuoco, sempre,
+     a ogni larghezza. Per chi naviga da tastiera o con uno screen reader il
+     dialogo sparisce da sotto le dita mentre è ancora sullo schermo. */
+  var fuocoInConferma = !!(ae && ae.closest && ae.closest('[role="alertdialog"]'));
   if (ae && ae.getAttribute && ae.getAttribute("data-act"))
     focusAct = '[data-act="'+ae.getAttribute("data-act")+'"]'+
                (ae.getAttribute("data-id") ? '[data-id="'+ae.getAttribute("data-id")+'"]' : "")+
@@ -1245,6 +1279,13 @@ function renderInner(){
       try { el3.focus({ preventScroll:true }); } catch (e0) { el3.focus(); }
       try { el3.select(); } catch (e2) {}
     }
+  }
+  /* e se il fuoco era dentro una conferma, ci torna: vedi il difetto
+     corretto in cima a questa funzione. Solo se la conferma c'è ancora —
+     un ridisegno che la chiude non deve riportarci il fuoco. */
+  if (fuocoInConferma && document.activeElement === document.body) {
+    var dlg = root.querySelector('[role="alertdialog"]');
+    if (dlg && dlg.focus) { try { dlg.focus({ preventScroll:true }); } catch (e5) { dlg.focus(); } }
   }
   var ns = document.getElementById("agscroll");
   if (ns) {

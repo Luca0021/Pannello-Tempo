@@ -718,3 +718,160 @@ vero prima negava tutto e poi applicava un testo diverso di una riga. Nessuna
 delle due cose contraddiceva l'altra, perché misurano oggetti diversi:
 l'emulatore misura il file, la sonda misura il servizio. Servono entrambe, e
 la seconda va rifatta ogni volta che qualcuno pubblica le regole.
+
+---
+
+## PRV-002 — le conferme non si vedevano, e l'account poteva restare senza dati
+
+Aggiunto dopo un censimento delle diciassette aree di sicurezza e affidabilità
+dei dati. Delle diciassette, tredici sono risultate solide e sono descritte
+altrove; qui stanno i tre difetti misurati, più un quarto emerso correggendo
+gli altri.
+
+### 1. Le sette conferme distruttive nascevano fuori dallo schermo
+
+Le schede di conferma vengono disegnate in cima alla pagina, nella zona
+«priorità»; i comandi che le aprono stanno in fondo alle impostazioni, dopo
+otto sezioni. Misurato premendo un'azione distruttiva:
+
+| viewport | scroll al clic | dialogo | fuoco |
+|---|---|---|---|
+| 320×568 | 12648 → 12900 | top **−10709** | `BODY` |
+| 393×852 | 11167 → 11419 | top **−9637** | `BODY` |
+| 1280×900 | 7389 → 7611 | top **−6087** | `BODY` |
+
+Premere «Elimina i dati di questo dispositivo» non produceva **niente di
+visibile**. Sono le sette azioni più pericolose del pannello, tre delle quali
+chiedono di scrivere `CANCELLA` e non si annullano. E una conferma armata e
+invisibile resta armata: scorrendo in cima più tardi la si ritrova lì.
+
+Corretto con l'ancora che il pannello ha già per questo — `riporta()` scorre
+finché l'elemento non ha il `top` richiesto — e il fuoco che entra nel
+dialogo, che ha ricevuto `tabindex="-1"`. Una funzione sola,
+`mostraConfermaInVista()`, per tutte e sette le azioni, le due cancellazioni
+diffuse e il ritorno al preset dei profili: erano lo stesso gesto.
+
+### 2. L'account poteva essere eliminato lasciando i dati irraggiungibili
+
+L'ordine dati-poi-account era già giusto, e per il motivo giusto: eliminando
+prima l'account si perde il token con cui cancellare i dati. Mancava la
+conseguenza di quell'ordine. Se il passo `cloud` falliva — o la verifica non
+confermava — `passoAccount()` procedeva lo stesso.
+
+Esito possibile: i dati restano nel database e l'account, **unica chiave per
+raggiungerli**, non esiste più. Nessuno, nemmeno chi li ha scritti, può più
+leggerli o cancellarli. È l'esito peggiore di quella schermata, e nasceva da
+una guardia che non c'era.
+
+Ora l'eliminazione dell'account non viene nemmeno **tentata** se la
+cancellazione dei dati richiesta non è riuscita e confermata, e il motivo lo
+dice: «senza l'account non ci sarebbe più modo di raggiungerli». I dati locali
+vengono comunque rimossi, perché quella è un'altra decisione.
+
+### 3. «Non c'era niente da fare» veniva riportato come un guasto
+
+Il ramo senza sessione segnava `cloud` come riuscito, quindi la guardia della
+verifica non scattava: si andava a rileggere un documento che non esiste in un
+account che non c'è, e la risposta era «Non verificabile: nessuna sessione».
+Misurato: «Elimina i dati dal tuo account» senza sessione riportava **«Una
+parte non è riuscita»** su un'operazione che non aveva nulla da compiere.
+
+In quest'area un falso allarme costa quanto un falso successo: chi legge due
+volte «una parte non è riuscita» senza che sia vero smette di leggere. Ora i
+passi distinguono *riuscito* da *non applicabile*, e i messaggi sono quattro
+invece di due: «Fatto.», «Non c'era niente da eliminare.», «L'account NON è
+stato eliminato, di proposito», «Una parte non è riuscita».
+
+### 4. Qualunque ridisegno toglieva il fuoco a una conferma aperta
+
+Emerso correggendo il primo, e trovato da una prova che falliva sempre alla
+terza conferma aperta. `render()` conserva il fuoco attraverso il ridisegno
+solo per gli elementi che portano `data-act` o `data-keep`; la scheda di
+conferma è un `div[role="alertdialog"][tabindex="-1"]` e non ha né l'uno né
+l'altro, quindi veniva sfocata prima dello scambio delle zone e nessuno le
+restituiva il fuoco.
+
+Non serve niente di esotico per inciamparci: il toast di un'azione precedente
+scade dopo 3,7 secondi e chiama `render()`. Per chi naviga da tastiera o con
+uno screen reader il dialogo spariva da sotto le dita mentre era ancora sullo
+schermo. Ora il fuoco torna nel dialogo se ci stava, **e solo se il dialogo
+c'è ancora**: un ridisegno che lo chiude non deve rimetterlo a forza.
+
+### Copertura aggiunta
+
+Quattro funzioni dell'area non comparivano in nessun file di prova:
+`ripristinaBackup`, `backupIntegro`, `ripulisciProfondo`,
+`verificaCancellazioneRemota`. Le prime due sono il percorso che ti salva
+quando qualcosa è andato storto; la terza è l'unica cosa fra un file ostile e
+`Object.prototype`.
+
+- `tests/unit/dati-sicuri.test.js`: **25 prove**. Fra le altre: una copia
+  danneggiata viene rifiutata **senza toccare i dati correnti**; una copia di
+  schema 1 viene migrata e non applicata così com'è; il ripristino si può
+  annullare; `Object.prototype` non viene inquinato da un backup che contiene
+  `__proto__`; un 404 dopo la cancellazione vale come conferma e un errore di
+  rete **no**.
+- `tests/e2e/cancellazione.spec.js`: da 10 a **23 prove**.
+
+Controprova eseguita rimettendo i quattro moduli com'erano: **11 delle 12
+prove di comportamento cadono**. Le 25 unitarie passano anche prima, ed è
+corretto: coprono funzioni che non sono state modificate.
+
+### Una decisione aperta, non presa qui
+
+`firebase/firestore.rules` definisce `emailVerificata()` e **nessuna regola la
+usa**. Il commento accanto dice come renderla obbligatoria. Non è un difetto
+di implementazione: è una decisione di prodotto — se la verifica dell'indirizzo
+debba essere una condizione per leggere e scrivere i propri dati — con
+conseguenze su chi si registra e non conferma subito.
+
+Va però detto che un aiutante di sicurezza **dichiarato e inerte** si legge, da
+chi apre il file, come una garanzia che non c'è. Le due uscite sono usarla o
+toglierla; la terza — lasciarla lì — è quella che costa di più a chi eredita il
+file. Non è stata toccata in questo intervento, su richiesta.
+
+### Revisione prima del push: che cosa resta, azione per azione
+
+La domanda posta in revisione: l'account viene conservato quando il cloud
+fallisce, ma i dati locali vengono eliminati lo stesso. È coerente?
+
+Misurato su `localStorage` prima e dopo, per ogni azione e nei due casi:
+
+| azione | cloud riesce | cloud fallisce |
+|---|---|---|
+| `locali` | dati tolti, copie 1→0, sessione chiusa | identico: il cloud non è coinvolto |
+| `cloud` | dati **restano**, copie 1→1 | dati **restano**, esito «parziale» |
+| `account` | tutto tolto, account eliminato | account **conservato**, dati locali tolti |
+
+**Il comportamento è corretto e non è stato cambiato**, e la ragione è
+misurata, non argomentata: dopo una cancellazione completa riuscita a metà
+nessun dato è perduto — la copia nel servizio resta e l'account che la
+raggiunge pure — e non resta niente che possa fare danni da solo. Verificato:
+`items` 0, coda 0, `dirty` false, `provider` «locale», `syncReady()` false,
+istantanea dei record azzerata, e l'unica chiave superstite è
+`pannello-tempo:sync`, che non contiene credenziali. Un rientro futuro
+**rilegge**, non sovrascrive.
+
+Il dispositivo viene invece davvero pulito, che è la metà della richiesta
+sotto il nostro controllo e conta per chi sta svuotando un telefono. Rifiutare
+di pulirlo perché il servizio ha detto di no lo lascerebbe sporco in uno
+scenario altrettanto plausibile: sarebbe una preferenza, non una correzione.
+
+Il contratto è ora fissato da prove parametrizzate sui due casi.
+
+### Un difetto introdotto separando «riuscito» da «non applicabile»
+
+Trovato nella stessa revisione, e introdotto dall'intervento precedente: il
+messaggio breve diceva «Non c'era niente da eliminare.» mentre la scheda
+d'esito — che guardava solo `completo` — titolava **«Cancellazione
+completata»**. Due frasi sullo stesso schermo, e quella che restava era la
+falsa: dichiarava una cancellazione mai avvenuta.
+
+Corretto il titolo, e aggiunta in cima alla scheda la decisione sull'account
+conservato, che prima si poteva leggere soltanto dentro il passo che la
+riportava. Controprova: rimesso il titolo di prima, la prova cade con
+«Received: "Cancellazione completata"».
+
+E una verifica richiesta esplicitamente: `mostraConfermaInVista()` viene
+invocata **una volta sola** per clic — misurato su tre azioni, con un dialogo
+solo nel documento, `top` 12 e il fuoco dentro.

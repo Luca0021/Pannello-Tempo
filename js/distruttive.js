@@ -131,8 +131,15 @@ function eseguiDistruttiva(id, poi){
       S.data = datiVuoti(); normalizeData();
       S.disegnoCompleto = "dataset-sostituito"; forzaProssimoCompleto();
     }
+    /* Quattro esiti, non due. «Fatto.» su un'operazione che non aveva niente
+       da fare farebbe credere a una cancellazione avvenuta; «una parte non è
+       riuscita» sulla stessa la farebbe temere rotta. E l'account risparmiato
+       di proposito non è un guasto: è una decisione, e va detta come tale. */
     if (poi) poi({ ok: esito.completo,
-                   nota: esito.completo ? "Fatto."
+                   nota: esito.completo
+                       ? (esito.nullaDaFare ? "Non c'era niente da eliminare." : "Fatto.")
+                       : esito.accountNonToccato
+                         ? "L'account NON è stato eliminato, di proposito: vedi il dettaglio."
                        : esito.riautenticare ? "Serve la password per eliminare l'account: vedi il dettaglio."
                        : "Una parte non è riuscita: vedi il dettaglio.",
                    esito: esito });

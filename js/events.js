@@ -28,6 +28,36 @@ var ANCORA_MAI = ["digest","search","vaioggi","vaiagenda","vairitardi","gotoday"
      esiste più farebbe saltare la pagina in un punto qualsiasi */
   "premigr-ripristina","copia-ripristina"];
 
+/* DIFETTO CORRETTO — le conferme nascevano fuori dallo schermo.
+
+   Tutte le schede di conferma vengono disegnate in cima alla pagina, nella
+   zona «priorità». I comandi che le aprono stanno invece in fondo alle
+   impostazioni, dopo otto sezioni. Misurato premendo un'azione distruttiva:
+
+     320x568    la pagina è scorsa di 12648px, il dialogo nasce a -10709
+     393x852    scorsa di 11167, dialogo a  -9637
+     1280x900   scorsa di  7389, dialogo a  -6087
+
+   e il fuoco restava sul pulsante premuto, anzi su BODY dopo il ridisegno
+   della zona. Premere «Elimina i dati di questo dispositivo» non produceva
+   NIENTE di visibile, e una conferma armata e invisibile resta armata.
+
+   `S.inCima` non serve — riporta a zero, che non è dove sta il dialogo —
+   quindi si usa l'ancora, che nel pannello esiste proprio per questo:
+   `riporta()` scorre finché l'elemento non ha quel `top` nella vista. Il
+   fuoco entra nel dialogo, che porta `tabindex="-1"`: un `role="alertdialog"`
+   che non lo riceve viene annunciato a metà.
+
+   Una funzione sola per tutte e sei le azioni distruttive, le due
+   cancellazioni diffuse e il ritorno al preset: erano lo stesso gesto e
+   meritavano un solo punto in cui è scritto come si fa. */
+function mostraConfermaInVista(){
+  S.ancora = { sel: '[role="alertdialog"]', top: 12 };
+  render();
+  var d = document.querySelector('#app [role="alertdialog"]');
+  if (d && d.focus) { try { d.focus({ preventScroll:true }); } catch (e) { d.focus(); } }
+}
+
 document.addEventListener("click", function(ev){
   var el = ev.target.closest("[data-act]");
   if (!el) return;
@@ -854,24 +884,10 @@ document.addEventListener("click", function(ev){
     if (!ap.ok) { toast(ap.motivo, "info"); return; }
     if (!ap.scelte) { toast("Non c'è nulla da ripristinare.", "info"); return; }
     S.conferma = "preset";
-    /* DIFETTO CORRETTO — la conferma compariva fuori dallo schermo.
-       Misurato su telefono a 393x852 e su desktop: la scheda dei profili sta
-       in fondo a otto sezioni di impostazioni, quindi al momento del clic la
-       pagina è scorsa di quasi settemila pixel; la scheda di conferma viene
-       però disegnata in cima, nella zona «priorità». Il risultato era che
-       premendo «Torna al preset» il dialogo nasceva a 5618 pixel SOPRA il
-       bordo della vista e il fuoco restava sul pulsante premuto: all'utente
-       non succedeva niente di visibile.
-       `S.inCima` non basta — riporta a zero, e il dialogo sta a y 1636 —
-       quindi si usa l'ancora, che esiste per questo: `riporta()` scorre
-       finché l'elemento non ha quel `top` nella vista. */
-    S.ancora = { sel: '[role="alertdialog"]', top: 12 };
-    render();
-    /* e il fuoco entra nel dialogo: un `role="alertdialog"` che non lo
-       riceve viene annunciato a metà, e il ridisegno della zona lo aveva
-       comunque perso */
-    var dlg = document.querySelector('#app [role="alertdialog"]');
-    if (dlg && dlg.focus) { try { dlg.focus({ preventScroll: true }); } catch (e3) { dlg.focus(); } }
+    /* stessa strada delle altre conferme: il dialogo si disegna in cima e
+       il comando sta in fondo, quindi va portato nella vista e gli va dato
+       il fuoco. Il perché, con le misure, sta su `mostraConfermaInVista`. */
+    mostraConfermaInVista();
   }
   else if (act === "preset-ok") {
     S.conferma = null;
@@ -1196,7 +1212,7 @@ document.addEventListener("click", function(ev){
     toast(amb === "questa" ? "Occorrenza rimossa"
           : amb === "questa-e-successive" ? "Serie interrotta da qui" : "Serie eliminata", "ok");
   }
-  else if (act === "distr") { S.conferma = v; svuota("confin"); render(); }
+  else if (act === "distr") { S.conferma = v; svuota("confin"); mostraConfermaInVista(); }
   else if (act === "distr-ok") {
     var azio = azioneDistruttiva(S.conferma);
     if (!azio) return;
@@ -1212,8 +1228,8 @@ document.addEventListener("click", function(ev){
       render();
     });
   }
-  else if (act === "del-cronologia") { S.conferma = "cronologia"; render(); }
-  else if (act === "del-tutto") { S.conferma = "tutto"; render(); }
+  else if (act === "del-cronologia") { S.conferma = "cronologia"; mostraConfermaInVista(); }
+  else if (act === "del-tutto") { S.conferma = "tutto"; mostraConfermaInVista(); }
   else if (act === "esito-ok") { S.esitoCancellazione = null; render(); }
   else if (act === "conferma-annulla") { S.conferma = null; svuota("confin"); render(); }
   else if (act === "conferma-ok") {

@@ -102,9 +102,12 @@ function PASSI_CANCELLAZIONE(){
    NON si finge che sia andata: si chiede la password e si riprova.
    ───────────────────────────────────────────────────────────────────────── */
 function eliminaAccountAuth(){
+  /* Senza sessione non c'è un account da eliminare: è «niente da fare», non
+     un fallimento. Segnalarlo come fallito faceva comparire «Una parte non è
+     riuscita» su un'operazione che non aveva nulla da compiere. */
   if (!sync.fb.idToken)
-    return Promise.resolve({ ok:false, riautenticare:false,
-      motivo:"Nessuna sessione attiva: l'account di accesso non è stato toccato." });
+    return Promise.resolve({ ok:true, nonApplicabile:true, riautenticare:false,
+      motivo:"Nessuna sessione attiva: non c'era un account di accesso da eliminare." });
   vietaProduzioneNeiTest();
   return fetch(endpointIdentity()+"/accounts:delete?key="+
                encodeURIComponent(FIREBASE_CONFIG.apiKey), {
@@ -163,15 +166,28 @@ function cancellaTutto(opzioni, poi){
   /* compatibilità: la firma precedente era (ancheCloud, poi) */
   if (typeof opzioni === "boolean") opzioni = { cloud: opzioni, account: false, locali: true };
   var o = Object.assign({ cloud:false, account:false, locali:true }, opzioni || {});
-  var esito = { passi: {}, completo: false, parziale: false, riautenticare: false };
-  function segna(id, ok, nota){
-    esito.passi[id] = { ok: !!ok, nota: nota || "" };
+  var esito = { passi: {}, completo: false, parziale: false, riautenticare: false,
+                nullaDaFare: false, accountNonToccato: false };
+  /* `nonApplicabile` distingue «riuscito» da «non c'era niente da fare». Sono
+     due cose diverse e prima erano la stessa: vedi i due difetti corretti qui
+     sotto, che nascono entrambi da questa mancanza. */
+  function segna(id, ok, nota, nonApplicabile){
+    esito.passi[id] = { ok: !!ok, nota: nota || "", nonApplicabile: !!nonApplicabile };
   }
   function conclusione(){
     var chiavi = Object.keys(esito.passi);
     var riusciti = chiavi.filter(function(k){ return esito.passi[k].ok; }).length;
     esito.completo = riusciti === chiavi.length;
     esito.parziale = riusciti > 0 && !esito.completo;
+    /* «Non c'era niente da eliminare» non è «Fatto.»: dirlo «fatto» farebbe
+       credere a una cancellazione che non è avvenuta. Vale quando TUTTI i
+       passi che l'azione richiedeva erano non applicabili. */
+    var richiesti = [];
+    if (o.cloud) richiesti.push("cloud");
+    if (o.account) richiesti.push("account");
+    if (o.locali) richiesti.push("locali");
+    esito.nullaDaFare = esito.completo && richiesti.length > 0 &&
+      richiesti.every(function(k){ return esito.passi[k] && esito.passi[k].nonApplicabile; });
     if (poi) poi(esito);
   }
 
@@ -221,8 +237,32 @@ function cancellaTutto(opzioni, poi){
      cancellare i dati, e restano orfani nel database. */
   function passoAccount(){
     if (!o.account) { locali(); return; }
+    /* DIFETTO CORRETTO — l'account veniva eliminato anche quando i dati
+       remoti NON erano stati cancellati.
+
+       L'ordine dati-poi-account era già giusto e per il motivo giusto:
+       eliminando prima l'account si perde il token con cui cancellare i
+       dati. Mancava però la conseguenza di quell'ordine: se il passo
+       `cloud` fallisce, o la verifica non conferma, i dati restano nel
+       database — e l'account è l'UNICA chiave per raggiungerli. Eliminarlo
+       lo stesso produce l'esito peggiore possibile di questa schermata:
+       dati che esistono e che nessuno, nemmeno chi li ha scritti, può più
+       leggere o cancellare.
+
+       Non è un fallimento del passo: è una decisione, e come tale viene
+       detta. Se la cancellazione remota non era stata chiesta, o non era
+       applicabile perché non c'è una sessione, la guardia non scatta. */
+    var c = esito.passi.cloud, v = esito.passi.verifica;
+    if (o.cloud && c && !c.nonApplicabile && (!c.ok || !v || !v.ok)) {
+      esito.accountNonToccato = true;
+      segna("account", false,
+        "Non eliminato di proposito: i dati nel tuo account non risultano cancellati, "+
+        "e senza l'account non ci sarebbe più modo di raggiungerli. Riprova quando la "+
+        "cancellazione dei dati sarà riuscita.");
+      locali(); return;
+    }
     eliminaAccountAuth().then(function(r){
-      segna("account", r.ok, r.motivo || "");
+      segna("account", r.ok, r.motivo || "", !!r.nonApplicabile);
       if (r.riautenticare) esito.riautenticare = true;
       locali();
     });
@@ -231,8 +271,19 @@ function cancellaTutto(opzioni, poi){
   /* passo 2: la verifica. Dire «cancellato» senza aver riletto è dire una
      cosa che non si sa. */
   function passoVerifica(){
-    if (!o.cloud || !esito.passi.cloud || !esito.passi.cloud.ok) {
-      segna("verifica", true, "non applicabile");
+    var c = esito.passi.cloud;
+    /* DIFETTO CORRETTO — la verifica falliva quando non c'era niente da
+       verificare. La guardia controllava `cloud.ok`, ma il ramo «nessuna
+       sessione attiva» segna `cloud` come RIUSCITO: si andava quindi a
+       rileggere un documento che non esiste, in un account che non c'è, e
+       `verificaCancellazioneRemota` rispondeva «Non verificabile: nessuna
+       sessione.». Misurato: «Elimina i dati dal tuo account» senza sessione
+       riportava «Una parte non è riuscita», cioè un allarme su
+       un'operazione che non aveva niente da fare. In un'area dove un
+       fallimento dichiarato deve significare qualcosa, un falso allarme
+       costa quanto un falso successo. */
+    if (!o.cloud || !c || !c.ok || c.nonApplicabile) {
+      segna("verifica", true, "non applicabile", true);
       passoAccount(); return;
     }
     verificaCancellazioneRemota().then(function(v){
@@ -258,7 +309,7 @@ function cancellaTutto(opzioni, poi){
   } else {
     segna("cloud", true, o.cloud
       ? "nessuna sessione attiva: nel tuo account non c'era nulla da cancellare da qui"
-      : "non richiesto");
+      : "non richiesto", true);
     passoVerifica();
   }
 }

@@ -128,9 +128,12 @@
       "stato": "COMPLETATO",
       "dove": [
         "js/privacy.js",
-        "js/distruttive.js"
+        "js/distruttive.js",
+        "js/render.js",
+        "js/events.js",
+        "tests/e2e/cancellazione.spec.js"
       ],
-      "verifica": "ESEGUITA SUL SERVIZIO REALE. Prima con chiamate REST diritte: documento creato, riletto, cancellato, e la rilettura successiva risponde 404. Poi — ed è la verifica che conta — attraverso `cancellaTutto({cloud, account, locali})`, cioè il percorso del pannello: tutti e sette i passi riusciti (cloud, verifica, account, coda, credenziali, locali, backup), esito «completo», e la controprova che l'account cancellato non permette più l'accesso. Nessun residuo lasciato sul progetto",
+      "verifica": "ESEGUITA SUL SERVIZIO REALE. Prima con chiamate REST diritte: documento creato, riletto, cancellato, e la rilettura successiva risponde 404. Poi — ed è la verifica che conta — attraverso `cancellaTutto({cloud, account, locali})`, cioè il percorso del pannello: tutti e sette i passi riusciti (cloud, verifica, account, coda, credenziali, locali, backup), esito «completo», e la controprova che l'account cancellato non permette più l'accesso. Nessun residuo lasciato sul progetto AGGIUNTO DOPO: tre difetti trovati misurando il percorso, non leggendolo. (1) Le sette schede di conferma venivano disegnate in cima alla pagina mentre i comandi stanno in fondo alle impostazioni: misurate a 10709px sopra il bordo della vista a 320x568, 9637 a 393x852, 6087 a 1280x900, col fuoco su BODY. Premere non produceva niente di visibile. (2) L'account veniva eliminato anche quando la cancellazione dei dati era fallita o non confermata, lasciando dati nel database e nessuna chiave per raggiungerli. (3) Senza sessione la verifica veniva tentata lo stesso e falliva, riportando «una parte non è riuscita» su un'operazione che non aveva nulla da compiere. Corretti tutti e tre, piu' il fuoco che qualunque ridisegno toglieva a una conferma aperta (il toast di un'azione precedente scade dopo 3,7s e chiama render()). 13 prove nuove nel browser e 25 unitarie; controprova eseguita: sul codice precedente 11 delle 12 prove di comportamento cadono.",
       "manca": ""
     },
     {
@@ -139,9 +142,10 @@
       "stato": "COMPLETATO",
       "dove": [
         "js/backup.js",
-        "js/privacy.js"
+        "js/privacy.js",
+        "tests/unit/dati-sicuri.test.js"
       ],
-      "verifica": "eseguita nel browser: JSON e CSV, senza credenziali",
+      "verifica": "eseguita nel browser: JSON e CSV, senza credenziali AGGIUNTO DOPO: ripristinaBackup, backupIntegro e ripulisciProfondo non erano citati in nessun file di prova. Ora 25 prove unitarie in tests/unit/dati-sicuri.test.js, fra cui il rifiuto di una copia danneggiata senza toccare i dati correnti, la migrazione di una copia di schema precedente, e che Object.prototype non venga inquinato da un file importato.",
       "manca": ""
     },
     {

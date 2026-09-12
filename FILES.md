@@ -141,7 +141,7 @@ l'ultima parola.
 
 ---
 
-## 4. `tests/` — diciotto file
+## 4. `tests/` — diciannove file
 
 La riga che stava qui — «nessuno è mai stato eseguito in questo ambiente: non
 c'è Node» — era vera quando è stata scritta e non lo è più: Node c'è, e
@@ -158,6 +158,7 @@ non si scarica da questa rete): la seconda metà della matrice del flusso
 | `unit/limiti-e-versioni.test.js` | 13 | Node. Le collisioni fra globali, i limiti di importazione, e che le modifiche risultino da sincronizzare |
 | `unit/messaggi-errore.test.js` | — | Node |
 | `unit/sincronizzazione.test.js` | 19 | Node |
+| `unit/dati-sicuri.test.js` | 25 | Node. Copie di sicurezza, ripristino, pulizia di un file importato e verifica della cancellazione remota: le quattro funzioni dell'area dati che non comparivano in nessun file di prova |
 | `unit/profili.test.js` | 33 | Node. Profili, i cinque rami di `moduloAttivo`, precedenza delle scelte esplicite, provenienza, ritorno al preset. La logica che decide quali sezioni esistono, e che prima non aveva un solo test |
 | `integration/gist-migrazione.test.js` | 20 | Node |
 | `security/regole.test.js` | 14 | Node + Java + emulatore Firestore |
@@ -167,7 +168,7 @@ non si scarica da questa rete): la seconda metà della matrice del flusso
 | `ui/impaginazione.spec.js` | 18 | Node + Playwright. Le regole misurabili dell'impaginazione, più le tre dichiarazioni che nessuna geometria vede |
 | `ui/primo-accesso.spec.js` | 17 | Node + Playwright |
 | `ui/profili.spec.js` | 32 | Node + Playwright. Che i comandi di profilo e modalità esistano nella pagina, che la conferma preceda l'azione, che la provenienza di ogni parte si legga |
-| `e2e/cancellazione.spec.js` | 10 | Node + Playwright |
+| `e2e/cancellazione.spec.js` | 28 | Node + Playwright |
 | `e2e/piattaforma.spec.js` | 17 | Node + Playwright |
 | `a11y/accessibilita.spec.js` | 14 + 6 + 3 | Node + Playwright + axe-core. Le aggiunte misurano ciò che axe non misura, e hanno trovato difetti veri |
 
