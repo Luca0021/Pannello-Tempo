@@ -14,6 +14,37 @@ era a rischio.
 `f915fb62fff8`, **con configurazione Firebase generata dai Secrets**: sul
 sito l'Account è disponibile e funziona.
 
+### Un titolo che non poteva andare a capo, e che solo la CI vedeva sfondare
+
+La pipeline è diventata rossa: `Verifica` #8, su **entrambi** i browser,
+asserzione «nessuno scorrimento orizzontale» a 320px — 5 pixel su chromium,
+55 su firefox, due volte su due. In locale la stessa prova dava 0.
+
+`css/components.css` dichiarava `.pt h2 > span:first-of-type{flex:none}`, cioè
+`flex-shrink: 0`: il titolo non si restringe e quindi **non va a capo**. Per
+una scheda normale non si nota; le due schede di conferma hanno però titoli
+lunghi quanto una frase, e «Tornare al preset di «Essenziale»?» misura 264,66
+dentro un `h2` largo 246 — sporge di 18,66 e a 320px ne restavano 18,34 prima
+del bordo. Con le metriche tipografiche del runner quei 18,34 non bastavano.
+
+Misurato a parità di viewport e font, l'overflow del documento è **esattamente**
+`span.right − clientWidth`: allungando il titolo si ottengono 17, 52, 88, 158.
+La metrica del runner è la variabile; la causa è il titolo che non si
+restringe.
+
+La prima correzione ipotizzata — `min-width:0` — è stata provata a runtime e
+**bocciata**: con `flex-shrink: 0` il minimo non viene mai raggiunto. Quella
+applicata è `.pt [role="alertdialog"] h2 > span:first-of-type{flex:0 1 auto;
+min-width:0}`, circoscritta alle due schede di conferma. Nessun `!important`,
+nessun `overflow-x:hidden`, nessun testo rimpicciolito, nessun troncamento, e
+la righetta decorativa resta dov'era.
+
+Accanto all'asserzione sull'overflow — che non è stata toccata — ce n'è ora una
+sul **contenimento**: `span.right ≤ h2.right`, vera o falsa a prescindere dai
+font. Controprova: tolta la regola, fallisce **in locale** con 18,66. Due prove
+nuove aprono anche la conferma delle azioni distruttive, che aveva lo stesso
+difetto latente e se la cavava solo perché il suo titolo è corto.
+
 ### La conferma del ripristino nasceva 5618 pixel sopra lo schermo
 
 Trovato estendendo le prove dei profili alle larghezze da telefono, che è la

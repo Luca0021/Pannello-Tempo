@@ -360,3 +360,80 @@ corretti:
    solo quando non c'è altro modo — ma quella regola vale per **ogni**
    `ul.linklist` del prodotto, e non è una riga da cambiare dentro una fase
    sui profili.
+
+*Il primo dei due è stato invece corretto subito dopo, perché la stessa riga
+CSS che ha risolto il §7.6 copre anche il titolo di quella conferma.*
+
+---
+
+## 7.6 Il titolo della conferma sfondava la vista, e solo la CI lo vedeva
+
+Il commit che ha portato le prove sul telefono ha fatto **fallire la
+pipeline**: `Verifica` #8, passo «Profili, modalità e personalizzazione», su
+**entrambi** i browser, asserzione 96 «nessuno scorrimento orizzontale» a
+320px — `5` su chromium e `55` su firefox, **due volte su due**, anche al
+retry. In locale la stessa prova dava 0.
+
+### La causa, dimostrata
+
+`css/components.css:257` dichiara `.pt h2 > span:first-of-type{flex:none;}`.
+`flex:none` è `0 0 auto`: il titolo non si restringe e quindi non va a capo.
+Per una scheda normale non si nota — i titoli sono corti — ma le due schede di
+**conferma** hanno titoli lunghi quanto una frase:
+
+```
+span#ptit «Tornare al preset di «Essenziale»?»   largo 264,66
+h2 che lo contiene                               largo    246   → sporge 18,66
+margine residuo fino al bordo della vista a 320px         18,34 → overflow 0
+```
+
+Allungando il titolo a parità di viewport e di font, l'overflow del documento
+è **esattamente** `span.right − clientWidth`:
+
+| titolo | span largo | overflow |
+|---|---|---|
+| vero | 264,66 | 0 |
+| +4 caratteri | 300,02 | 17 |
+| +8 | 335,36 | 52 |
+| +12 | 370,72 | 88 |
+| +20 | 441,41 | 158 |
+
+I 5px di chromium e i 55 di firefox stanno dentro questa curva: corrispondono
+allo stesso titolo reso circa il 9% e il 28% più largo. La metrica tipografica
+del runner è **la variabile**; la causa è il titolo che non può restringersi.
+Senza `flex:none` un font più largo manderebbe semplicemente il titolo a capo.
+
+### La correzione, e quella sbagliata scartata prima
+
+La prima proposta — `min-width:0` — è stata **provata a runtime e bocciata**:
+zero pixel di differenza, perché con `flex-shrink: 0` il minimo non viene mai
+raggiunto. Le varianti, misurate a 320px:
+
+| variante | titolo vero | +8 | +20 |
+|---|---|---|---|
+| `flex:none` (com'era) | 0 | 52 | 158 |
+| `min-width:0` da solo | 0 | 52 | 158 |
+| `flex:0 1 auto` | 0 | 0 | 0, ma sporge ancora 37,44 |
+| **`flex:0 1 auto; min-width:0`** | **0** | **0** | **0**, sporge 0 |
+| `+ overflow-wrap:anywhere` | 0 | 0 | 0, ma su tre righe |
+
+Applicata: `.pt [role="alertdialog"] h2 > span:first-of-type{flex:0 1 auto;
+min-width:0;}`. `flex-grow` resta 0 perché un titolo che si allarga
+spingerebbe via la righetta `::after` sugli schermi larghi; niente
+`overflow-wrap:anywhere` perché il titolo ha spazi e andare a capo fra le
+parole basta. A 320px il titolo passa da una riga sfondata a due, e l'`h2` da
+53 a 75 pixel. Nessun `!important`, nessun `overflow-x:hidden`, nessun testo
+rimpicciolito, nessun troncamento.
+
+### La misura che mancava
+
+L'asserzione 96 guarda il **documento**: vede il difetto solo quando il titolo
+supera il bordo della vista, quindi in locale taceva e in CI parlava. Accanto
+c'è ora la **98**, che guarda il **contenimento** — `span.right ≤ h2.right` —
+ed è vera o falsa a prescindere da quanto è largo un carattere. Controprova:
+tolta la regola CSS, la 98 fallisce **in locale** con `Received: 18.66`.
+
+E poiché di conferme ce ne sono due, due prove nuove aprono anche quella delle
+azioni distruttive: senza la regola, l'asserzione 103 cade su entrambe con
+`flex-shrink 0`. Il difetto latente del §7.5 è quindi chiuso per la parte
+tipografica; resta aperta quella dello scorrimento.

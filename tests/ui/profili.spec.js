@@ -670,7 +670,24 @@ test.describe('profili · gli stessi stati su uno schermo da telefono', () => {
           overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           testoMin: Math.min(...[...d.querySelectorAll('p')].map((x) => parseFloat(getComputedStyle(x).fontSize))),
           etichettato: !!(d.getAttribute('aria-labelledby') &&
-            document.getElementById(d.getAttribute('aria-labelledby')))
+            document.getElementById(d.getAttribute('aria-labelledby'))),
+          /* il titolo dentro il proprio h2: è la misura che mancava, ed è il
+             motivo per cui il difetto è arrivato fino alla CI invece di
+             cadere qui — vedi la nota sopra la prova del contenimento */
+          titolo: (() => {
+            const sp = d.querySelector('h2 > span');
+            const h2 = sp ? sp.closest('h2') : null;
+            if (!sp || !h2) return null;
+            const sr = sp.getBoundingClientRect(), hr = h2.getBoundingClientRect();
+            const cs = getComputedStyle(sp);
+            const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.3;
+            return { sporge: Math.round((sr.right - hr.right) * 100) / 100,
+                     larghezza: Math.round(sr.width * 100) / 100,
+                     contenitore: Math.round(hr.width * 100) / 100,
+                     righe: Math.round(sr.height / lh),
+                     flexShrink: cs.flexShrink, minWidth: cs.minWidth,
+                     testo: (sp.textContent || '').trim() };
+          })()
         };
       });
       expect(m.assente, '88 — la conferma deve comparire').toBeUndefined();
@@ -687,6 +704,69 @@ test.describe('profili · gli stessi stati su uno schermo da telefono', () => {
       expect(m.sopraLaBarra, '95 — la conferma non nasce sotto la barra fissa').toBe(true);
       expect(m.overflow, '96 — nessuno scorrimento orizzontale').toBeLessThanOrEqual(1);
       expect(m.testoMin, '97 — il testo della conferma non è rimpicciolito').toBeGreaterThanOrEqual(12);
+      /* 98 — IL CONTROLLO CHE MANCAVA, ed è quello che rende la 96
+         indipendente dai font.
+
+         La 96 guarda il documento: vede il difetto solo quando il titolo
+         supera il bordo della VISTA. In locale il titolo sporgeva già di
+         18,66px dal proprio h2 e ne restavano 18,34 al bordo, quindi la 96
+         passava; con le metriche tipografiche del runner quei 18,34 non
+         bastavano più e la 96 cadeva con 5px su chromium e 55 su firefox.
+         Il contenimento invece è vero o falso a prescindere da quanto è
+         largo un carattere: un titolo che esce dal proprio contenitore è
+         sbagliato anche quando per fortuna non arriva al bordo. */
+      expect(m.titolo, '98 — il titolo della conferma esiste').not.toBeNull();
+      expect(m.titolo.sporge,
+        `98 — il titolo «${m.titolo.testo}» sta nel suo h2 ` +
+        `(largo ${m.titolo.larghezza} in un contenitore da ${m.titolo.contenitore}, ` +
+        `flex-shrink ${m.titolo.flexShrink}, min-width ${m.titolo.minWidth})`)
+        .toBeLessThanOrEqual(1);
+      /* 99 — e ci sta andando a capo, non rimpicciolendosi o troncandosi */
+      expect(m.titolo.righe, '99 — il titolo va a capo su al massimo tre righe')
+        .toBeLessThanOrEqual(3);
+    });
+  }
+
+  /* LE DUE CONFERME, NON UNA.
+     La regola CSS è circoscritta a `[role="alertdialog"]`, e di schede di
+     conferma ce ne sono due: questa e quella delle azioni distruttive, che
+     ha la stessa struttura — `h2 > span` con `flex:none` — e lo stesso
+     difetto latente. Oggi se la cava perché «Ripristina l'aspetto?» è corto,
+     ma è la stessa fragilità, e una correzione che ne copre una sola
+     lascerebbe l'altra a scadere il giorno in cui qualcuno allunga un
+     titolo. */
+  for (const [azione, atteso] of [['aspetto', /aspetto/i], ['impostazioni', /impostazioni/i]]) {
+    test(`a 320px il titolo della conferma «${azione}» sta nel suo contenitore`, async ({ page }) => {
+      await statoVivo(page, { w: 320, h: 568 });
+      await page.evaluate((a) => { S.conferma = a; render(); }, azione);
+      await page.waitForTimeout(400);
+      const m = await page.evaluate(() => {
+        const d = document.querySelector('#app [role="alertdialog"]');
+        if (!d) return { assente: true };
+        const sp = d.querySelector('h2 > span');
+        const h2 = sp ? sp.closest('h2') : null;
+        if (!sp || !h2) return { senzaTitolo: true };
+        const sr = sp.getBoundingClientRect(), hr = h2.getBoundingClientRect();
+        const cs = getComputedStyle(sp);
+        return { sporge: Math.round((sr.right - hr.right) * 100) / 100,
+          larghezza: Math.round(sr.width * 100) / 100,
+          contenitore: Math.round(hr.width * 100) / 100,
+          flexShrink: cs.flexShrink, minWidth: cs.minWidth,
+          fontSize: parseFloat(cs.fontSize),
+          testo: (sp.textContent || '').trim(),
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+      });
+      expect(m.assente, '100 — la conferma deve comparire').toBeUndefined();
+      expect(m.senzaTitolo, '101 — e avere un titolo').toBeUndefined();
+      expect(m.testo, '102 — è la conferma attesa').toMatch(atteso);
+      /* 103 — la stessa regola vale qui: lo span deve potersi restringere */
+      expect(Number(m.flexShrink), '103 — il titolo può restringersi').toBeGreaterThan(0);
+      expect(m.sporge,
+        `104 — il titolo «${m.testo}» sta nel suo h2 ` +
+        `(largo ${m.larghezza} in ${m.contenitore})`).toBeLessThanOrEqual(1);
+      expect(m.overflow, '105 — nessuno scorrimento orizzontale').toBeLessThanOrEqual(1);
+      /* 106 — il testo non è stato rimpicciolito per farlo stare */
+      expect(m.fontSize, '106 — il titolo non è stato rimpicciolito').toBeGreaterThanOrEqual(15);
     });
   }
 

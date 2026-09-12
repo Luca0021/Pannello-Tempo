@@ -166,7 +166,7 @@ non si scarica da questa rete): la seconda metà della matrice del flusso
 | `ui/terminologia.spec.js` | 8 | Node + Playwright |
 | `ui/impaginazione.spec.js` | 18 | Node + Playwright. Le regole misurabili dell'impaginazione, più le tre dichiarazioni che nessuna geometria vede |
 | `ui/primo-accesso.spec.js` | 17 | Node + Playwright |
-| `ui/profili.spec.js` | 30 | Node + Playwright. Che i comandi di profilo e modalità esistano nella pagina, che la conferma preceda l'azione, che la provenienza di ogni parte si legga |
+| `ui/profili.spec.js` | 32 | Node + Playwright. Che i comandi di profilo e modalità esistano nella pagina, che la conferma preceda l'azione, che la provenienza di ogni parte si legga |
 | `e2e/cancellazione.spec.js` | 10 | Node + Playwright |
 | `e2e/piattaforma.spec.js` | 17 | Node + Playwright |
 | `a11y/accessibilita.spec.js` | 14 + 6 + 3 | Node + Playwright + axe-core. Le aggiunte misurano ciò che axe non misura, e hanno trovato difetti veri |

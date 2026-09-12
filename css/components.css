@@ -255,6 +255,33 @@
 .pt [data-ico="impostazioni"]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%207h9M17%207h3M4%2017h3M11%2017h9%22%2F%3E%3Ccircle%20cx%3D%2215%22%20cy%3D%227%22%20r%3D%222.2%22%2F%3E%3Ccircle%20cx%3D%228%22%20cy%3D%2217%22%20r%3D%222.2%22%2F%3E%3C%2Fsvg%3E");}
 .pt .focus h2::before{background-color:var(--brass);}
 .pt h2 > span:first-of-type{flex:none;}
+/* DIFETTO CORRETTO — il titolo di una conferma sfondava la vista.
+
+   `flex:none` è `0 0 auto`: il titolo non si restringe e quindi non va a
+   capo, e uno `span` più largo del proprio `h2` gli esce dai fianchi. Per le
+   schede normali non si vede — il titolo è corto — ma le due schede di
+   CONFERMA hanno titoli lunghi quanto una frase: «Tornare al preset di
+   «Essenziale»?» misura 264,66px dentro un h2 largo 246, cioè sporge di
+   18,66. A 320px di vista gliene restavano 18,34, e in locale l'overflow
+   risultava zero.
+
+   In CI no: con le metriche tipografiche del runner lo stesso titolo è più
+   largo, supera il bordo, e `scrollWidth - clientWidth` è diventato 5 su
+   chromium e 55 su firefox — due volte su due, anche al retry. La relazione
+   è esatta e misurata: l'overflow del documento è `span.right - clientWidth`,
+   e allungando il titolo in locale si ottengono 17, 52, 88, 158.
+
+   `min-width:0` da solo NON basta, ed è stato verificato prima di scriverlo:
+   con `flex-shrink:0` il minimo non viene mai raggiunto. Serve rendere lo
+   span restringibile. `flex-grow` resta 0 perché un titolo che si allarga
+   spingerebbe via la righetta `::after` sugli schermi larghi, e non serve
+   `overflow-wrap:anywhere` perché il titolo ha spazi: si va a capo fra le
+   parole, non dentro.
+
+   Circoscritto a `[role="alertdialog"]`: sono le due schede di conferma,
+   questa e quella delle azioni distruttive, che ha lo stesso difetto latente
+   e oggi se la cava solo perché «Ripristina l'aspetto?» è corto. */
+.pt [role="alertdialog"] h2 > span:first-of-type{flex:0 1 auto;min-width:0;}
 /* ─────────────────────────────────────────────────────────────────────────
    LA RIGHETTA DECORATIVA NON È UN CLAIMANT DELLA LARGHEZZA
    ─────────────────────────────────────────────────────────────────────────
